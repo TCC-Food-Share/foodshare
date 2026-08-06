@@ -2,6 +2,8 @@
 
 Este projeto usa **Conventional Commits** validados automaticamente por `commitlint` e formatação automática via `husky` + `lint-staged`. Esta página é o passo a passo oficial — siga em todo commit.
 
+Documento irmão: [BRANCHES.md](./BRANCHES.md), que padroniza o **nome das branches**.
+
 ---
 
 ## Regra de ouro
@@ -110,9 +112,13 @@ git commit -m "feat: tela de login com biometria"
 Os hooks do Husky rodam nesta ordem:
 
 1. **`pre-commit`** → `lint-staged` roda nos arquivos staged:
-   - `*.{js,jsx,ts,tsx}` → `eslint --fix` + `prettier --write`
-   - `*.{json,md,yml,yaml}` → `prettier --write`
+   - `*.{ts,tsx,js,jsx,mjs,cjs}` → `eslint --fix` + `prettier --write`
+   - `*.{json,md,yml,yaml,css,html}` → `prettier --write`
+   - `*.prisma` → `prisma format`
    - Se algum erro de lint não puder ser corrigido automaticamente, o commit é abortado.
+
+   Cada projeto (`backend/`, `frontend/`) tem seu próprio `.lintstagedrc.json`, então o arquivo staged é sempre checado pelo ESLint do projeto a que ele pertence.
+
 2. **`commit-msg`** → `commitlint` valida a mensagem contra `@commitlint/config-conventional`. Se o formato estiver errado, commit é abortado.
 
 ### 6. Push
@@ -169,7 +175,7 @@ Você esqueceu o tipo. Repita com formato `tipo: descrição`.
 **Pre-commit aborta com erro de ESLint**
 
 ```bash
-npm run lint:fix          # tenta consertar automaticamente
+npm run lint              # roda eslint --fix nos dois projetos
 # corrija manualmente o que sobrou
 git add <arquivos>
 git commit -m "..."
