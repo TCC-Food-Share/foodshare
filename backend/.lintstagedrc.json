@@ -3,5 +3,6 @@
     "npx --no-install eslint --fix --no-warn-ignored",
     "npx --no-install prettier --write"
   ],
-  "*.{json,md,yml,yaml}": "npx --no-install prettier --write"
+  "*.{json,md,yml,yaml}": "npx --no-install prettier --write",
+  "*.prisma": "npx --no-install prisma format --schema"
 }
