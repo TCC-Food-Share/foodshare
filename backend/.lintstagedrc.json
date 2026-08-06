@@ -1,0 +1,7 @@
+{
+  "*.{ts,mts,cts,js,mjs,cjs}": [
+    "npx --no-install eslint --fix --no-warn-ignored",
+    "npx --no-install prettier --write"
+  ],
+  "*.{json,md,yml,yaml}": "npx --no-install prettier --write"
+}
