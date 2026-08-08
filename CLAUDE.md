@@ -15,7 +15,7 @@ Leia, nesta ordem:
 
 ## Stack
 
-- Backend: NestJS (com Fastify) + Prisma + PostgreSQL, tudo em TypeScript
+- Backend: NestJS + Prisma + PostgreSQL, tudo em TypeScript
 - Frontend: React + TypeScript
 - Infra: self-hosted (Oracle Cloud VPS + Coolify)
 
