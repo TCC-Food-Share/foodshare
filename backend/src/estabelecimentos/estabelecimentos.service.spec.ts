@@ -36,17 +36,31 @@ describe('EstabelecimentosService', () => {
     estabelecimento: { create: jest.fn<() => Promise<unknown>>() },
   };
 
+  const prismaMock = {
+    usuario: {
+      findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+    },
+    estabelecimento: {
+      findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+    },
+  };
+
   let service: EstabelecimentosService;
   let transaction: jest.Mock<(callback: (transactionClient: typeof tx) => unknown) => unknown>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
     transaction = jest.fn((callback: (transactionClient: typeof tx) => unknown) => callback(tx));
+    prismaMock.usuario.findUnique.mockResolvedValue(null);
+    prismaMock.estabelecimento.findUnique.mockResolvedValue(null);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         EstabelecimentosService,
-        { provide: PrismaService, useValue: { $transaction: transaction } },
+        {
+          provide: PrismaService,
+          useValue: { $transaction: transaction, ...prismaMock },
+        },
       ],
     }).compile();
 
@@ -105,6 +119,39 @@ describe('EstabelecimentosService', () => {
     expect(resultado.usuario).not.toHaveProperty('senha');
     expect(resultadoSerializado).not.toContain('hash-da-senha');
     expect(resultadoSerializado).not.toContain(dto.senha);
+  });
+
+  it('lança ConflictException com campos: ["cnpj"] quando só o CNPJ já está cadastrado', async () => {
+    prismaMock.estabelecimento.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve('cnpj' in where ? { id: 99 } : null),
+    );
+
+    await expect(service.criar(dto)).rejects.toMatchObject({
+      response: { campos: ['cnpj'] },
+    });
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('lança ConflictException com todos os campos duplicados numa única resposta', async () => {
+    prismaMock.usuario.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve('celularPessoal' in where ? { id: 88 } : null),
+    );
+    prismaMock.estabelecimento.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve('emailInstitucional' in where ? { id: 99 } : null),
+    );
+
+    await expect(service.criar(dto)).rejects.toMatchObject({
+      response: { campos: ['celularPessoal', 'emailInstitucional'] },
+    });
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('segue para a criação quando nenhum campo está duplicado', async () => {
+    mockCriacaoComSucesso();
+
+    await service.criar(dto);
+
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 
   it('lança ConflictException quando o Prisma reporta violação de unicidade (P2002)', async () => {

@@ -20,6 +20,12 @@ describe('EstabelecimentosController (e2e)', () => {
   };
   const prismaMock = {
     $transaction: jest.fn((callback: (transactionClient: typeof tx) => unknown) => callback(tx)),
+    usuario: {
+      findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+    },
+    estabelecimento: {
+      findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+    },
   };
 
   const dtoValido = {
@@ -43,6 +49,8 @@ describe('EstabelecimentosController (e2e)', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    prismaMock.usuario.findUnique.mockResolvedValue(null);
+    prismaMock.estabelecimento.findUnique.mockResolvedValue(null);
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [PrismaModule, EstabelecimentosModule],
@@ -118,6 +126,20 @@ describe('EstabelecimentosController (e2e)', () => {
       .send({ ...dtoValido, ...override })
       .expect(400);
 
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('POST /estabelecimentos com CNPJ já cadastrado retorna 409 identificando o campo cnpj', async () => {
+    prismaMock.estabelecimento.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve('cnpj' in where ? { id: 99 } : null),
+    );
+
+    const resposta = await request(app.getHttpServer())
+      .post('/estabelecimentos')
+      .send(dtoValido)
+      .expect(409);
+
+    expect(resposta.body.campos).toEqual(['cnpj']);
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 

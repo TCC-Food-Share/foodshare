@@ -130,14 +130,28 @@ fix/refresh-token-expirado
 
 Se você não consegue descrever a branch em poucas palavras, provavelmente ela está fazendo coisas demais — quebre em branches menores.
 
-### Número de ticket
+### Código do requisito (RF/RNF)
 
-Quando houver ticket, coloque logo após o tipo:
+Neste projeto o identificador não é número de ticket — é o código do requisito em `docs/REQUISITOS.md`. Coloque-o logo após o tipo, minúsculo, sem hífen entre a sigla e o número:
 
 ```
-feat/123-cadastro-de-refeicao
-fix/456-token-expirado
+feat/rf02-unicidade-estabelecimento
+fix/rnf08-hash-senha
 ```
+
+O código já aponta pro requisito completo — a descrição depois dele pode (e deve) ser bem mais curta que o normal: **1 a 2 palavras**, só o suficiente pra diferenciar de outra branch com o mesmo código.
+
+```bash
+# Vago demais (sem o código, ninguém sabe qual requisito é)
+feat/unicidade-cadastro-estabelecimento
+
+# Bom
+feat/rf02-unicidade-estabelecimento
+```
+
+Se a mudança não corresponde a nenhum RF/RNF (ex: `chore/`), omita o código e use a descrição normal de 2 a 4 palavras.
+
+Se cobrir mais de um requisito, use o principal — o que melhor identifica o propósito da branch — e não liste todos.
 
 ---
 
