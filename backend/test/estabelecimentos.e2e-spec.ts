@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -12,10 +13,10 @@ describe('EstabelecimentosController (e2e)', () => {
   let app: INestApplication<App>;
 
   const tx = {
-    papel: { findUniqueOrThrow: jest.fn() },
-    endereco: { create: jest.fn() },
-    usuario: { create: jest.fn() },
-    estabelecimento: { create: jest.fn() },
+    papel: { findUniqueOrThrow: jest.fn<() => Promise<unknown>>() },
+    endereco: { create: jest.fn<() => Promise<unknown>>() },
+    usuario: { create: jest.fn<() => Promise<unknown>>() },
+    estabelecimento: { create: jest.fn<() => Promise<unknown>>() },
   };
   const prismaMock = {
     $transaction: jest.fn((callback: (transactionClient: typeof tx) => unknown) => callback(tx)),

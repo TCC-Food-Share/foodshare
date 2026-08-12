@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { ConflictException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
@@ -13,7 +14,7 @@ describe('EstabelecimentosService', () => {
     celularPessoal: '18999999999',
     senha: 'senha-segura',
     razaoSocial: 'Estabelecimento Teste LTDA',
-    nomeFantasia: undefined,
+    nomeFantasia: 'Estabelecimento Teste LTDA',
     cnpj: '12345678000199',
     emailInstitucional: 'contato@teste.com',
     celularInstitucional: '18988888888',
@@ -29,14 +30,14 @@ describe('EstabelecimentosService', () => {
   };
 
   const tx = {
-    papel: { findUniqueOrThrow: jest.fn() },
-    endereco: { create: jest.fn() },
-    usuario: { create: jest.fn() },
-    estabelecimento: { create: jest.fn() },
+    papel: { findUniqueOrThrow: jest.fn<() => Promise<unknown>>() },
+    endereco: { create: jest.fn<() => Promise<unknown>>() },
+    usuario: { create: jest.fn<() => Promise<unknown>>() },
+    estabelecimento: { create: jest.fn<() => Promise<unknown>>() },
   };
 
   let service: EstabelecimentosService;
-  let transaction: jest.Mock;
+  let transaction: jest.Mock<(callback: (transactionClient: typeof tx) => unknown) => unknown>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -65,7 +66,7 @@ describe('EstabelecimentosService', () => {
     tx.estabelecimento.create.mockResolvedValue({
       id: 30,
       razaoSocial: dto.razaoSocial,
-      nomeFantasia: null,
+      nomeFantasia: dto.nomeFantasia,
       cnpj: dto.cnpj,
       emailInstitucional: dto.emailInstitucional,
       celularInstitucional: dto.celularInstitucional,
