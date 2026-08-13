@@ -20,6 +20,12 @@ describe('EntidadesBeneficiariasController (e2e)', () => {
   };
   const prismaMock = {
     $transaction: jest.fn((callback: (transactionClient: typeof tx) => unknown) => callback(tx)),
+    usuario: {
+      findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+    },
+    entidadeBeneficiaria: {
+      findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+    },
   };
 
   const dtoValido = {
@@ -44,6 +50,8 @@ describe('EntidadesBeneficiariasController (e2e)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     prismaMock.$transaction.mockImplementation((callback) => callback(tx));
+    prismaMock.usuario.findUnique.mockResolvedValue(null);
+    prismaMock.entidadeBeneficiaria.findUnique.mockResolvedValue(null);
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [PrismaModule, EntidadesBeneficiariasModule],
@@ -124,6 +132,20 @@ describe('EntidadesBeneficiariasController (e2e)', () => {
       expect(prismaMock.$transaction).not.toHaveBeenCalled();
     },
   );
+
+  it('POST /entidades-beneficiarias com CNPJ já cadastrado retorna 409 identificando o campo cnpj', async () => {
+    prismaMock.entidadeBeneficiaria.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve('cnpj' in where ? { id: 99 } : null),
+    );
+
+    const resposta = await request(app.getHttpServer())
+      .post('/entidades-beneficiarias')
+      .send(dtoValido)
+      .expect(409);
+
+    expect(resposta.body.campos).toEqual(['cnpj']);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
 
   it('POST /entidades-beneficiarias com CNPJ/e-mail/celular duplicado retorna 409 genérico', async () => {
     prismaMock.$transaction.mockImplementation(() => {
