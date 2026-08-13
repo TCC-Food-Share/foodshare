@@ -13,6 +13,12 @@ async function main() {
     update: {},
     create: { nome: 'Estabelecimento' },
   });
+
+  await prisma.papel.upsert({
+    where: { nome: 'EntidadeBeneficiaria' },
+    update: {},
+    create: { nome: 'EntidadeBeneficiaria' },
+  });
 }
 
 main()
