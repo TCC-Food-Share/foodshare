@@ -8,16 +8,16 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  await prisma.papel.upsert({
-    where: { nome: 'Estabelecimento' },
+  await prisma.role.upsert({
+    where: { name: 'Establishment' },
     update: {},
-    create: { nome: 'Estabelecimento' },
+    create: { name: 'Establishment' },
   });
 
-  await prisma.papel.upsert({
-    where: { nome: 'EntidadeBeneficiaria' },
+  await prisma.role.upsert({
+    where: { name: 'BeneficiaryEntity' },
     update: {},
-    create: { nome: 'EntidadeBeneficiaria' },
+    create: { name: 'BeneficiaryEntity' },
   });
 }
 

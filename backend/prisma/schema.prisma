@@ -8,174 +8,247 @@ datasource db {
   provider = "postgresql"
 }
 
-model Papel {
-  id       Int       @id @default(autoincrement())
-  nome     String    @unique @db.VarChar(50)
-  usuarios Usuario[]
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
 
-  @@map("papel")
+  @@map("role")
 }
 
-model Usuario {
-  id             Int      @id @default(autoincrement())
-  nome           String   @db.VarChar(200)
-  email          String   @unique @db.VarChar(200)
-  celularPessoal String   @unique @db.VarChar(20)
-  senha          String   @db.VarChar(255)
-  imagem         String?  @db.VarChar(500)
-  dataCadastro   DateTime @default(now())
-  deletado       Boolean  @default(false)
-  authUserId     String?  @unique
+model User {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(200)
+  email         String   @unique @db.VarChar(200)
+  emailVerified Boolean  @default(true)
+  personalPhone String   @unique @db.VarChar(20)
+  image         String?  @db.VarChar(500)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deleted       Boolean  @default(false)
 
-  idPapel Int
-  papel   Papel @relation(fields: [idPapel], references: [id])
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id])
 
-  estabelecimento      Estabelecimento?
-  entidadeBeneficiaria EntidadeBeneficiaria?
-  motivosCancelamento  MotivoCancelamento[]  @relation("AdministradorMotivo")
+  establishment       Establishment?
+  beneficiaryEntity   BeneficiaryEntity?
+  cancellationReasons CancellationReason[] @relation("AdministratorReason")
 
-  @@map("usuario")
+  sessions Session[]
+  accounts Account[]
+
+  @@map("user")
 }
 
-model Endereco {
-  id          Int     @id @default(autoincrement())
-  cep         String  @db.VarChar(9)
-  logradouro  String  @db.VarChar(300)
-  numero      String  @db.VarChar(10)
-  complemento String? @db.VarChar(200)
-  cidade      String  @db.VarChar(200)
-  estado      String  @db.VarChar(2)
-
-  estabelecimento      Estabelecimento?
-  entidadeBeneficiaria EntidadeBeneficiaria?
-
-  @@map("endereco")
-}
-
-model Estabelecimento {
-  id                   Int     @id @default(autoincrement())
-  razaoSocial          String  @db.VarChar(300)
-  nomeFantasia         String? @db.VarChar(200)
-  cnpj                 String  @unique @db.VarChar(18)
-  emailInstitucional   String  @unique @db.VarChar(200)
-  celularInstitucional String  @unique @db.VarChar(20)
-  descricao            String  @db.VarChar(2000)
-  deletado             Boolean @default(false)
-
-  idUsuario Int     @unique
-  usuario   Usuario @relation(fields: [idUsuario], references: [id])
-
-  idEndereco Int      @unique
-  endereco   Endereco @relation(fields: [idEndereco], references: [id])
-
-  alimentos Alimento[]
-  pedidos   Pedido[]
-
-  @@map("estabelecimento")
-}
-
-model EntidadeBeneficiaria {
-  id                   Int     @id @default(autoincrement())
-  razaoSocial          String  @db.VarChar(300)
-  nomeFantasia         String? @db.VarChar(200)
-  cnpj                 String  @unique @db.VarChar(18)
-  emailInstitucional   String  @unique @db.VarChar(200)
-  celularInstitucional String  @unique @db.VarChar(20)
-  descricao            String  @db.VarChar(2000)
-  deletado             Boolean @default(false)
-
-  idUsuario Int     @unique
-  usuario   Usuario @relation(fields: [idUsuario], references: [id])
-
-  idEndereco Int      @unique
-  endereco   Endereco @relation(fields: [idEndereco], references: [id])
-
-  pedidos Pedido[]
-
-  @@map("entidade_beneficiaria")
-}
-
-model Categoria {
-  id        Int        @id @default(autoincrement())
-  nome      String     @unique @db.VarChar(100)
-  alimentos Alimento[]
-
-  @@map("categoria")
-}
-
-model StatusAlimento {
-  id        Int        @id @default(autoincrement())
-  nome      String     @unique @db.VarChar(50)
-  alimentos Alimento[]
-
-  @@map("status_alimento")
-}
-
-model StatusPedido {
-  id      Int      @id @default(autoincrement())
-  nome    String   @unique @db.VarChar(50)
-  pedidos Pedido[]
-
-  @@map("status_pedido")
-}
-
-model Alimento {
-  id             Int      @id @default(autoincrement())
-  imagem         String?  @db.VarChar(500)
-  nome           String   @db.VarChar(200)
-  qtdUnidade     String   @db.VarChar(50)
-  descricao      String   @db.VarChar(2000)
-  estado         String?  @db.VarChar(50)
-  dataVencimento DateTime
-  dataPublicacao DateTime
-  deletado       Boolean  @default(false)
-
-  idCategoria Int
-  categoria   Categoria @relation(fields: [idCategoria], references: [id])
-
-  idEstabelecimento Int
-  estabelecimento   Estabelecimento @relation(fields: [idEstabelecimento], references: [id])
-
-  idStatus Int
-  status   StatusAlimento @relation(fields: [idStatus], references: [id])
-
-  pedidos Pedido[]
-
-  @@map("alimento")
-}
-
-model MotivoCancelamento {
-  id   Int    @id @default(autoincrement())
-  nome String @unique @db.VarChar(200)
-
-  idAdministrador Int
-  administrador   Usuario @relation("AdministradorMotivo", fields: [idAdministrador], references: [id])
-
-  pedidos Pedido[]
-
-  @@map("motivo_cancelamento")
-}
-
-model Pedido {
+model Address {
   id         Int      @id @default(autoincrement())
-  dataPedido DateTime @default(now())
-  quantidade Int
-  deletado   Boolean  @default(false)
+  postalCode String   @db.VarChar(9)
+  street     String   @db.VarChar(300)
+  number     String   @db.VarChar(10)
+  complement String?  @db.VarChar(200)
+  city       String   @db.VarChar(200)
+  state      String   @db.VarChar(2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  idAlimento Int
-  alimento   Alimento @relation(fields: [idAlimento], references: [id])
+  establishment     Establishment?
+  beneficiaryEntity BeneficiaryEntity?
 
-  idStatus Int
-  status   StatusPedido @relation(fields: [idStatus], references: [id])
+  @@map("address")
+}
 
-  idEstabelecimento Int
-  estabelecimento   Estabelecimento @relation(fields: [idEstabelecimento], references: [id])
+model Establishment {
+  id                 Int      @id @default(autoincrement())
+  companyName        String   @db.VarChar(300)
+  tradeName          String?  @db.VarChar(200)
+  cnpj               String   @unique @db.VarChar(18)
+  institutionalEmail String   @unique @db.VarChar(200)
+  institutionalPhone String   @unique @db.VarChar(20)
+  description        String   @db.VarChar(2000)
+  deleted            Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  idEntidadeBeneficiaria Int
-  entidadeBeneficiaria   EntidadeBeneficiaria @relation(fields: [idEntidadeBeneficiaria], references: [id])
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
 
-  idMotivoCancelamento Int?
-  motivoCancelamento   MotivoCancelamento? @relation(fields: [idMotivoCancelamento], references: [id])
+  addressId Int     @unique
+  address   Address @relation(fields: [addressId], references: [id])
 
-  @@map("pedido")
+  foods  Food[]
+  orders Order[]
+
+  @@map("establishment")
+}
+
+model BeneficiaryEntity {
+  id                 Int      @id @default(autoincrement())
+  companyName        String   @db.VarChar(300)
+  tradeName          String?  @db.VarChar(200)
+  cnpj               String   @unique @db.VarChar(18)
+  institutionalEmail String   @unique @db.VarChar(200)
+  institutionalPhone String   @unique @db.VarChar(20)
+  description        String   @db.VarChar(2000)
+  deleted            Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  addressId Int     @unique
+  address   Address @relation(fields: [addressId], references: [id])
+
+  orders Order[]
+
+  @@map("beneficiary_entity")
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  foods     Food[]
+
+  @@map("category")
+}
+
+model FoodStatus {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  foods     Food[]
+
+  @@map("food_status")
+}
+
+model OrderStatus {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+
+  @@map("order_status")
+}
+
+model Food {
+  id             Int      @id @default(autoincrement())
+  image          String?  @db.VarChar(500)
+  name           String   @db.VarChar(200)
+  quantityUnit   String   @db.VarChar(50)
+  description    String   @db.VarChar(2000)
+  condition      String?  @db.VarChar(50)
+  expirationDate DateTime
+  publishedAt    DateTime
+  deleted        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  establishmentId Int
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+
+  statusId Int
+  status   FoodStatus @relation(fields: [statusId], references: [id])
+
+  orders Order[]
+
+  @@map("food")
+}
+
+model CancellationReason {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(200)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  administratorId Int
+  administrator   User @relation("AdministratorReason", fields: [administratorId], references: [id])
+
+  orders Order[]
+
+  @@map("cancellation_reason")
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  orderDate DateTime @default(now())
+  quantity  Int
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  foodId Int
+  food   Food @relation(fields: [foodId], references: [id])
+
+  statusId Int
+  status   OrderStatus @relation(fields: [statusId], references: [id])
+
+  establishmentId Int
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+
+  beneficiaryEntityId Int
+  beneficiaryEntity   BeneficiaryEntity @relation(fields: [beneficiaryEntityId], references: [id])
+
+  cancellationReasonId Int?
+  cancellationReason   CancellationReason? @relation(fields: [cancellationReasonId], references: [id])
+
+  @@map("order")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
