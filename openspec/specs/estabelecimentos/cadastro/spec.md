@@ -40,7 +40,7 @@ O sistema SHALL criar o usuário, o endereço e o estabelecimento como uma únic
 - **THEN** o sistema não deixa nenhum registro órfão ou parcial e retorna erro ao cliente
 
 ### Requirement: Unicidade de CNPJ, e-mail e celular no cadastro
-O sistema SHALL impedir o cadastro de um estabelecimento quando o CNPJ, o e-mail institucional, o celular institucional, o e-mail pessoal ou o celular pessoal informados já pertencerem a outro cadastro, rejeitando a submissão e identificando todos os campos duplicados encontrados, sem criar nenhum registro (`Usuario`, `Endereco` ou `Estabelecimento`).
+O sistema SHALL impedir o cadastro de um estabelecimento quando o CNPJ, o e-mail institucional, o celular institucional, o e-mail pessoal ou o celular pessoal informados já pertencerem a outro cadastro, rejeitando a submissão e identificando todos os campos duplicados encontrados, sem criar nenhum registro (`User`, `Address` ou `Establishment`).
 
 #### Scenario: Um único campo duplicado
 - **WHEN** um estabelecimento envia um cadastro em que apenas o CNPJ já pertence a outro cadastro (demais campos únicos)
