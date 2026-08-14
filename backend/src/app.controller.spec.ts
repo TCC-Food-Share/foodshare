@@ -1,5 +1,10 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
+
+jest.mock('@thallesp/nestjs-better-auth', () => ({
+  AllowAnonymous: () => () => undefined,
+  Session: () => () => undefined,
+}));
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
