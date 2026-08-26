@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class AddressDto {
-  @ApiProperty({ example: '01310-100', description: 'Postal code, format 00000-000 or 00000000' })
+  @ApiProperty({ example: '01310-100', description: 'CEP, formato 00000-000 ou 00000000' })
   @IsString()
   @Matches(/^\d{5}-?\d{3}$/, { message: 'postalCode must be in the format 00000-000 or 00000000' })
   postalCode!: string;
@@ -31,7 +31,7 @@ export class AddressDto {
   @MaxLength(200)
   city!: string;
 
-  @ApiProperty({ example: 'SP', description: 'State code (UF), 2 uppercase letters' })
+  @ApiProperty({ example: 'SP', description: 'Sigla do estado (UF), 2 letras maiúsculas' })
   @IsString()
   @Matches(/^[A-Z]{2}$/, { message: 'state must be a 2-letter uppercase state code' })
   state!: string;

@@ -12,7 +12,7 @@ import { BeneficiaryEntitiesService } from './beneficiary-entities.service';
 import { BeneficiaryEntityResponseDto } from './dto/beneficiary-entity-response.dto';
 import { CreateBeneficiaryEntityDto } from './dto/create-beneficiary-entity.dto';
 
-@ApiTags('Beneficiary Entities')
+@ApiTags('Entidades Beneficiárias')
 @Controller('beneficiary-entities')
 export class BeneficiaryEntitiesController {
   constructor(private readonly beneficiaryEntitiesService: BeneficiaryEntitiesService) {}
@@ -20,17 +20,18 @@ export class BeneficiaryEntitiesController {
   @Post()
   @AllowAnonymous()
   @ApiOperation({
-    summary: 'Register beneficiary entity',
+    summary: 'Cadastro de entidade beneficiária',
     description:
-      'Registers a beneficiary entity with owner data, institutional data and address (RF03).',
+      'Cadastra uma entidade beneficiária com dados do responsável, dados institucionais ' +
+      'e endereço (RF03).',
   })
   @ApiCreatedResponse({
-    description: 'Beneficiary entity registered successfully.',
+    description: 'Entidade beneficiária cadastrada com sucesso.',
     type: BeneficiaryEntityResponseDto,
   })
-  @ApiBadRequestResponse({ description: 'Invalid registration data.' })
+  @ApiBadRequestResponse({ description: 'Dados de cadastro inválidos.' })
   @ApiConflictResponse({
-    description: 'CNPJ, email or phone already registered by another entity or user.',
+    description: 'CNPJ, e-mail ou celular já cadastrados por outra entidade ou usuário.',
   })
   create(@Body() dto: CreateBeneficiaryEntityDto): Promise<BeneficiaryEntityResponseDto> {
     return this.beneficiaryEntitiesService.create(dto);

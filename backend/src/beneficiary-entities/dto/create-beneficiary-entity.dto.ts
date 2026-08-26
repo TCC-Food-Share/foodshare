@@ -14,18 +14,18 @@ import {
 import { AddressDto } from '../../establishments/dto/address.dto';
 
 export class CreateBeneficiaryEntityDto {
-  @ApiProperty({ example: 'João Souza', description: 'Owner name', maxLength: 200 })
+  @ApiProperty({ example: 'João Souza', description: 'Nome do responsável', maxLength: 200 })
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
   name!: string;
 
-  @ApiProperty({ example: 'joao@example.com', description: 'Owner personal email' })
+  @ApiProperty({ example: 'joao@example.com', description: 'E-mail pessoal do responsável' })
   @IsEmail()
   @MaxLength(200)
   email!: string;
 
-  @ApiProperty({ example: '(11) 91234-5678', description: 'Owner personal phone' })
+  @ApiProperty({ example: '(11) 91234-5678', description: 'Celular pessoal do responsável' })
   @IsString()
   @Matches(/^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/, {
     message: 'personalPhone must be a valid Brazilian phone number',
@@ -34,7 +34,7 @@ export class CreateBeneficiaryEntityDto {
 
   @ApiProperty({
     example: 'strongPassword123',
-    description: 'Access password (8 to 72 characters)',
+    description: 'Senha de acesso (8 a 72 caracteres)',
     minLength: 8,
     maxLength: 72,
   })
@@ -45,7 +45,7 @@ export class CreateBeneficiaryEntityDto {
 
   @ApiProperty({
     example: 'Helping Hands Charity Association',
-    description: 'Beneficiary entity legal (registered) name',
+    description: 'Razão social da entidade beneficiária',
     maxLength: 300,
   })
   @IsString()
@@ -53,7 +53,11 @@ export class CreateBeneficiaryEntityDto {
   @MaxLength(300)
   companyName!: string;
 
-  @ApiPropertyOptional({ example: 'Helping Hands', maxLength: 200 })
+  @ApiPropertyOptional({
+    example: 'Helping Hands',
+    description: 'Nome fantasia (opcional)',
+    maxLength: 200,
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -61,7 +65,7 @@ export class CreateBeneficiaryEntityDto {
 
   @ApiProperty({
     example: '12.345.678/0001-90',
-    description: 'CNPJ (14 digits, with or without punctuation)',
+    description: 'CNPJ (14 dígitos, com ou sem pontuação)',
   })
   @IsString()
   @Matches(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/, {
@@ -69,12 +73,12 @@ export class CreateBeneficiaryEntityDto {
   })
   cnpj!: string;
 
-  @ApiProperty({ example: 'contact@helpinghands.org', description: 'Institutional email' })
+  @ApiProperty({ example: 'contact@helpinghands.org', description: 'E-mail institucional' })
   @IsEmail()
   @MaxLength(200)
   institutionalEmail!: string;
 
-  @ApiProperty({ example: '(11) 3456-7890', description: 'Institutional phone' })
+  @ApiProperty({ example: '(11) 3456-7890', description: 'Celular institucional' })
   @IsString()
   @Matches(/^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/, {
     message: 'institutionalPhone must be a valid Brazilian phone number',
@@ -83,7 +87,7 @@ export class CreateBeneficiaryEntityDto {
 
   @ApiProperty({
     example: 'Entity that supports families in social vulnerability.',
-    description: 'Beneficiary entity description',
+    description: 'Descrição da entidade beneficiária',
     maxLength: 2000,
   })
   @IsString()
