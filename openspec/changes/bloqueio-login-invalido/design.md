@@ -13,19 +13,24 @@ O login em si (RF07, change `autenticacao-login`) já existe como capability `au
 
 ## Decisions
 
-**Checagem de `deleted` via `hooks.before` na instância do better-auth, interceptando `/sign-in/email` (path interno do better-auth).**
+**Checagem de `deleted` via `hooks.before` na instância do better-auth, interceptando `/sign-in/email` (path interno do better-auth). Lógica extraída pra `backend/src/auth/reject-deleted-user.hook.ts`, testável isoladamente sem tocar no runtime ESM do better-auth.**
 ```ts
+// reject-deleted-user.hook.ts
+export async function rejectDeletedUserOnSignIn(ctx, prisma) {
+  if (ctx.path !== "/sign-in/email") return;
+  const email = ctx.body?.email;
+  const user = email ? await prisma.user.findUnique({ where: { email } }) : null;
+  if (user?.deleted) {
+    throw APIError.from("UNAUTHORIZED", BASE_ERROR_CODES.INVALID_EMAIL_OR_PASSWORD);
+  }
+}
+
+// auth.instance.ts
 hooks: {
-  before: createAuthMiddleware(async (ctx) => {
-    if (ctx.path !== "/sign-in/email") return;
-    const user = await prisma.user.findUnique({ where: { email: ctx.body?.email } });
-    if (user?.deleted) {
-      throw new APIError("UNAUTHORIZED", { message: "Invalid credentials." });
-    }
-  }),
+  before: createAuthMiddleware((ctx) => rejectDeletedUserOnSignIn(ctx, prisma)),
 }
 ```
-A mensagem de erro é a mesma usada para credencial incorreta — do ponto de vista de quem tenta logar, uma conta excluída logicamente é indistinguível de uma senha errada (evita confirmar a um atacante que aquele e-mail existe e está apenas desativado).
+A mensagem de erro reusa a constante `BASE_ERROR_CODES.INVALID_EMAIL_OR_PASSWORD` do próprio better-auth (a mesma que ele usa para credencial incorreta), em vez de escrever um texto novo — garante que o texto é byte-idêntico ao caso de senha errada, mesmo se o better-auth mudar a mensagem numa versão futura. Do ponto de vista de quem tenta logar, uma conta excluída logicamente é indistinguível de uma senha errada (evita confirmar a um atacante que aquele e-mail existe e está apenas desativado). Confirmado manualmente comparando as duas respostas byte a byte (ver `tasks.md`, seção 2).
 Alternativa considerada: plugin de admin do better-auth (`banned`/`banReason`/`banExpires`) — descartado por trazer conceito e superfície de administração de usuários (banimento por admin) que não faz parte do MVP; nosso `deletado` é um conceito diferente (exclusão lógica, não banimento) e mais simples de checar direto.
 
 ## Risks / Trade-offs
