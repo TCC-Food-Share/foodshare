@@ -24,18 +24,43 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Food Share API')
     .setDescription(
-      'API for the Food Share platform — connects establishments with surplus food ' +
-        'to beneficiary entities.',
+      'API da plataforma Food Share, conecta estabelecimentos com excedentes ' +
+        'alimentares a entidades beneficiárias.',
     )
     .setVersion('1.0.0')
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   const authSchema = await auth.api.generateOpenAPISchema();
+  const hiddenAuthPaths = new Set(['/ok', '/error']);
+  const authOperationOverrides: Record<string, { summary: string; description: string }> = {
+    '/sign-in/email': {
+      summary: 'Login',
+      description: 'Autentica com e-mail e senha e, em caso de sucesso, emite uma sessão (cookie).',
+    },
+    '/sign-out': {
+      summary: 'Logout',
+      description: 'Encerra a sessão atual, invalidando o cookie de sessão.',
+    },
+  };
   const authPaths = Object.fromEntries(
-    Object.entries(authSchema.paths).map(([path, item]) => [`/api/auth${path}`, item]),
+    Object.entries(authSchema.paths)
+      .filter(([path]) => !hiddenAuthPaths.has(path))
+      .map(([path, item]) => [
+        `/auth${path}`,
+        Object.fromEntries(
+          Object.entries(item).map(([method, operation]) => [
+            method,
+            { ...operation, tags: ['Autenticação'], ...authOperationOverrides[path] },
+          ]),
+        ),
+      ]),
   );
   const mergedDocument = {
     ...document,
+    tags: [
+      ...(document.tags ?? []),
+      { name: 'Autenticação', description: 'Login, logout e sessão.' },
+    ],
     paths: { ...document.paths, ...authPaths },
     components: {
       ...document.components,
@@ -52,7 +77,7 @@ async function bootstrap() {
     ui: false,
   });
 
-  app.use('/docs', apiReference({ content: mergedDocument }));
+  app.use('/docs', apiReference({ content: mergedDocument, pageTitle: 'Food Share API Docs' }));
 
   await app.listen(process.env.PORT ?? 3000);
 }

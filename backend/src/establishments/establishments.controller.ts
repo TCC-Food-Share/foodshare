@@ -12,7 +12,7 @@ import { CreateEstablishmentDto } from './dto/create-establishment.dto';
 import { EstablishmentResponseDto } from './dto/establishment-response.dto';
 import { EstablishmentsService } from './establishments.service';
 
-@ApiTags('Establishments')
+@ApiTags('Estabelecimentos')
 @Controller('establishments')
 export class EstablishmentsController {
   constructor(private readonly establishmentsService: EstablishmentsService) {}
@@ -20,18 +20,18 @@ export class EstablishmentsController {
   @Post()
   @AllowAnonymous()
   @ApiOperation({
-    summary: 'Register establishment',
+    summary: 'Cadastro de estabelecimento',
     description:
-      'Registers an establishment with owner data, institutional data and address (RF01). ' +
-      'Prevents duplicate CNPJ, email or phone (RF02).',
+      'Cadastra um estabelecimento com dados do responsável, dados institucionais e ' +
+      'endereço (RF01). Impede CNPJ, e-mail ou celular duplicados (RF02).',
   })
   @ApiCreatedResponse({
-    description: 'Establishment registered successfully.',
+    description: 'Estabelecimento cadastrado com sucesso.',
     type: EstablishmentResponseDto,
   })
-  @ApiBadRequestResponse({ description: 'Invalid registration data.' })
+  @ApiBadRequestResponse({ description: 'Dados de cadastro inválidos.' })
   @ApiConflictResponse({
-    description: 'CNPJ, email or phone already registered by another establishment or user.',
+    description: 'CNPJ, e-mail ou celular já cadastrados por outro estabelecimento ou usuário.',
   })
   create(@Body() dto: CreateEstablishmentDto): Promise<EstablishmentResponseDto> {
     return this.establishmentsService.create(dto);

@@ -14,18 +14,18 @@ import {
 import { AddressDto } from './address.dto';
 
 export class CreateEstablishmentDto {
-  @ApiProperty({ example: 'Maria Silva', description: 'Owner name', maxLength: 200 })
+  @ApiProperty({ example: 'Maria Silva', description: 'Nome do responsável', maxLength: 200 })
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
   name!: string;
 
-  @ApiProperty({ example: 'maria@example.com', description: 'Owner personal email' })
+  @ApiProperty({ example: 'maria@example.com', description: 'E-mail pessoal do responsável' })
   @IsEmail()
   @MaxLength(200)
   email!: string;
 
-  @ApiProperty({ example: '(11) 91234-5678', description: 'Owner personal phone' })
+  @ApiProperty({ example: '(11) 91234-5678', description: 'Celular pessoal do responsável' })
   @IsString()
   @Matches(/^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/, {
     message: 'personalPhone must be a valid Brazilian phone number',
@@ -34,7 +34,7 @@ export class CreateEstablishmentDto {
 
   @ApiProperty({
     example: 'strongPassword123',
-    description: 'Access password (8 to 72 characters)',
+    description: 'Senha de acesso (8 a 72 caracteres)',
     minLength: 8,
     maxLength: 72,
   })
@@ -45,7 +45,7 @@ export class CreateEstablishmentDto {
 
   @ApiProperty({
     example: 'Good Taste Restaurant Ltd',
-    description: 'Establishment legal (registered) name',
+    description: 'Razão social do estabelecimento',
     maxLength: 300,
   })
   @IsString()
@@ -53,7 +53,11 @@ export class CreateEstablishmentDto {
   @MaxLength(300)
   companyName!: string;
 
-  @ApiPropertyOptional({ example: 'Good Taste', maxLength: 200 })
+  @ApiPropertyOptional({
+    example: 'Good Taste',
+    description: 'Nome fantasia (opcional)',
+    maxLength: 200,
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -61,7 +65,7 @@ export class CreateEstablishmentDto {
 
   @ApiProperty({
     example: '12.345.678/0001-90',
-    description: 'CNPJ (14 digits, with or without punctuation)',
+    description: 'CNPJ (14 dígitos, com ou sem pontuação)',
   })
   @IsString()
   @Matches(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/, {
@@ -69,12 +73,12 @@ export class CreateEstablishmentDto {
   })
   cnpj!: string;
 
-  @ApiProperty({ example: 'contact@goodtaste.com', description: 'Institutional email' })
+  @ApiProperty({ example: 'contact@goodtaste.com', description: 'E-mail institucional' })
   @IsEmail()
   @MaxLength(200)
   institutionalEmail!: string;
 
-  @ApiProperty({ example: '(11) 3456-7890', description: 'Institutional phone' })
+  @ApiProperty({ example: '(11) 3456-7890', description: 'Celular institucional' })
   @IsString()
   @Matches(/^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/, {
     message: 'institutionalPhone must be a valid Brazilian phone number',
@@ -83,7 +87,7 @@ export class CreateEstablishmentDto {
 
   @ApiProperty({
     example: 'Restaurant specialized in home-style meals.',
-    description: 'Establishment description',
+    description: 'Descrição do estabelecimento',
     maxLength: 2000,
   })
   @IsString()
