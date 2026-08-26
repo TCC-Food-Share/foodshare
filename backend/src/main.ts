@@ -2,16 +2,19 @@ import 'dotenv/config';
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { OpenAPIObject } from '@nestjs/swagger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import express from 'express';
+import { join } from 'path';
 
 import { AppModule } from './app.module';
 import { auth } from './auth/auth.instance';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+  app.useStaticAssets(join(process.cwd(), 'public'));
   app.use(express.json());
   app.useGlobalPipes(
     new ValidationPipe({
@@ -77,7 +80,14 @@ async function bootstrap() {
     ui: false,
   });
 
-  app.use('/docs', apiReference({ content: mergedDocument, pageTitle: 'Food Share API Docs' }));
+  app.use(
+    '/docs',
+    apiReference({
+      content: mergedDocument,
+      pageTitle: 'Food Share API Docs',
+      favicon: '/favicon.png',
+    }),
+  );
 
   await app.listen(process.env.PORT ?? 3000);
 }
