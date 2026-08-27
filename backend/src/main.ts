@@ -40,6 +40,10 @@ async function bootstrap() {
       summary: 'Login',
       description: 'Autentica com e-mail e senha e, em caso de sucesso, emite uma sessão (cookie).',
     },
+    '/sign-out': {
+      summary: 'Logout',
+      description: 'Encerra a sessão atual, invalidando o cookie de sessão.',
+    },
   };
   const authPaths = Object.fromEntries(
     Object.entries(authSchema.paths)
@@ -56,7 +60,10 @@ async function bootstrap() {
   );
   const mergedDocument = {
     ...document,
-    tags: [...(document.tags ?? []), { name: 'Autenticação', description: 'Login e sessão.' }],
+    tags: [
+      ...(document.tags ?? []),
+      { name: 'Autenticação', description: 'Login, logout e sessão.' },
+    ],
     paths: { ...document.paths, ...authPaths },
     components: {
       ...document.components,
