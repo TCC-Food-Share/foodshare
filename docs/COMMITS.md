@@ -78,6 +78,12 @@ feat!: troca contrato do endpoint de login
 
 ---
 
+## Sem trailers automáticos
+
+Não adicione `Co-Authored-By` (ou qualquer outro trailer) em commits gerados por assistente de IA. Reforça a regra de ouro: uma frase, sem corpo.
+
+---
+
 ## Passo a passo
 
 ### 1. Antes de codar
