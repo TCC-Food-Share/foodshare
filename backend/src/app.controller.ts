@@ -6,7 +6,6 @@ import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma/prisma.service';
 
-@ApiTags('Geral')
 @Controller()
 export class AppController {
   constructor(
@@ -22,6 +21,7 @@ export class AppController {
   }
 
   @Get('me')
+  @ApiTags('Autenticação')
   @ApiOperation({
     summary: 'Sessão atual',
     description: 'Retorna os dados do usuário autenticado na sessão atual.',
@@ -33,6 +33,7 @@ export class AppController {
 
   @Get('health')
   @AllowAnonymous()
+  @ApiTags('Geral')
   @ApiOperation({
     summary: 'Health check',
     description: 'Verifica se a API está no ar e se a conexão com o banco de dados está saudável.',

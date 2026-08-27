@@ -32,7 +32,7 @@ async function bootstrap() {
     )
     .setVersion('1.0.0')
     .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  const document = SwaggerModule.createDocument(app, swaggerConfig, { autoTagControllers: false });
   const authSchema = await auth.api.generateOpenAPISchema();
   const hiddenAuthPaths = new Set(['/ok', '/error']);
   const authOperationOverrides: Record<string, { summary: string; description: string }> = {
