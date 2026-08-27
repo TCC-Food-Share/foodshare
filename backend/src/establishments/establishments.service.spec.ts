@@ -166,9 +166,27 @@ describe('EstablishmentsService', () => {
     );
 
     await expect(service.create(dto)).rejects.toMatchObject({
-      response: { fields: ['personalPhone', 'institutionalEmail'] },
+      response: { fields: ['institutionalEmail', 'personal'] },
     });
     expect(authMock.api.signUpEmail).not.toHaveBeenCalled();
+  });
+
+  it('does not reveal whether the personal email or the personal phone is the duplicate', async () => {
+    prismaMock.user.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve('email' in where ? { id: 77 } : null),
+    );
+
+    await expect(service.create(dto)).rejects.toMatchObject({
+      response: { fields: ['personal'], message: 'Personal email or phone is already registered.' },
+    });
+  });
+
+  it('collapses duplicate personal email and personal phone into a single "personal" entry', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ id: 77 });
+
+    await expect(service.create(dto)).rejects.toMatchObject({
+      response: { fields: ['personal'] },
+    });
   });
 
   it('proceeds with creation when no field is duplicated', async () => {

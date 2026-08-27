@@ -13,8 +13,7 @@ const FIELD_LABELS: Record<string, string> = {
   cnpj: 'CNPJ',
   institutionalEmail: 'institutional email',
   institutionalPhone: 'institutional phone',
-  email: 'personal email',
-  personalPhone: 'personal phone',
+  personal: 'personal email or phone',
 };
 
 function buildDuplicateMessage(fields: string[]): string {
@@ -24,7 +23,8 @@ function buildDuplicateMessage(fields: string[]): string {
       ? labels[0]
       : `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
   const verb = labels.length === 1 ? 'is' : 'are';
-  return `${list} ${verb} already registered.`;
+  const message = `${list} ${verb} already registered.`;
+  return message.charAt(0).toUpperCase() + message.slice(1);
 }
 
 @Injectable()
@@ -111,11 +111,10 @@ export class BeneficiaryEntitiesService {
       ]);
 
     const duplicateFields: string[] = [];
-    if (userByEmail) duplicateFields.push('email');
-    if (userByPhone) duplicateFields.push('personalPhone');
     if (entityByCnpj) duplicateFields.push('cnpj');
     if (entityByEmail) duplicateFields.push('institutionalEmail');
     if (entityByPhone) duplicateFields.push('institutionalPhone');
+    if (userByEmail || userByPhone) duplicateFields.push('personal');
 
     if (duplicateFields.length > 0) {
       throw new ConflictException({
