@@ -50,6 +50,7 @@ export const auth = betterAuth({
   },
   disabledPaths: [
     '/sign-up/email',
+    '/sign-out',
     '/sign-in/social',
     '/get-session',
     '/list-sessions',

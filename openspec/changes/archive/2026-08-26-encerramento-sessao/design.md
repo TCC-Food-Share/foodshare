@@ -8,7 +8,7 @@ O `proposal.md` original previa o endpoint de logout "no módulo `auth/`" (que h
 - Endpoint de logout exige sessão válida (sem `@AllowAnonymous()`, guard global se aplica) e delega inteiramente pro better-auth — sem lógica própria de expiração/blacklist.
 
 **Non-Goals:**
-- Desabilitar a rota nativa `POST /auth/sign-out` do better-auth. Ao contrário do `sign-up/email` (RF01/03, onde a rota nativa deixava o cadastro incompleto — só criava `User`+`Account`, sem `Address`/`Establishment`), aqui a rota nativa já faz exatamente a mesma coisa que o wrapper faria (não tem estado adicional pra sincronizar), então não é um caso de "duas rotas fazendo coisas diferentes e incompletas". Mesmo assim, `POST /logout` (`AppController`) é o único documentado no Scalar — mantém o padrão de uma rota oficial por ação, mesmo a nativa continuando tecnicamente acessível.
+- (revisado — ver Decisions abaixo: a rota nativa acabou desabilitada também, não ficou de fora do escopo como este texto dizia originalmente)
 
 ## Decisions
 
@@ -25,6 +25,8 @@ async logout(@Req() request: Request) {
 
 `@HttpCode(200)`: o default do Nest pra `@Post()` é 201 (Created) — semanticamente errado pra logout, nada é criado. Achado e corrigido durante o teste manual.
 
+**`/sign-out` adicionado a `disabledPaths` em `auth.instance.ts`, junto do `/sign-up/email` já desabilitado no RF08.** Erro cometido na primeira versão deste documento: a rota nativa `POST /auth/sign-out` continuou documentada no Scalar junto de `POST /logout` — as duas com summary "Logout", a mesma duplicidade que já tinha sido evitada no cadastro (RF01/03). Só percebido depois de perguntado — corrigido: `disabledPaths` some com a rota HTTP crua (confirmado via curl, 404) sem quebrar `AppController.logout()`, que chama `authService.api.signOut()` programaticamente (não passa pelo router HTTP, `disabledPaths` só filtra requests reais — mesmo mecanismo já usado no `sign-up/email`).
+
 ## Risks / Trade-offs
 
-- [Rota nativa `/auth/sign-out` continua acessível em paralelo à oficial `/logout`] → aceito: ver Non-Goals acima — não há risco de estado divergente, é a mesma operação nos dois casos.
+- Nenhum trade-off aceito nessa versão — a duplicidade de rota (ver Decisions) foi corrigida, não mantida como risco aceitável.
