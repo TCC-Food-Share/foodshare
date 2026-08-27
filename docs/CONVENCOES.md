@@ -25,6 +25,30 @@
   `beneficiary-entities/`), no padrão de módulos do NestJS.
 - `prisma/schema.prisma` como única fonte de verdade do modelo de dados.
 
+### Rotas e documentação (`/auth`, tags do Scalar)
+
+- `/auth/*` é reservado pro better-auth (`basePath` em `auth.instance.ts`,
+  hoje `/auth`) e só pra rotas nativas dele (ex: `/auth/sign-in/email`).
+  **Nenhum controller nosso consegue registrar rota sob esse prefixo** —
+  o pacote `@thallesp/nestjs-better-auth` monta o handler do better-auth
+  como middleware global do Express, intercepta qualquer request sob
+  `/auth/*` antes do router do Nest decidir qualquer coisa, e devolve
+  404 próprio pra sub-rota que ele não reconhece. Confirmado testando
+  (`@Post('auth/logout')` registra no Nest, mas a rota nunca é
+  alcançada). Endpoint próprio que é conceitualmente "auth" (logout,
+  `/me`, etc.) fica em rota raiz (`POST /logout`, não `POST /auth/logout`).
+- Agrupamento na doc (Scalar) é por `@ApiTags`, independente do path —
+  `/logout` e `/me` ficam raiz mas com `@ApiTags('Autenticação')` no
+  método, mesmo grupo de `/auth/sign-in/email`.
+  - `@ApiTags` no método **soma** com `@ApiTags` da classe, não
+    sobrescreve — não usar tag na classe se algum método precisar de
+    tag diferente da dos outros (ex: `AppController`, que mistura rotas
+    de grupos diferentes). Nesse caso, tag em todo método individualmente.
+  - `SwaggerModule.createDocument(app, config, { autoTagControllers: false })`
+    em `main.ts` — sem isso, controller sem `@ApiTags` explícito ganha
+    tag automática com o nome da classe (`AppController` → tag `App`),
+    que também some com a tag do método.
+
 ## Frontend
 
 - Componentes funcionais com hooks, TypeScript estrito.
