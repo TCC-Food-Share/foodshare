@@ -3,9 +3,11 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { createAuthMiddleware } from 'better-auth/api';
 import { openAPI } from 'better-auth/plugins';
 
 import { PrismaClient } from '../../generated/prisma/client';
+import { rejectDeletedUserOnSignIn } from './reject-deleted-user.hook';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -43,6 +45,9 @@ export const auth = betterAuth({
     },
   },
   plugins: [openAPI({ disableDefaultReference: true })],
+  hooks: {
+    before: createAuthMiddleware((ctx) => rejectDeletedUserOnSignIn(ctx, prisma)),
+  },
   disabledPaths: [
     '/sign-up/email',
     '/sign-in/social',
