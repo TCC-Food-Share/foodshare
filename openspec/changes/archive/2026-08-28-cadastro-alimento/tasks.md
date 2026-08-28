@@ -1,3 +1,5 @@
+> **Revisado depois do archive, antes do merge**: todo "Revisar" abaixo virou "Ativo" — mecanismo de revisão removido, ver `design.md` ("Decisão final").
+
 ## 1. Schema
 
 - [x] 1.1 `Food.quantity Decimal @db.Decimal(10, 2)` adicionado — campo não existia, decidido com a usuária (Decimal em vez de Int, aceita fracionário)

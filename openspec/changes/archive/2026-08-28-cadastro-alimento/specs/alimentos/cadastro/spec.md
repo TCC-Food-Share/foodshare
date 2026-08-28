@@ -27,9 +27,9 @@ O sistema SHALL permitir que um estabelecimento autenticado cadastre um alimento
 - **WHEN** uma entidade beneficiária autenticada tenta cadastrar um alimento
 - **THEN** o sistema rejeita a requisição, sem criar nenhum registro
 
-### Requirement: Alimento cadastrado inicia com status "Revisar"
-O sistema SHALL atribuir automaticamente o status "Revisar" a todo alimento no momento do cadastro, sem permitir que o cliente informe ou escolha o status inicial.
+### Requirement: Alimento cadastrado inicia com status "Ativo"
+O sistema SHALL atribuir automaticamente o status "Ativo" a todo alimento no momento do cadastro, sem permitir que o cliente informe ou escolha o status inicial. Não existe etapa de revisão/aprovação antes do alimento ficar visível na plataforma.
 
 #### Scenario: Status inicial automático
 - **WHEN** um estabelecimento autenticado cadastra um alimento com todos os dados válidos
-- **THEN** o sistema atribui o status "Revisar" ao alimento criado, independentemente de qualquer valor de status presente na requisição
+- **THEN** o sistema atribui o status "Ativo" ao alimento criado e ele fica imediatamente visível na plataforma, independentemente de qualquer valor de status presente na requisição

@@ -1,3 +1,7 @@
+## Decisão final (revisado depois do archive)
+
+**O mecanismo de revisão ("Revisar") foi removido a pedido da usuária, antes do merge.** Alimento cadastrado recebe automaticamente o status "Ativo" — sem etapa intermediária, mostrado na plataforma normalmente desde a criação. `FoodStatus` seedado só com "Ativo" (não seedar mais "Revisar"). Resto deste documento (`Context` a `Risks/Trade-offs` abaixo) é o histórico de como a change foi originalmente pensada — preservado pra rastreabilidade, não reflete o estado final. Onde ler "Revisar" abaixo, o comportamento real hoje é "Ativo" direto na criação, sem gate nenhum.
+
 ## Context
 
 O schema já tinha `Food`/`Category`/`FoodStatus`/`Establishment` relacionados (criados junto do schema completo do TCC), mas incompletos pro RF10 literal: sem valor numérico de quantidade (só `quantityUnit`, a unidade), com um campo `condition` que não corresponde a nenhum RF do MVP, e sem seed nenhum de `Category`/`FoodStatus`.

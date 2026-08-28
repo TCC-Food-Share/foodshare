@@ -1,3 +1,5 @@
+> **Revisado depois do archive, antes do merge**: o mecanismo de "Revisar" descrito abaixo foi removido a pedido da usuária. Alimento cadastrado recebe status "Ativo" direto, sem etapa de revisão. Ver `design.md` ("Decisão final") pro detalhe — este arquivo fica como registro do que foi originalmente proposto.
+
 ## Why
 
 Nenhum fluxo de estoque existe ainda — sem um estabelecimento poder cadastrar um alimento (RF10), não há o que listar (RF12+) nem o que pedir (RF15+). RF11 exige que todo alimento cadastrado comece com status "Revisar" — inseparável de RF10, é o mesmo fluxo de criação.

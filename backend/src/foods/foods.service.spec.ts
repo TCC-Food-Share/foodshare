@@ -39,7 +39,7 @@ describe('FoodsService', () => {
     jest.clearAllMocks();
     prismaMock.establishment.findUnique.mockResolvedValue({ id: 30, userId: 20 });
     prismaMock.category.findUnique.mockResolvedValue({ id: 1, name: 'Não Perecíveis' });
-    prismaMock.foodStatus.findUniqueOrThrow.mockResolvedValue({ id: 1, name: 'Revisar' });
+    prismaMock.foodStatus.findUniqueOrThrow.mockResolvedValue({ id: 1, name: 'Ativo' });
     prismaMock.food.create.mockResolvedValue({
       id: 100,
       image: dto.image,
@@ -50,7 +50,7 @@ describe('FoodsService', () => {
       expirationDate: new Date(dto.expirationDate),
       publishedAt: new Date('2026-08-28T12:00:00.000Z'),
       category: { id: 1, name: 'Não Perecíveis' },
-      status: { id: 1, name: 'Revisar' },
+      status: { id: 1, name: 'Ativo' },
       establishment: { id: 30, companyName: 'Test Establishment Ltd' },
     });
 
@@ -61,19 +61,19 @@ describe('FoodsService', () => {
     service = moduleRef.get(FoodsService);
   });
 
-  it('creates a food for the authenticated establishment with status "Revisar"', async () => {
+  it('creates a food for the authenticated establishment with status "Ativo"', async () => {
     const result = await service.create(20, dto);
 
     expect(prismaMock.establishment.findUnique).toHaveBeenCalledWith({ where: { userId: 20 } });
     expect(prismaMock.foodStatus.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { name: 'Revisar' },
+      where: { name: 'Ativo' },
     });
     expect(prismaMock.food.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ establishmentId: 30, categoryId: 1, statusId: 1 }),
       }),
     );
-    expect(result.status.name).toBe('Revisar');
+    expect(result.status.name).toBe('Ativo');
     expect(result.establishment.id).toBe(30);
   });
 

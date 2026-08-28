@@ -18,7 +18,7 @@ const CATEGORIES = [
   'Outros',
 ];
 
-const FOOD_STATUSES = ['Revisar', 'Ativo'];
+const FOOD_STATUSES = ['Ativo'];
 
 async function main() {
   await prisma.role.upsert({

@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateFoodDto } from './dto/create-food.dto';
 import { FoodResponseDto } from './dto/food-response.dto';
 
-const INITIAL_STATUS = 'Revisar';
+const INITIAL_STATUS = 'Ativo';
 
 @Injectable()
 export class FoodsService {
