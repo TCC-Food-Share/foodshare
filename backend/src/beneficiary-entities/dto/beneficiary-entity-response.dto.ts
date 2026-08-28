@@ -12,6 +12,9 @@ class UserResponseDto {
 
   @ApiProperty({ example: '(11) 91234-5678' })
   personalPhone!: string;
+
+  @ApiProperty({ example: 'https://cdn.example.com/logo.png', nullable: true })
+  image!: string | null;
 }
 
 class AddressResponseDto {

@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from '../../generated/prisma/client';
 import type { BetterAuthInstance } from '../auth/better-auth.token';
@@ -6,6 +6,7 @@ import { BETTER_AUTH } from '../auth/better-auth.token';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEstablishmentDto } from './dto/create-establishment.dto';
 import { EstablishmentResponseDto } from './dto/establishment-response.dto';
+import { UpdateEstablishmentDto } from './dto/update-establishment.dto';
 
 const ROLE_ESTABLISHMENT = 'Establishment';
 
@@ -96,6 +97,100 @@ export class EstablishmentsService {
     }
   }
 
+  async update(userId: number, dto: UpdateEstablishmentDto): Promise<EstablishmentResponseDto> {
+    const existing = await this.prisma.establishment.findUnique({ where: { userId } });
+    if (!existing) {
+      throw new NotFoundException('Establishment not found.');
+    }
+
+    await this.checkUpdateUniqueness(dto, existing.id, userId);
+
+    try {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        if (dto.personalPhone !== undefined || dto.image !== undefined) {
+          await tx.user.update({
+            where: { id: userId },
+            data: {
+              ...(dto.personalPhone !== undefined && { personalPhone: dto.personalPhone }),
+              ...(dto.image !== undefined && { image: dto.image }),
+            },
+          });
+        }
+
+        if (dto.address) {
+          await tx.address.update({
+            where: { id: existing.addressId },
+            data: {
+              postalCode: dto.address.postalCode,
+              street: dto.address.street,
+              number: dto.address.number,
+              complement: dto.address.complement,
+              city: dto.address.city,
+              state: dto.address.state,
+            },
+          });
+        }
+
+        return tx.establishment.update({
+          where: { id: existing.id },
+          data: {
+            ...(dto.institutionalPhone !== undefined && {
+              institutionalPhone: dto.institutionalPhone,
+            }),
+            ...(dto.institutionalEmail !== undefined && {
+              institutionalEmail: dto.institutionalEmail,
+            }),
+            ...(dto.description !== undefined && { description: dto.description }),
+          },
+          include: { user: true, address: true },
+        });
+      });
+
+      return this.toResponse(updated);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('CNPJ, email or phone already registered.');
+      }
+      throw error;
+    }
+  }
+
+  private async checkUpdateUniqueness(
+    dto: UpdateEstablishmentDto,
+    establishmentId: number,
+    userId: number,
+  ): Promise<void> {
+    const [userByPhone, establishmentByEmail, establishmentByPhone] = await Promise.all([
+      dto.personalPhone !== undefined
+        ? this.prisma.user.findFirst({
+            where: { personalPhone: dto.personalPhone, NOT: { id: userId } },
+          })
+        : null,
+      dto.institutionalEmail !== undefined
+        ? this.prisma.establishment.findFirst({
+            where: { institutionalEmail: dto.institutionalEmail, NOT: { id: establishmentId } },
+          })
+        : null,
+      dto.institutionalPhone !== undefined
+        ? this.prisma.establishment.findFirst({
+            where: { institutionalPhone: dto.institutionalPhone, NOT: { id: establishmentId } },
+          })
+        : null,
+    ]);
+
+    const duplicateFields: string[] = [];
+    if (establishmentByEmail) duplicateFields.push('institutionalEmail');
+    if (establishmentByPhone) duplicateFields.push('institutionalPhone');
+    if (userByPhone) duplicateFields.push('personal');
+
+    if (duplicateFields.length > 0) {
+      throw new ConflictException({
+        message: buildDuplicateMessage(duplicateFields),
+        fields: duplicateFields,
+      });
+    }
+  }
+
   private async checkUniqueness(dto: CreateEstablishmentDto): Promise<void> {
     const [
       userByEmail,
@@ -147,6 +242,7 @@ export class EstablishmentsService {
         name: establishment.user.name,
         email: establishment.user.email,
         personalPhone: establishment.user.personalPhone,
+        image: establishment.user.image,
       },
       address: {
         id: establishment.address.id,

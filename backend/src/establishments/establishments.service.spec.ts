@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import { Prisma } from '../../generated/prisma/client';
 import { BETTER_AUTH } from '../auth/better-auth.token';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEstablishmentDto } from './dto/create-establishment.dto';
+import { UpdateEstablishmentDto } from './dto/update-establishment.dto';
 import { EstablishmentsService } from './establishments.service';
 
 describe('EstablishmentsService', () => {
@@ -42,18 +43,29 @@ describe('EstablishmentsService', () => {
   };
 
   const tx = {
-    address: { create: jest.fn<(args: unknown) => Promise<unknown>>() },
-    establishment: { create: jest.fn<(args: unknown) => Promise<unknown>>() },
+    address: {
+      create: jest.fn<(args: unknown) => Promise<unknown>>(),
+      update: jest.fn<(args: unknown) => Promise<unknown>>(),
+    },
+    establishment: {
+      create: jest.fn<(args: unknown) => Promise<unknown>>(),
+      update: jest.fn<(args: unknown) => Promise<unknown>>(),
+    },
+    user: {
+      update: jest.fn<(args: unknown) => Promise<unknown>>(),
+    },
   };
 
   const prismaMock = {
     role: { findUniqueOrThrow: jest.fn<() => Promise<unknown>>() },
     user: {
       findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+      findFirst: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
       delete: jest.fn<(args: { where: { id: number } }) => Promise<unknown>>(),
     },
     establishment: {
       findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+      findFirst: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
     },
   };
 
@@ -64,8 +76,10 @@ describe('EstablishmentsService', () => {
     jest.clearAllMocks();
     transaction = jest.fn((callback: (transactionClient: typeof tx) => unknown) => callback(tx));
     prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.user.findFirst.mockResolvedValue(null);
     prismaMock.user.delete.mockResolvedValue(undefined);
     prismaMock.establishment.findUnique.mockResolvedValue(null);
+    prismaMock.establishment.findFirst.mockResolvedValue(null);
     prismaMock.role.findUniqueOrThrow.mockResolvedValue({ id: 1, name: 'Establishment' });
 
     const moduleRef = await Test.createTestingModule({
@@ -236,5 +250,122 @@ describe('EstablishmentsService', () => {
     });
 
     await expect(service.create(dto)).rejects.toBe(unexpectedError);
+  });
+
+  describe('update', () => {
+    const existingEstablishment = {
+      id: 30,
+      userId: 20,
+      addressId: 10,
+      companyName: dto.companyName,
+      tradeName: dto.tradeName,
+      cnpj: dto.cnpj,
+      institutionalEmail: dto.institutionalEmail,
+      institutionalPhone: dto.institutionalPhone,
+      description: dto.description,
+    };
+
+    function mockUpdatedResult(overrides: Partial<typeof existingEstablishment> = {}) {
+      const merged = { ...existingEstablishment, ...overrides };
+      tx.establishment.update.mockResolvedValue({
+        ...merged,
+        user: { id: 20, name: dto.name, email: dto.email, personalPhone: dto.personalPhone },
+        address: { id: 10, ...dto.address, complement: null },
+      });
+    }
+
+    it('updates only the field sent (description)', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(existingEstablishment);
+      mockUpdatedResult({ description: 'New description' });
+      const updateDto: UpdateEstablishmentDto = { description: 'New description' };
+
+      const result = await service.update(20, updateDto);
+
+      expect(tx.user.update).not.toHaveBeenCalled();
+      expect(tx.address.update).not.toHaveBeenCalled();
+      expect(tx.establishment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 30 },
+          data: { description: 'New description' },
+        }),
+      );
+      expect(result.description).toBe('New description');
+    });
+
+    it('throws NotFoundException when the authenticated user has no establishment', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+
+      await expect(service.update(999, { description: 'x' })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('throws ConflictException when institutionalPhone is already used by another establishment', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(existingEstablishment);
+      prismaMock.establishment.findFirst.mockImplementation(({ where }) =>
+        Promise.resolve('institutionalPhone' in where ? { id: 99 } : null),
+      );
+
+      await expect(service.update(20, { institutionalPhone: '18977777777' })).rejects.toMatchObject(
+        { response: { fields: ['institutionalPhone'] } },
+      );
+      expect(tx.establishment.update).not.toHaveBeenCalled();
+    });
+
+    it('excludes the establishment itself from the uniqueness check', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(existingEstablishment);
+      mockUpdatedResult();
+
+      await service.update(20, { institutionalEmail: dto.institutionalEmail });
+
+      expect(prismaMock.establishment.findFirst).toHaveBeenCalledWith({
+        where: { institutionalEmail: dto.institutionalEmail, NOT: { id: 30 } },
+      });
+    });
+
+    it('updates address only when the full sub-object is sent', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(existingEstablishment);
+      mockUpdatedResult();
+
+      await service.update(20, { address: dto.address });
+
+      expect(tx.address.update).toHaveBeenCalledWith({
+        where: { id: 10 },
+        data: {
+          postalCode: dto.address.postalCode,
+          street: dto.address.street,
+          number: dto.address.number,
+          complement: dto.address.complement,
+          city: dto.address.city,
+          state: dto.address.state,
+        },
+      });
+    });
+
+    it('returns the updated data without the password', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(existingEstablishment);
+      mockUpdatedResult();
+
+      const result = await service.update(20, { description: 'New description' });
+      const serialized = JSON.stringify(result);
+
+      expect(result).not.toHaveProperty('password');
+      expect(result.user).not.toHaveProperty('password');
+      expect(serialized).not.toContain(dto.password);
+    });
+
+    it('throws ConflictException when Prisma reports P2002 during the update transaction', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(existingEstablishment);
+      tx.establishment.update.mockImplementation(() => {
+        throw new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        });
+      });
+
+      await expect(
+        service.update(20, { institutionalEmail: 'new@test.com' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
   });
 });
