@@ -1,32 +1,34 @@
 ## 1. Pré-requisito: autenticação
 
-- [ ] 1.1 Confirmar que existe um guard de autenticação reutilizável (RF07) que resolve o `User` autenticado a partir da requisição; se ainda não existir no momento de aplicar este change, implementar o mínimo necessário (guard + decorator de usuário atual) antes de seguir para as tarefas 2–4, sem expandir para o restante do escopo de RF07/RF08/RF09
+- [x] 1.1 Guard de autenticação (RF07/RF08) já existe e já se aplica globalmente por padrão (`@thallesp/nestjs-better-auth`) — nenhuma implementação nova necessária, só não decorar os endpoints novos com `@AllowAnonymous()`
 
 ## 2. DTOs e validação compartilhados
 
-- [ ] 2.1 Criar `backend/src/establishments/dto/update-establishment.dto.ts` com campos opcionais `personalPhone`, `institutionalPhone`, `institutionalEmail`, `image`, `description` (mesmas regras de formato de `create-establishment.dto.ts`) e `address?: AddressDto` reaproveitando `address.dto.ts` (todos os subcampos obrigatórios quando `address` é enviado)
-- [ ] 2.2 Criar `backend/src/beneficiary-entities/dto/update-beneficiary-entity.dto.ts` espelhando o DTO acima para entidade beneficiária, reaproveitando o `AddressDto` de `establishments/dto/address.dto.ts`
-- [ ] 2.3 Confirmar que o `ValidationPipe` global está com `whitelist: true` (e `forbidNonWhitelisted: false`) para que campos fora do DTO (CNPJ, razão social, e-mail pessoal, nome, nome fantasia, senha) sejam descartados em vez de gerar erro
+- [x] 2.1 Criado `backend/src/establishments/dto/update-establishment.dto.ts` com campos opcionais `personalPhone`, `institutionalPhone`, `institutionalEmail`, `image`, `description` (mesmas regras de formato de `create-establishment.dto.ts`) e `address?: AddressDto` reaproveitando `address.dto.ts`
+- [x] 2.2 Criado `backend/src/beneficiary-entities/dto/update-beneficiary-entity.dto.ts` espelhando o DTO acima, reaproveitando o `AddressDto` de `establishments/dto/address.dto.ts`
+- [x] 2.3 Corrigido em relação ao design original: o `ValidationPipe` global já usa `forbidNonWhitelisted: true` (não `false` como a v1 deste tasks.md assumia) — campo fora do DTO (CNPJ, razão social, e-mail pessoal, nome, nome fantasia, senha) rejeita a requisição inteira com 400, não descarta silenciosamente. Ver `design.md`.
 
 ## 3. Edição de estabelecimento
 
-- [ ] 3.1 Em `establishments.service.ts`, adicionar `update(userId: number, dto: UpdateEstablishmentDto)`: buscar o estabelecimento pelo `userId` do usuário autenticado (nunca por um id vindo do cliente)
-- [ ] 3.2 Se `personalPhone`, `institutionalPhone` ou `institutionalEmail` vierem no dto, consultar em paralelo (`Promise.all`) os `findUnique` correspondentes, excluindo o próprio registro (`NOT: { id }` / `NOT: { userId }`), e lançar `ConflictException` com os campos duplicados se houver colisão — mesmo padrão de `checkUniqueness` do change `unicidade-cadastro-entidade-beneficiaria`
-- [ ] 3.3 Se `address` vier no dto, validar que os 6 subcampos estão presentes (a validação do DTO já cobre isso) e incluir o update do `Address` vinculado na mesma transação
-- [ ] 3.4 Persistir os updates de `User` (telefones/imagem), `Address` (se enviado) e `Establishment` (telefone institucional/e-mail institucional/descrição, se enviados) dentro de `prisma.$transaction`, capturando `P2002` como rede de segurança e traduzindo para `ConflictException` genérica
-- [ ] 3.5 Retornar o estabelecimento atualizado usando o mesmo shape de `establishment-response.dto.ts` (sem senha)
-- [ ] 3.6 Em `establishments.controller.ts`, adicionar `PATCH /establishments/me` protegido pelo guard de autenticação (tarefa 1.1), extraindo o usuário autenticado via decorator e chamando `update`
+- [x] 3.1 `EstablishmentsService.update(userId, dto)`: busca o estabelecimento por `userId` (`findUnique`); `NotFoundException` se não existir (cobre também o caso de conta do tipo errado chamando o endpoint)
+- [x] 3.2 Uniqueness check (`checkUpdateUniqueness`) só pros campos enviados, via `findFirst` com `NOT: { id }` excluindo o próprio registro — mesmo padrão do `checkUniqueness` do cadastro (RF02/RF04), adaptado
+- [x] 3.3 Endereço como sub-objeto tudo-ou-nada — a validação do `AddressDto` (herdada, todos os campos obrigatórios dentro do sub-objeto) já cobre isso; confirmado manualmente (endereço parcial → 400)
+- [x] 3.4 `User` (celular/imagem), `Address` (se enviado) e `Establishment` (celular institucional/e-mail institucional/descrição, se enviados) atualizados dentro de `prisma.$transaction`; `P2002` como rede de segurança, traduzido pra `ConflictException` genérica
+- [x] 3.5 Retorna o estabelecimento atualizado no shape de `establishment-response.dto.ts` — `UserResponseDto` ganhou o campo `image` (não existia antes, RF05 é o primeiro fluxo que expõe/edita esse campo)
+- [x] 3.6 `PATCH /establishments/me` em `establishments.controller.ts`, sem `@AllowAnonymous()` (guard global se aplica), `userId` extraído via `@Session()`
 
 ## 4. Edição de entidade beneficiária
 
-- [ ] 4.1 Repetir 3.1–3.6 para `beneficiary-entities.service.ts` / `beneficiary-entities.controller.ts`: método `update`, checagem de unicidade excluindo o próprio registro, transação atômica, endpoint `PATCH /beneficiary-entities/me`, resposta no shape de `beneficiary-entity-response.dto.ts`
+- [x] 4.1 3.1–3.6 espelhados em `beneficiary-entities.service.ts`/`beneficiary-entities.controller.ts`: `update`, `checkUpdateUniqueness`, transação atômica, `PATCH /beneficiary-entities/me`, resposta no shape de `beneficiary-entity-response.dto.ts`
 
 ## 5. Testes
 
-- [ ] 5.1 Teste unitário (estabelecimento): edição de um único campo (ex: descrição) atualiza somente esse campo
-- [ ] 5.2 Teste unitário (estabelecimento): edição com endereço parcial (faltando subcampo) é rejeitada sem alterar nada
-- [ ] 5.3 Teste unitário (estabelecimento): edição com telefone institucional já usado por outro cadastro retorna `ConflictException` e não persiste nada
-- [ ] 5.4 Teste unitário (estabelecimento): payload incluindo CNPJ/razão social junto de campos editáveis válidos aplica só os editáveis e mantém CNPJ/razão social intactos
-- [ ] 5.5 Repetir 5.1–5.4 para entidade beneficiária
-- [ ] 5.6 Teste unitário: `update` chamado sem um `userId` resolvido (guard não aplicado) não é um caminho alcançável pelo service — a exigência de autenticação é responsabilidade do guard global, testada uma vez no change `autenticacao-login`; não repetir aqui
-- [ ] 5.7 Teste unitário (estabelecimento e entidade beneficiária): `update` com dados válidos retorna os dados atualizados sem a senha
+- [x] 5.1 Teste unitário (estabelecimento e entidade beneficiária): edição de um único campo (descrição) atualiza só esse campo, `tx.user.update`/`tx.address.update` não chamados
+- [x] 5.2 Sem teste unitário de service pra "endereço parcial rejeitado" — é validação de DTO (`class-validator`), não lógica do service; camada não testada isoladamente em nenhum outro DTO deste projeto (mesma convenção de `create-establishment.dto.ts`). Coberto por verificação manual (`curl`, endereço faltando `city`/`state` → 400)
+- [x] 5.3 Teste unitário (estabelecimento e entidade beneficiária): `institutionalPhone` já usado por outro cadastro → `ConflictException`, `tx.*.update` não chamado
+- [x] 5.4 Sem teste unitário de service pra "payload com CNPJ/razão social é aceito e só edita os editáveis" — comportamento mudou (ver 2.3): esses campos agora rejeitam a requisição inteira (400), garantido pelo `ValidationPipe` global (`forbidNonWhitelisted: true`), infraestrutura já existente e não coberta por este change. Confirmado manualmente (`curl` com `cnpj` no body → 400, `"property cnpj should not exist"`)
+- [x] 5.5 Testes de 5.1/5.3/5.6/5.7 espelhados pra entidade beneficiária
+- [x] 5.6 Nenhum teste de "sem `userId` resolvido" — igual ao raciocínio original, guard já testado no change `autenticacao-login`. Teste novo adicionado no lugar: `NotFoundException` quando o `userId` resolvido não tem `Establishment`/`BeneficiaryEntity` vinculado (cobre conta do tipo errado)
+- [x] 5.7 Teste unitário (estabelecimento e entidade beneficiária): `update` com dados válidos retorna os dados atualizados sem a senha
+- [x] 5.8 (novo) Teste unitário: uniqueness check exclui o próprio registro (`NOT: { id }`) — sem isso, editar um cadastro sem mudar o e-mail institucional bateria "duplicado" contra si mesmo
+- [x] 5.9 (novo) Verificação manual ponta a ponta (`curl`): cadastro → login → edita descrição (200) → tenta editar CNPJ (400) → edita sem sessão (401) → endereço parcial (400) → endereço completo (200) → cria 2º cadastro, tenta reusar e-mail institucional dele (409) → conta de tipo errado chamando o endpoint do outro tipo (404)

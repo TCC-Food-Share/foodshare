@@ -26,12 +26,12 @@ O sistema SHALL validar o formato de cada campo editável enviado, usando as mes
 - **WHEN** um estabelecimento autenticado envia um campo em formato inválido (ex: estado fora da sigla de 2 letras, CEP fora do formato esperado)
 - **THEN** o sistema rejeita a edição, informa quais campos são inválidos e não altera nenhum dado
 
-### Requirement: Campos não editáveis ignorados na edição do estabelecimento
-O sistema SHALL ignorar, sem rejeitar a submissão só por causa disso, qualquer campo fora da lista de campos editáveis (ex: razão social, CNPJ, e-mail pessoal, nome do responsável, nome fantasia, senha) presente no corpo da requisição de edição.
+### Requirement: Campos não editáveis rejeitados na edição do estabelecimento
+O sistema SHALL rejeitar a submissão inteira, sem persistir nenhuma alteração, quando o corpo da requisição de edição contiver qualquer campo fora da lista de campos editáveis (ex: razão social, CNPJ, e-mail pessoal, nome do responsável, nome fantasia, senha).
 
 #### Scenario: Submissão inclui campo não editável
 - **WHEN** um estabelecimento autenticado envia, junto com campos editáveis válidos, um valor para CNPJ ou razão social
-- **THEN** o sistema aplica normalmente os campos editáveis válidos e mantém CNPJ e razão social com o valor já cadastrado
+- **THEN** o sistema rejeita a edição inteira e não altera nenhum dado
 
 ### Requirement: Edição restrita à própria conta autenticada
 O sistema SHALL determinar qual cadastro será editado exclusivamente a partir da sessão autenticada, nunca a partir de um identificador informado pelo cliente, e SHALL rejeitar qualquer tentativa de edição sem autenticação válida.
