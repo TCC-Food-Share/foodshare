@@ -25,17 +25,16 @@
 | RF08   | O sistema deverá impedir o acesso de contas com credenciais inválidas ou excluídas logicamente.                                                          |
 | RF09   | O sistema deverá permitir que o usuário autenticado encerre sua sessão a qualquer momento.                                                               |
 | RF10   | O sistema deverá permitir que o estabelecimento cadastre um alimento informando imagem, nome, categoria, quantidade, descrição e data de vencimento.     |
-| RF11   | O sistema deverá iniciar todo alimento cadastrado com o status "Revisar".                                                                                |
-| RF12   | O sistema deverá permitir que usuários autenticados visualizem a listagem de alimentos com status "Ativo".                                               |
-| RF13   | O sistema deverá permitir a busca de alimentos por nome, categoria e localização.                                                                        |
-| RF14   | O sistema deverá permitir a visualização dos dados completos de um alimento selecionado.                                                                 |
-| RF15   | O sistema deverá permitir que a entidade beneficiária solicite um pedido de doação para um alimento disponível.                                          |
-| RF16   | O sistema deverá impedir que a entidade beneficiária crie um novo pedido caso já possua 10 ou mais pedidos em andamento.                                 |
-| RF17   | O sistema deverá permitir que o estabelecimento aceite um pedido recebido, reservando a quantidade do alimento vinculado.                                |
-| RF18   | O sistema deverá permitir que o estabelecimento rejeite um pedido recebido.                                                                              |
-| RF19   | O sistema deverá permitir que a entidade beneficiária confirme o recebimento do alimento, encerrando o pedido.                                           |
-| RF20   | O sistema deverá permitir que estabelecimentos e entidades beneficiárias visualizem seus pedidos separados por status.                                   |
-| RF21   | O sistema deverá permitir a visualização dos detalhes completos de um pedido vinculado.                                                                  |
+| RF11   | O sistema deverá permitir que usuários autenticados visualizem a listagem de alimentos.                                                                  |
+| RF12   | O sistema deverá permitir a busca de alimentos por nome, categoria e localização.                                                                        |
+| RF13   | O sistema deverá permitir a visualização dos dados completos de um alimento selecionado.                                                                 |
+| RF14   | O sistema deverá permitir que a entidade beneficiária solicite um pedido de doação para um alimento disponível.                                          |
+| RF15   | O sistema deverá impedir que a entidade beneficiária crie um novo pedido caso já possua 10 ou mais pedidos em andamento.                                 |
+| RF16   | O sistema deverá permitir que o estabelecimento aceite um pedido recebido, reservando a quantidade do alimento vinculado.                                |
+| RF17   | O sistema deverá permitir que o estabelecimento rejeite um pedido recebido.                                                                              |
+| RF18   | O sistema deverá permitir que a entidade beneficiária confirme o recebimento do alimento, encerrando o pedido.                                           |
+| RF19   | O sistema deverá permitir que estabelecimentos e entidades beneficiárias visualizem seus pedidos separados por status.                                   |
+| RF20   | O sistema deverá permitir a visualização dos detalhes completos de um pedido vinculado.                                                                  |
 
 ## Requisitos não funcionais (RNF)
 

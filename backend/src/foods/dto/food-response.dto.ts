@@ -12,7 +12,7 @@ class FoodStatusResponseDto {
   @ApiProperty({ example: 1 })
   id!: number;
 
-  @ApiProperty({ example: 'Revisar' })
+  @ApiProperty({ example: 'Ativo' })
   name!: string;
 }
 

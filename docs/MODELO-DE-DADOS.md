@@ -10,10 +10,10 @@ schema precisa cobrir pelo menos:
 
 - **Estabelecimento** — dados cadastrais (RF01, RF02, RF05, RF06)
 - **EntidadeBeneficiaria** — dados cadastrais (RF03, RF04, RF05, RF06)
-- **Alimento** — vinculado a um Estabelecimento, com status (`Revisar`,
-  `Ativo` etc.) (RF10, RF11, RF12, RF13, RF14)
+- **Alimento** — vinculado a um Estabelecimento, com status (`Ativo`
+  etc.) (RF10, RF11, RF12, RF13)
 - **Pedido** — vinculado a um Alimento e a uma EntidadeBeneficiaria, com
-  status (RF15–RF21)
+  status (RF14–RF20)
 
 Entidades administrativas, categorias gerenciáveis e motivos de
 cancelamento padronizados fazem parte do schema completo do TCC, mas

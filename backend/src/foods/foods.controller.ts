@@ -23,8 +23,8 @@ export class FoodsController {
     summary: 'Cadastro de alimento',
     description:
       'Cadastra um alimento vinculado ao estabelecimento autenticado, informando imagem, ' +
-      'nome, categoria, quantidade, descrição e data de vencimento (RF10). Todo alimento ' +
-      'cadastrado inicia com o status "Revisar" (RF11).',
+      'nome, categoria, quantidade, descrição e data de vencimento (RF10). Fica disponível ' +
+      'na plataforma imediatamente, sem etapa de revisão.',
   })
   @ApiCreatedResponse({ description: 'Alimento cadastrado com sucesso.', type: FoodResponseDto })
   @ApiBadRequestResponse({ description: 'Dados de cadastro inválidos.' })
