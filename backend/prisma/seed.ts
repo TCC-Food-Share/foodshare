@@ -7,6 +7,19 @@ import { PrismaClient } from '../generated/prisma/client';
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
+const CATEGORIES = [
+  'Perecíveis',
+  'Não Perecíveis',
+  'Hortifruti',
+  'Laticínios',
+  'Carnes',
+  'Pães e Massas',
+  'Bebidas',
+  'Outros',
+];
+
+const FOOD_STATUSES = ['Revisar', 'Ativo'];
+
 async function main() {
   await prisma.role.upsert({
     where: { name: 'Establishment' },
@@ -19,6 +32,14 @@ async function main() {
     update: {},
     create: { name: 'BeneficiaryEntity' },
   });
+
+  for (const name of CATEGORIES) {
+    await prisma.category.upsert({ where: { name }, update: {}, create: { name } });
+  }
+
+  for (const name of FOOD_STATUSES) {
+    await prisma.foodStatus.upsert({ where: { name }, update: {}, create: { name } });
+  }
 }
 
 main()
