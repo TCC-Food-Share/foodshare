@@ -4,8 +4,18 @@ import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFoodDto } from './dto/create-food.dto';
 import { FoodResponseDto } from './dto/food-response.dto';
+import { ListFoodsQueryDto } from './dto/list-foods-query.dto';
+import { PaginatedFoodsResponseDto } from './dto/paginated-foods-response.dto';
 
-const INITIAL_STATUS = 'Ativo';
+const ACTIVE_STATUS = 'Ativo';
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 50;
+
+function startOfTodayUtc(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
 
 @Injectable()
 export class FoodsService {
@@ -23,7 +33,7 @@ export class FoodsService {
     }
 
     const status = await this.prisma.foodStatus.findUniqueOrThrow({
-      where: { name: INITIAL_STATUS },
+      where: { name: ACTIVE_STATUS },
     });
 
     const food = await this.prisma.food.create({
@@ -43,6 +53,38 @@ export class FoodsService {
     });
 
     return this.toResponse(food);
+  }
+
+  async list(query: ListFoodsQueryDto): Promise<PaginatedFoodsResponseDto> {
+    const page = query.page ?? DEFAULT_PAGE;
+    const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const where = this.availableFoodsWhere();
+
+    const [foods, total] = await Promise.all([
+      this.prisma.food.findMany({
+        where,
+        orderBy: { publishedAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { category: true, status: true, establishment: true },
+      }),
+      this.prisma.food.count({ where }),
+    ]);
+
+    return {
+      data: foods.map((food) => this.toResponse(food)),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  private availableFoodsWhere(): Prisma.FoodWhereInput {
+    return {
+      deleted: false,
+      status: { name: ACTIVE_STATUS },
+      expirationDate: { gte: startOfTodayUtc() },
+    };
   }
 
   private toResponse(
