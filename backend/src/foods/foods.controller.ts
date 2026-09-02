@@ -1,16 +1,20 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { Session } from '@thallesp/nestjs-better-auth';
 
 import { CreateFoodDto } from './dto/create-food.dto';
 import { FoodResponseDto } from './dto/food-response.dto';
+import { ListFoodsQueryDto } from './dto/list-foods-query.dto';
+import { PaginatedFoodsResponseDto } from './dto/paginated-foods-response.dto';
 import { FoodsService } from './foods.service';
 
 @ApiTags('Alimentos')
@@ -31,5 +35,23 @@ export class FoodsController {
   @ApiNotFoundResponse({ description: 'Nenhum estabelecimento vinculado ao usuário autenticado.' })
   create(@Session() session: UserSession, @Body() dto: CreateFoodDto): Promise<FoodResponseDto> {
     return this.foodsService.create(Number(session.user.id), dto);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'Listagem de alimentos',
+    description:
+      'Lista, de forma paginada, os alimentos disponíveis na plataforma — status "Ativo", ' +
+      'não excluídos e não vencidos — cadastrados por qualquer estabelecimento (RF11). ' +
+      'Requer usuário autenticado (estabelecimento ou entidade beneficiária).',
+  })
+  @ApiOkResponse({
+    description: 'Página de alimentos disponíveis.',
+    type: PaginatedFoodsResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Parâmetro de paginação inválido.' })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  list(@Query() query: ListFoodsQueryDto): Promise<PaginatedFoodsResponseDto> {
+    return this.foodsService.list(query);
   }
 }
