@@ -58,33 +58,69 @@ export class FoodsService {
   async list(query: ListFoodsQueryDto): Promise<PaginatedFoodsResponseDto> {
     const page = query.page ?? DEFAULT_PAGE;
     const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
-    const where = this.availableFoodsWhere();
+    const skip = (page - 1) * pageSize;
 
-    const [foods, total] = await Promise.all([
-      this.prisma.food.findMany({
-        where,
-        orderBy: { publishedAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: { category: true, status: true, establishment: true },
-      }),
-      this.prisma.food.count({ where }),
-    ]);
+    // `unaccent()` is not expressible through the Prisma query builder, so the
+    // filtered page is resolved with raw SQL (ids + count), then hydrated with a
+    // regular Prisma query to keep the category/status/establishment includes.
+    const from = Prisma.sql`
+      FROM food f
+      JOIN establishment e ON e.id = f."establishmentId"
+      JOIN address a ON a.id = e."addressId"
+      JOIN food_status s ON s.id = f."statusId"
+      WHERE ${this.buildAvailableAndFilteredWhere(query)}
+    `;
 
-    return {
-      data: foods.map((food) => this.toResponse(food)),
-      total,
-      page,
-      pageSize,
-    };
+    const idRows = await this.prisma.$queryRaw<{ id: number }[]>(Prisma.sql`
+      SELECT f.id ${from}
+      ORDER BY f."publishedAt" DESC
+      LIMIT ${pageSize} OFFSET ${skip}
+    `);
+    const countRows = await this.prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
+      SELECT count(*) AS count ${from}
+    `);
+
+    const total = Number(countRows[0]?.count ?? 0);
+    const ids = idRows.map((row) => row.id);
+    const data = ids.length === 0 ? [] : await this.hydrate(ids);
+
+    return { data, total, page, pageSize };
   }
 
-  private availableFoodsWhere(): Prisma.FoodWhereInput {
-    return {
-      deleted: false,
-      status: { name: ACTIVE_STATUS },
-      expirationDate: { gte: startOfTodayUtc() },
-    };
+  private buildAvailableAndFilteredWhere(query: ListFoodsQueryDto): Prisma.Sql {
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`f.deleted = false`,
+      Prisma.sql`s.name = ${ACTIVE_STATUS}`,
+      Prisma.sql`f."expirationDate" >= ${startOfTodayUtc()}`,
+    ];
+
+    if (query.name) {
+      conditions.push(Prisma.sql`unaccent(f.name) ILIKE '%' || unaccent(${query.name}) || '%'`);
+    }
+    if (query.categoryId !== undefined) {
+      conditions.push(Prisma.sql`f."categoryId" = ${query.categoryId}`);
+    }
+    if (query.city) {
+      conditions.push(Prisma.sql`unaccent(a.city) ILIKE '%' || unaccent(${query.city}) || '%'`);
+    }
+    if (query.state) {
+      conditions.push(Prisma.sql`a.state = ${query.state}`);
+    }
+
+    return Prisma.join(conditions, ' AND ');
+  }
+
+  private async hydrate(ids: number[]): Promise<FoodResponseDto[]> {
+    const foods = await this.prisma.food.findMany({
+      where: { id: { in: ids } },
+      include: { category: true, status: true, establishment: true },
+    });
+    const byId = new Map(foods.map((food) => [food.id, food]));
+
+    return ids
+      .map((id) => byId.get(id))
+      .filter((food): food is NonNullable<typeof food> => food !== undefined)
+      .map((food) => this.toResponse(food));
   }
 
   private toResponse(
