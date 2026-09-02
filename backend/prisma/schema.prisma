@@ -140,9 +140,9 @@ model Food {
   id             Int      @id @default(autoincrement())
   image          String?  @db.VarChar(500)
   name           String   @db.VarChar(200)
+  quantity       Decimal  @db.Decimal(10, 2)
   quantityUnit   String   @db.VarChar(50)
   description    String   @db.VarChar(2000)
-  condition      String?  @db.VarChar(50)
   expirationDate DateTime
   publishedAt    DateTime
   deleted        Boolean  @default(false)
