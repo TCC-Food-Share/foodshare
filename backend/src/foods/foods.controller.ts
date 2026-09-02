@@ -39,17 +39,19 @@ export class FoodsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Listagem de alimentos',
+    summary: 'Listagem e busca de alimentos',
     description:
       'Lista, de forma paginada, os alimentos disponíveis na plataforma — status "Ativo", ' +
       'não excluídos e não vencidos — cadastrados por qualquer estabelecimento (RF11). ' +
-      'Requer usuário autenticado (estabelecimento ou entidade beneficiária).',
+      'Aceita filtros opcionais de busca (RF12): `name` e `city` casam por trecho ignorando ' +
+      'caixa e acento, `categoryId` filtra pela categoria e `state` pela UF do estabelecimento ' +
+      'de origem; filtros informados combinam por E. Requer usuário autenticado.',
   })
   @ApiOkResponse({
     description: 'Página de alimentos disponíveis.',
     type: PaginatedFoodsResponseDto,
   })
-  @ApiBadRequestResponse({ description: 'Parâmetro de paginação inválido.' })
+  @ApiBadRequestResponse({ description: 'Parâmetro de busca ou de paginação inválido.' })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   list(@Query() query: ListFoodsQueryDto): Promise<PaginatedFoodsResponseDto> {
     return this.foodsService.list(query);

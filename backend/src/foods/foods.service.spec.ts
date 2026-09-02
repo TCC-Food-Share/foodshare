@@ -32,6 +32,13 @@ describe('FoodsService', () => {
     establishment: { id: 30, companyName: 'Test Establishment Ltd' },
   };
 
+  // Literal text of every `$queryRaw` call, joined; used to tell the id query
+  // from the count query and to assert which filters made it into the SQL.
+  const sqlText = (sql: Prisma.Sql): string => sql.strings.join(' ');
+
+  let idRows: { id: number }[];
+  let countValue: bigint;
+
   const prismaMock = {
     establishment: {
       findUnique: jest.fn<(args: { where: { userId: number } }) => Promise<unknown>>(),
@@ -45,20 +52,29 @@ describe('FoodsService', () => {
     food: {
       create: jest.fn<(args: unknown) => Promise<unknown>>(),
       findMany: jest.fn<(args: unknown) => Promise<unknown>>(),
-      count: jest.fn<(args: unknown) => Promise<number>>(),
     },
+    $queryRaw: jest.fn<(sql: Prisma.Sql) => Promise<unknown>>(),
   };
+
+  const idQueryCall = (): Prisma.Sql =>
+    prismaMock.$queryRaw.mock.calls.map((c) => c[0]).find((s) => !sqlText(s).includes('count(*)'))!;
 
   let service: FoodsService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    idRows = [{ id: 100 }];
+    countValue = 1n;
     prismaMock.establishment.findUnique.mockResolvedValue({ id: 30, userId: 20 });
     prismaMock.category.findUnique.mockResolvedValue({ id: 1, name: 'Não Perecíveis' });
     prismaMock.foodStatus.findUniqueOrThrow.mockResolvedValue({ id: 1, name: 'Ativo' });
     prismaMock.food.create.mockResolvedValue(foodRow);
     prismaMock.food.findMany.mockResolvedValue([foodRow]);
-    prismaMock.food.count.mockResolvedValue(1);
+    prismaMock.$queryRaw.mockImplementation((sql: Prisma.Sql) =>
+      sqlText(sql).includes('count(*)')
+        ? Promise.resolve([{ count: countValue }])
+        : Promise.resolve(idRows),
+    );
 
     const moduleRef = await Test.createTestingModule({
       providers: [FoodsService, { provide: PrismaService, useValue: prismaMock }],
@@ -113,53 +129,78 @@ describe('FoodsService', () => {
   });
 
   describe('list', () => {
-    it('lists the first page with defaults (page 1, size 20, newest first, available foods only)', async () => {
+    it('lists the first page with defaults (page 1, size 20) and no search clauses', async () => {
       const result = await service.list({});
 
-      expect(prismaMock.food.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            deleted: false,
-            status: { name: 'Ativo' },
-            expirationDate: { gte: expect.any(Date) },
-          }),
-          orderBy: { publishedAt: 'desc' },
-          skip: 0,
-          take: 20,
-        }),
-      );
+      const sql = idQueryCall();
+      expect(sqlText(sql)).toContain('ORDER BY f."publishedAt" DESC');
+      expect(sqlText(sql)).not.toContain('unaccent');
+      expect(sqlText(sql)).not.toContain('"categoryId" =');
+      expect(sqlText(sql)).not.toContain('a.state =');
+      // base availability params + LIMIT/OFFSET
+      expect(sql.values).toEqual(['Ativo', expect.any(Date), 20, 0]);
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(20);
     });
 
-    it('builds skip/take from the requested page and pageSize', async () => {
+    it('builds LIMIT/OFFSET from the requested page and pageSize', async () => {
       await service.list({ page: 3, pageSize: 5 });
 
-      expect(prismaMock.food.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 10, take: 5 }),
-      );
+      expect(idQueryCall().values).toEqual(['Ativo', expect.any(Date), 5, 10]);
     });
 
     it('clamps pageSize to 50', async () => {
       const result = await service.list({ pageSize: 999 });
 
-      expect(prismaMock.food.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 50 }));
+      expect(idQueryCall().values).toEqual(['Ativo', expect.any(Date), 50, 0]);
       expect(result.pageSize).toBe(50);
     });
 
-    it('returns total from food.count using the same availability filter', async () => {
-      prismaMock.food.count.mockResolvedValue(42);
+    it('passes name/categoryId/city/state filters into the where clause', async () => {
+      await service.list({ name: 'feijao', categoryId: 2, city: 'birigui', state: 'SP' });
+
+      const sql = idQueryCall();
+      expect(sqlText(sql)).toContain('unaccent(f.name) ILIKE');
+      expect(sqlText(sql)).toContain('f."categoryId" =');
+      expect(sqlText(sql)).toContain('unaccent(a.city) ILIKE');
+      expect(sqlText(sql)).toContain('a.state =');
+      expect(sql.values).toEqual(['Ativo', expect.any(Date), 'feijao', 2, 'birigui', 'SP', 20, 0]);
+    });
+
+    it('hydrates by id and preserves the SQL result order', async () => {
+      idRows = [{ id: 3 }, { id: 1 }, { id: 2 }];
+      prismaMock.food.findMany.mockResolvedValue([
+        { ...foodRow, id: 1 },
+        { ...foodRow, id: 2 },
+        { ...foodRow, id: 3 },
+      ]);
 
       const result = await service.list({});
 
-      expect(prismaMock.food.count).toHaveBeenCalledWith({
-        where: expect.objectContaining({
-          deleted: false,
-          status: { name: 'Ativo' },
-          expirationDate: { gte: expect.any(Date) },
-        }),
-      });
+      expect(prismaMock.food.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: { in: [3, 1, 2] } } }),
+      );
+      expect(result.data.map((food) => food.id)).toEqual([3, 1, 2]);
+    });
+
+    it('converts the bigint count to a number total', async () => {
+      countValue = 42n;
+
+      const result = await service.list({});
+
       expect(result.total).toBe(42);
+      expect(typeof result.total).toBe('number');
+    });
+
+    it('skips hydration when no id matches (empty data, total from count)', async () => {
+      idRows = [];
+      countValue = 0n;
+
+      const result = await service.list({ name: 'inexistente' });
+
+      expect(prismaMock.food.findMany).not.toHaveBeenCalled();
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
     });
 
     it('maps each item through the shared response shape (quantity string, relations expanded)', async () => {
