@@ -52,6 +52,7 @@ describe('FoodsService', () => {
     food: {
       create: jest.fn<(args: unknown) => Promise<unknown>>(),
       findMany: jest.fn<(args: unknown) => Promise<unknown>>(),
+      findFirst: jest.fn<(args: unknown) => Promise<unknown>>(),
     },
     $queryRaw: jest.fn<(sql: Prisma.Sql) => Promise<unknown>>(),
   };
@@ -70,6 +71,7 @@ describe('FoodsService', () => {
     prismaMock.foodStatus.findUniqueOrThrow.mockResolvedValue({ id: 1, name: 'Ativo' });
     prismaMock.food.create.mockResolvedValue(foodRow);
     prismaMock.food.findMany.mockResolvedValue([foodRow]);
+    prismaMock.food.findFirst.mockResolvedValue(foodRow);
     prismaMock.$queryRaw.mockImplementation((sql: Prisma.Sql) =>
       sqlText(sql).includes('count(*)')
         ? Promise.resolve([{ count: countValue }])
@@ -215,6 +217,34 @@ describe('FoodsService', () => {
         id: 30,
         companyName: 'Test Establishment Ltd',
       });
+    });
+  });
+
+  describe('getById', () => {
+    it('queries by id within the available-food filter and maps the response', async () => {
+      const result = await service.getById(100);
+
+      expect(prismaMock.food.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: 100,
+            deleted: false,
+            status: { name: 'Ativo' },
+            expirationDate: { gte: expect.any(Date) },
+          },
+          include: { category: true, status: true, establishment: true },
+        }),
+      );
+      expect(typeof result.quantity).toBe('string');
+      expect(result.category).toEqual({ id: 1, name: 'Não Perecíveis' });
+      expect(result.status).toEqual({ id: 1, name: 'Ativo' });
+      expect(result.establishment).toEqual({ id: 30, companyName: 'Test Establishment Ltd' });
+    });
+
+    it('throws NotFoundException when no available food matches the id', async () => {
+      prismaMock.food.findFirst.mockResolvedValue(null);
+
+      await expect(service.getById(999)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });
