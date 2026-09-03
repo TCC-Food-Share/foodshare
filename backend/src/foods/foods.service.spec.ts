@@ -247,4 +247,28 @@ describe('FoodsService', () => {
       await expect(service.getById(999)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
+
+  describe('findAvailableById', () => {
+    it('returns the raw record within the available-food filter', async () => {
+      const result = await service.findAvailableById(100);
+
+      expect(prismaMock.food.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: 100,
+            deleted: false,
+            status: { name: 'Ativo' },
+            expirationDate: { gte: expect.any(Date) },
+          },
+        }),
+      );
+      expect(result).toBe(foodRow);
+    });
+
+    it('returns null when no available food matches the id', async () => {
+      prismaMock.food.findFirst.mockResolvedValue(null);
+
+      await expect(service.findAvailableById(999)).resolves.toBeNull();
+    });
+  });
 });

@@ -88,15 +88,23 @@ export class FoodsService {
   }
 
   async getById(id: number): Promise<FoodResponseDto> {
-    const food = await this.prisma.food.findFirst({
-      where: this.availableFoodWhereInput(id),
-      include: { category: true, status: true, establishment: true },
-    });
+    const food = await this.findAvailableById(id);
     if (!food) {
       throw new NotFoundException('Food not found.');
     }
 
     return this.toResponse(food);
+  }
+
+  // Raw available-food record (or null), shared by `getById` and by the orders
+  // module (RF14), which needs `establishmentId` and the `Decimal` quantity.
+  findAvailableById(id: number): Promise<Prisma.FoodGetPayload<{
+    include: { category: true; status: true; establishment: true };
+  }> | null> {
+    return this.prisma.food.findFirst({
+      where: this.availableFoodWhereInput(id),
+      include: { category: true, status: true, establishment: true },
+    });
   }
 
   // Prisma form of the "available food" rule (RF11). The RF12 listing keeps a raw

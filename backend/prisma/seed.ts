@@ -20,6 +20,8 @@ const CATEGORIES = [
 
 const FOOD_STATUSES = ['Ativo'];
 
+const ORDER_STATUSES = ['Pendente'];
+
 async function main() {
   await prisma.role.upsert({
     where: { name: 'Establishment' },
@@ -39,6 +41,10 @@ async function main() {
 
   for (const name of FOOD_STATUSES) {
     await prisma.foodStatus.upsert({ where: { name }, update: {}, create: { name } });
+  }
+
+  for (const name of ORDER_STATUSES) {
+    await prisma.orderStatus.upsert({ where: { name }, update: {}, create: { name } });
   }
 }
 
