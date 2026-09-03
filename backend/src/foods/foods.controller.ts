@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
@@ -55,5 +55,21 @@ export class FoodsController {
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   list(@Query() query: ListFoodsQueryDto): Promise<PaginatedFoodsResponseDto> {
     return this.foodsService.list(query);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Detalhe de um alimento',
+    description:
+      'Retorna os dados completos de um alimento disponível — status "Ativo", não excluído ' +
+      'e não vencido — identificado por id (RF13). Alimento fora desse conjunto responde 404. ' +
+      'Requer usuário autenticado.',
+  })
+  @ApiOkResponse({ description: 'Dados completos do alimento.', type: FoodResponseDto })
+  @ApiBadRequestResponse({ description: 'Id em formato inválido.' })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  @ApiNotFoundResponse({ description: 'Nenhum alimento disponível com o id informado.' })
+  getById(@Param('id', ParseIntPipe) id: number): Promise<FoodResponseDto> {
+    return this.foodsService.getById(id);
   }
 }

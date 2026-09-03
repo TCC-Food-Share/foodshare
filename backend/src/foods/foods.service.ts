@@ -87,6 +87,30 @@ export class FoodsService {
     return { data, total, page, pageSize };
   }
 
+  async getById(id: number): Promise<FoodResponseDto> {
+    const food = await this.prisma.food.findFirst({
+      where: this.availableFoodWhereInput(id),
+      include: { category: true, status: true, establishment: true },
+    });
+    if (!food) {
+      throw new NotFoundException('Food not found.');
+    }
+
+    return this.toResponse(food);
+  }
+
+  // Prisma form of the "available food" rule (RF11). The RF12 listing keeps a raw
+  // SQL form of the same base filter in `buildAvailableAndFilteredWhere` because
+  // `unaccent` cannot go through the query builder; both must stay in sync.
+  private availableFoodWhereInput(id?: number): Prisma.FoodWhereInput {
+    return {
+      deleted: false,
+      status: { name: ACTIVE_STATUS },
+      expirationDate: { gte: startOfTodayUtc() },
+      ...(id !== undefined ? { id } : {}),
+    };
+  }
+
   private buildAvailableAndFilteredWhere(query: ListFoodsQueryDto): Prisma.Sql {
     const conditions: Prisma.Sql[] = [
       Prisma.sql`f.deleted = false`,
