@@ -180,7 +180,7 @@ model CancellationReason {
 model Order {
   id        Int      @id @default(autoincrement())
   orderDate DateTime @default(now())
-  quantity  Int
+  quantity  Decimal  @db.Decimal(10, 2)
   deleted   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
