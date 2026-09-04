@@ -20,7 +20,7 @@ const CATEGORIES = [
 
 const FOOD_STATUSES = ['Ativo'];
 
-const ORDER_STATUSES = ['Pendente', 'Aceito', 'Rejeitado'];
+const ORDER_STATUSES = ['Pendente', 'Aceito', 'Rejeitado', 'Recebido'];
 
 async function main() {
   await prisma.role.upsert({

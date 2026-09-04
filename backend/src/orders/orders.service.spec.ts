@@ -42,11 +42,13 @@ describe('OrdersService', () => {
 
   const acceptedOrderRow = { ...orderRow, status: { id: 2, name: 'Aceito' } };
   const rejectedOrderRow = { ...orderRow, status: { id: 3, name: 'Rejeitado' } };
+  const receivedOrderRow = { ...orderRow, status: { id: 4, name: 'Recebido' } };
 
   const orderStatusByName: Record<string, { id: number; name: string }> = {
     Pendente: { id: 1, name: 'Pendente' },
     Aceito: { id: 2, name: 'Aceito' },
     Rejeitado: { id: 3, name: 'Rejeitado' },
+    Recebido: { id: 4, name: 'Recebido' },
   };
 
   const prismaMock = {
@@ -316,6 +318,59 @@ describe('OrdersService', () => {
       prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
 
       await expect(service.reject(30, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.order.findUniqueOrThrow).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('receive', () => {
+    beforeEach(() => {
+      prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 2 });
+      prismaMock.order.findUniqueOrThrow.mockResolvedValue(receivedOrderRow);
+    });
+
+    it('moves an accepted order to "Recebido" without touching the food', async () => {
+      const result = await service.receive(20, 50);
+
+      expect(prismaMock.beneficiaryEntity.findUnique).toHaveBeenCalledWith({
+        where: { userId: 20 },
+      });
+      expect(prismaMock.order.findFirst).toHaveBeenCalledWith({
+        where: { id: 50, beneficiaryEntityId: 7, deleted: false },
+      });
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 50, statusId: 2 },
+        data: { statusId: 4 },
+      });
+      expect(result.status.name).toBe('Recebido');
+      expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the user has no beneficiary entity', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(null);
+
+      await expect(service.receive(99, 50)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the order is missing, deleted or from another entity', async () => {
+      prismaMock.order.findFirst.mockResolvedValue(null);
+
+      await expect(service.receive(20, 50)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when the order is not accepted', async () => {
+      prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 1 });
+
+      await expect(service.receive(20, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when a concurrent confirmation won the race', async () => {
+      prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.receive(20, 50)).rejects.toBeInstanceOf(ConflictException);
       expect(prismaMock.order.findUniqueOrThrow).not.toHaveBeenCalled();
     });
   });
