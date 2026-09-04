@@ -98,4 +98,32 @@ export class OrdersController {
   ): Promise<OrderResponseDto> {
     return this.ordersService.reject(Number(session.user.id), id);
   }
+
+  @Patch(':id/receive')
+  @ApiOperation({
+    summary: 'Confirmação de recebimento de pedido',
+    description:
+      'A entidade beneficiária autenticada confirma que recebeu o alimento de um pedido ' +
+      '"Aceito" que é dela — o pedido passa para o status terminal "Recebido", encerrando-o ' +
+      '(RF18). O estoque do alimento não muda: a quantidade já foi reservada no aceite. O ' +
+      'pedido é resolvido pela sessão; exclusivo da entidade beneficiária dona do pedido.',
+  })
+  @ApiOkResponse({
+    description: 'Recebimento confirmado; pedido encerrado.',
+    type: OrderResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description:
+      'Nenhuma entidade beneficiária vinculada ao usuário, ou pedido inexistente / de outra entidade.',
+  })
+  @ApiConflictResponse({
+    description: 'Pedido não está "Aceito" (ainda "Pendente", ou já "Rejeitado" / "Recebido").',
+  })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  receive(
+    @Session() session: UserSession,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.receive(Number(session.user.id), id);
+  }
 }

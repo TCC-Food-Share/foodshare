@@ -63,7 +63,7 @@ O sistema SHALL atribuir automaticamente o status "Pendente" a todo pedido no mo
 - **THEN** o sistema atribui o status "Pendente" ao pedido criado, independentemente de qualquer valor de status presente na requisição
 
 ### Requirement: Limite de pedidos em andamento por entidade beneficiária
-O sistema SHALL recusar a criação de um novo pedido quando a entidade beneficiária autenticada já possuir 10 ou mais pedidos em andamento, sem criar o pedido. Um pedido conta como **em andamento** quando pertence à entidade, não está excluído logicamente e seu status não é um status terminal. Os status "Pendente" e "Aceito" são status em andamento; "Rejeitado" é terminal e não conta para o limite. Pedidos de outras entidades beneficiárias não contam.
+O sistema SHALL recusar a criação de um novo pedido quando a entidade beneficiária autenticada já possuir 10 ou mais pedidos em andamento, sem criar o pedido. Um pedido conta como **em andamento** quando pertence à entidade, não está excluído logicamente e seu status não é um status terminal. Os status "Pendente" e "Aceito" são status em andamento; "Rejeitado" e "Recebido" são terminais e não contam para o limite. Pedidos de outras entidades beneficiárias não contam.
 
 A verificação do limite SHALL ocorrer depois de resolver a entidade beneficiária da sessão e antes de qualquer validação do alimento ou da quantidade, de modo que uma entidade no limite receba a mesma recusa independentemente do conteúdo da requisição.
 
@@ -85,6 +85,10 @@ A verificação do limite SHALL ocorrer depois de resolver a entidade beneficiá
 
 #### Scenario: Pedidos rejeitados não contam para o limite
 - **WHEN** uma entidade beneficiária autenticada possui 9 pedidos em andamento ("Pendente" ou "Aceito") e outros pedidos com status "Rejeitado", e solicita um pedido válido
+- **THEN** o sistema considera apenas os 9 pedidos em andamento, fica abaixo do limite e cria o pedido
+
+#### Scenario: Pedidos recebidos não contam para o limite
+- **WHEN** uma entidade beneficiária autenticada possui 9 pedidos em andamento ("Pendente" ou "Aceito") e outros pedidos com status "Recebido", e solicita um pedido válido
 - **THEN** o sistema considera apenas os 9 pedidos em andamento, fica abaixo do limite e cria o pedido
 
 #### Scenario: Limite é isolado por entidade beneficiária

@@ -14,6 +14,7 @@ import { OrderResponseDto } from './dto/order-response.dto';
 const INITIAL_STATUS = 'Pendente';
 const ACCEPTED_STATUS = 'Aceito';
 const REJECTED_STATUS = 'Rejeitado';
+const RECEIVED_STATUS = 'Recebido';
 const IN_PROGRESS_STATUSES = [INITIAL_STATUS, ACCEPTED_STATUS];
 const MAX_ORDERS_IN_PROGRESS = 10;
 
@@ -155,6 +156,45 @@ export class OrdersService {
     });
     if (moved.count === 0) {
       throw new ConflictException('Order is not pending.');
+    }
+
+    const updated = await this.prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+      include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
+    });
+
+    return this.toResponse(updated);
+  }
+
+  async receive(userId: number, orderId: number): Promise<OrderResponseDto> {
+    const beneficiaryEntity = await this.prisma.beneficiaryEntity.findUnique({ where: { userId } });
+    if (!beneficiaryEntity) {
+      throw new NotFoundException('Beneficiary entity not found.');
+    }
+
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, beneficiaryEntityId: beneficiaryEntity.id, deleted: false },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+
+    const [accepted, received] = await Promise.all([
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ACCEPTED_STATUS } }),
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: RECEIVED_STATUS } }),
+    ]);
+    if (order.statusId !== accepted.id) {
+      throw new ConflictException('Order is not accepted.');
+    }
+
+    // Conditional transition: a concurrent confirmation of the same order sees
+    // count 0 here and loses the race with a clean conflict.
+    const moved = await this.prisma.order.updateMany({
+      where: { id: order.id, statusId: accepted.id },
+      data: { statusId: received.id },
+    });
+    if (moved.count === 0) {
+      throw new ConflictException('Order is not accepted.');
     }
 
     const updated = await this.prisma.order.findUniqueOrThrow({
