@@ -12,6 +12,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 
 const INITIAL_STATUS = 'Pendente';
+const ACCEPTED_STATUS = 'Aceito';
 const MAX_ORDERS_IN_PROGRESS = 10;
 
 @Injectable()
@@ -27,7 +28,7 @@ export class OrdersService {
       throw new NotFoundException('Beneficiary entity not found.');
     }
 
-    // No status filter: "Pendente" is the only order status today; RF17/RF18 add terminal ones.
+    // No status filter: "Pendente" and "Aceito" are both in progress; RF17/RF18 add terminal ones to exclude.
     const ordersInProgress = await this.prisma.order.count({
       where: { beneficiaryEntityId: beneficiaryEntity.id, deleted: false },
     });
@@ -62,6 +63,60 @@ export class OrdersService {
     });
 
     return this.toResponse(order);
+  }
+
+  async accept(userId: number, orderId: number): Promise<OrderResponseDto> {
+    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
+    if (!establishment) {
+      throw new NotFoundException('Establishment not found.');
+    }
+
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, establishmentId: establishment.id, deleted: false },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+
+    const [pending, accepted] = await Promise.all([
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: INITIAL_STATUS } }),
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ACCEPTED_STATUS } }),
+    ]);
+    if (order.statusId !== pending.id) {
+      throw new ConflictException('Order is not pending.');
+    }
+
+    const food = await this.foodsService.findAvailableById(order.foodId);
+    if (!food) {
+      throw new ConflictException('Linked food is no longer available.');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Conditional transition: a concurrent accept of the same order sees count 0
+      // here and bails out, so the food quantity is never decremented twice.
+      const moved = await tx.order.updateMany({
+        where: { id: order.id, statusId: pending.id },
+        data: { statusId: accepted.id },
+      });
+      if (moved.count === 0) {
+        throw new ConflictException('Order is not pending.');
+      }
+
+      const reserved = await tx.food.updateMany({
+        where: { id: order.foodId, quantity: { gte: order.quantity } },
+        data: { quantity: { decrement: order.quantity } },
+      });
+      if (reserved.count === 0) {
+        throw new ConflictException('Insufficient food quantity to accept this order.');
+      }
+
+      return tx.order.findUniqueOrThrow({
+        where: { id: order.id },
+        include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
+      });
+    });
+
+    return this.toResponse(updated);
   }
 
   private toResponse(
