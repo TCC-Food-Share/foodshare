@@ -13,6 +13,8 @@ import { OrderResponseDto } from './dto/order-response.dto';
 
 const INITIAL_STATUS = 'Pendente';
 const ACCEPTED_STATUS = 'Aceito';
+const REJECTED_STATUS = 'Rejeitado';
+const IN_PROGRESS_STATUSES = [INITIAL_STATUS, ACCEPTED_STATUS];
 const MAX_ORDERS_IN_PROGRESS = 10;
 
 @Injectable()
@@ -28,9 +30,14 @@ export class OrdersService {
       throw new NotFoundException('Beneficiary entity not found.');
     }
 
-    // No status filter: "Pendente" and "Aceito" are both in progress; RF17/RF18 add terminal ones to exclude.
+    // "In progress" is the non-terminal set ("Pendente", "Aceito"); "Rejeitado" (and RF18's
+    // "Recebido") are terminal and excluded via this whitelist.
     const ordersInProgress = await this.prisma.order.count({
-      where: { beneficiaryEntityId: beneficiaryEntity.id, deleted: false },
+      where: {
+        beneficiaryEntityId: beneficiaryEntity.id,
+        deleted: false,
+        status: { name: { in: IN_PROGRESS_STATUSES } },
+      },
     });
     if (ordersInProgress >= MAX_ORDERS_IN_PROGRESS) {
       throw new ConflictException(
@@ -114,6 +121,45 @@ export class OrdersService {
         where: { id: order.id },
         include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
       });
+    });
+
+    return this.toResponse(updated);
+  }
+
+  async reject(userId: number, orderId: number): Promise<OrderResponseDto> {
+    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
+    if (!establishment) {
+      throw new NotFoundException('Establishment not found.');
+    }
+
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, establishmentId: establishment.id, deleted: false },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+
+    const [pending, rejected] = await Promise.all([
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: INITIAL_STATUS } }),
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: REJECTED_STATUS } }),
+    ]);
+    if (order.statusId !== pending.id) {
+      throw new ConflictException('Order is not pending.');
+    }
+
+    // Conditional transition: a concurrent accept or reject of the same order sees
+    // count 0 here and loses the race with a clean conflict.
+    const moved = await this.prisma.order.updateMany({
+      where: { id: order.id, statusId: pending.id },
+      data: { statusId: rejected.id },
+    });
+    if (moved.count === 0) {
+      throw new ConflictException('Order is not pending.');
+    }
+
+    const updated = await this.prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+      include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
     });
 
     return this.toResponse(updated);
