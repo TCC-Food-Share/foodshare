@@ -65,6 +65,7 @@ describe('OrdersService', () => {
       count: jest.fn<(args: unknown) => Promise<number>>(),
       create: jest.fn<(args: unknown) => Promise<unknown>>(),
       findFirst: jest.fn<(args: unknown) => Promise<unknown>>(),
+      findMany: jest.fn<(args: unknown) => Promise<unknown[]>>(),
       findUniqueOrThrow: jest.fn<(args: unknown) => Promise<unknown>>(),
       updateMany: jest.fn<(args: unknown) => Promise<{ count: number }>>(),
     },
@@ -90,6 +91,7 @@ describe('OrdersService', () => {
     prismaMock.order.count.mockResolvedValue(0);
     prismaMock.order.create.mockResolvedValue(orderRow);
     prismaMock.order.findFirst.mockResolvedValue(pendingOrderRow);
+    prismaMock.order.findMany.mockResolvedValue([orderRow]);
     prismaMock.order.findUniqueOrThrow.mockResolvedValue(acceptedOrderRow);
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.food.updateMany.mockResolvedValue({ count: 1 });
@@ -372,6 +374,90 @@ describe('OrdersService', () => {
 
       await expect(service.receive(20, 50)).rejects.toBeInstanceOf(ConflictException);
       expect(prismaMock.order.findUniqueOrThrow).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('list', () => {
+    beforeEach(() => {
+      prismaMock.order.count.mockResolvedValue(1);
+    });
+
+    it('lists the orders of the session establishment, newest first, no status filter', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue({ id: 99, userId: 30 });
+
+      const result = await service.list(30, {});
+
+      expect(prismaMock.beneficiaryEntity.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deleted: false, establishmentId: 3 },
+          orderBy: { orderDate: 'desc' },
+          skip: 0,
+          take: 20,
+        }),
+      );
+      expect(result).toEqual({
+        data: [expect.objectContaining({ id: 50 })],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      });
+    });
+
+    it('lists the orders of the session beneficiary entity when the account is not an establishment', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+
+      await service.list(20, {});
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { deleted: false, beneficiaryEntityId: 7 } }),
+      );
+    });
+
+    it('throws NotFoundException when the account has no establishment nor beneficiary entity', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(null);
+
+      await expect(service.list(99, {})).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.order.findMany).not.toHaveBeenCalled();
+    });
+
+    it('applies the status filter', async () => {
+      await service.list(30, { status: 'Aceito' });
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deleted: false, establishmentId: 3, status: { name: 'Aceito' } },
+        }),
+      );
+    });
+
+    it('applies page and pageSize', async () => {
+      const result = await service.list(30, { page: 2, pageSize: 5 });
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 5, take: 5 }),
+      );
+      expect(result.page).toBe(2);
+      expect(result.pageSize).toBe(5);
+    });
+
+    it('clamps pageSize to the maximum of 50', async () => {
+      const result = await service.list(30, { pageSize: 100 });
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 50 }));
+      expect(result.pageSize).toBe(50);
+    });
+
+    it('reports the total from order.count using the same where as findMany', async () => {
+      prismaMock.order.count.mockResolvedValue(7);
+
+      const result = await service.list(30, { status: 'Recebido' });
+
+      expect(prismaMock.order.count).toHaveBeenCalledWith({
+        where: { deleted: false, establishmentId: 3, status: { name: 'Recebido' } },
+      });
+      expect(result.total).toBe(7);
     });
   });
 });

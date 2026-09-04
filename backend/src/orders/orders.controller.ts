@@ -1,4 +1,4 @@
-import { Body, Controller, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -13,7 +13,9 @@ import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { Session } from '@thallesp/nestjs-better-auth';
 
 import { CreateOrderDto } from './dto/create-order.dto';
+import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
+import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto';
 import { OrdersService } from './orders.service';
 
 @ApiTags('Pedidos')
@@ -47,6 +49,33 @@ export class OrdersController {
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   create(@Session() session: UserSession, @Body() dto: CreateOrderDto): Promise<OrderResponseDto> {
     return this.ordersService.create(Number(session.user.id), dto);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'Listagem dos próprios pedidos',
+    description:
+      'Lista, de forma paginada, os pedidos do solicitante — resolvido pela sessão: um ' +
+      'estabelecimento vê os pedidos feitos aos alimentos dele, uma entidade beneficiária vê ' +
+      'os pedidos que criou (RF19). Filtro opcional `status` (`Pendente` | `Aceito` | ' +
+      '`Rejeitado` | `Recebido`) para separar por status; ausente traz todos. Paginação por ' +
+      '`page` (default 1) e `pageSize` (default 20, máximo 50). Ordenado do pedido mais ' +
+      'recente para o mais antigo.',
+  })
+  @ApiOkResponse({
+    description: 'Página de pedidos do solicitante.',
+    type: PaginatedOrdersResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Parâmetro `status`, `page` ou `pageSize` inválido.' })
+  @ApiNotFoundResponse({
+    description: 'Nenhum estabelecimento nem entidade beneficiária vinculada ao usuário.',
+  })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  list(
+    @Session() session: UserSession,
+    @Query() query: ListOrdersQueryDto,
+  ): Promise<PaginatedOrdersResponseDto> {
+    return this.ordersService.list(Number(session.user.id), query);
   }
 
   @Patch(':id/accept')

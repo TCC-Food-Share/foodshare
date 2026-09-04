@@ -9,13 +9,20 @@ import { Prisma } from '../../generated/prisma/client';
 import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
+import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto';
+import {
+  ACCEPTED_STATUS,
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  IN_PROGRESS_STATUSES,
+  INITIAL_STATUS,
+  MAX_PAGE_SIZE,
+  RECEIVED_STATUS,
+  REJECTED_STATUS,
+} from './orders.constants';
 
-const INITIAL_STATUS = 'Pendente';
-const ACCEPTED_STATUS = 'Aceito';
-const REJECTED_STATUS = 'Rejeitado';
-const RECEIVED_STATUS = 'Recebido';
-const IN_PROGRESS_STATUSES = [INITIAL_STATUS, ACCEPTED_STATUS];
 const MAX_ORDERS_IN_PROGRESS = 10;
 
 @Injectable()
@@ -203,6 +210,41 @@ export class OrdersService {
     });
 
     return this.toResponse(updated);
+  }
+
+  async list(userId: number, query: ListOrdersQueryDto): Promise<PaginatedOrdersResponseDto> {
+    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
+    const beneficiaryEntity = establishment
+      ? null
+      : await this.prisma.beneficiaryEntity.findUnique({ where: { userId } });
+
+    if (!establishment && !beneficiaryEntity) {
+      throw new NotFoundException('No establishment or beneficiary entity linked to this account.');
+    }
+
+    const where: Prisma.OrderWhereInput = {
+      deleted: false,
+      ...(establishment
+        ? { establishmentId: establishment.id }
+        : { beneficiaryEntityId: beneficiaryEntity!.id }),
+      ...(query.status ? { status: { name: query.status } } : {}),
+    };
+
+    const page = query.page ?? DEFAULT_PAGE;
+    const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+
+    const [rows, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
+        orderBy: { orderDate: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return { data: rows.map((row) => this.toResponse(row)), total, page, pageSize };
   }
 
   private toResponse(
