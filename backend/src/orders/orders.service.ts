@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { Prisma } from '../../generated/prisma/client';
 import { FoodsService } from '../foods/foods.service';
@@ -7,6 +12,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 
 const INITIAL_STATUS = 'Pendente';
+const MAX_ORDERS_IN_PROGRESS = 10;
 
 @Injectable()
 export class OrdersService {
@@ -19,6 +25,16 @@ export class OrdersService {
     const beneficiaryEntity = await this.prisma.beneficiaryEntity.findUnique({ where: { userId } });
     if (!beneficiaryEntity) {
       throw new NotFoundException('Beneficiary entity not found.');
+    }
+
+    // No status filter: "Pendente" is the only order status today; RF17/RF18 add terminal ones.
+    const ordersInProgress = await this.prisma.order.count({
+      where: { beneficiaryEntityId: beneficiaryEntity.id, deleted: false },
+    });
+    if (ordersInProgress >= MAX_ORDERS_IN_PROGRESS) {
+      throw new ConflictException(
+        'Beneficiary entity has reached the limit of orders in progress.',
+      );
     }
 
     const food = await this.foodsService.findAvailableById(dto.foodId);

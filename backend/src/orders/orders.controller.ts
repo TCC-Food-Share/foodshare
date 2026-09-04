@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOperation,
@@ -26,7 +27,9 @@ export class OrdersController {
       'Cria um pedido de doação da entidade beneficiária autenticada para um alimento ' +
       'disponível, informando o alimento e a quantidade desejada (RF14). O pedido inicia ' +
       'com status "Pendente"; os vínculos com a entidade e com o estabelecimento são ' +
-      'resolvidos pela sessão e pelo alimento. Exclusivo de entidade beneficiária.',
+      'resolvidos pela sessão e pelo alimento. Exclusivo de entidade beneficiária. ' +
+      'A entidade é impedida de criar um novo pedido enquanto tiver 10 ou mais pedidos ' +
+      'em andamento (RF15).',
   })
   @ApiCreatedResponse({ description: 'Pedido criado com sucesso.', type: OrderResponseDto })
   @ApiBadRequestResponse({
@@ -34,6 +37,11 @@ export class OrdersController {
   })
   @ApiNotFoundResponse({
     description: 'Nenhuma entidade beneficiária vinculada ao usuário, ou alimento indisponível.',
+  })
+  @ApiConflictResponse({
+    description:
+      'A entidade beneficiária já possui 10 ou mais pedidos em andamento e não pode criar ' +
+      'um novo pedido até encerrar algum deles (RF15).',
   })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   create(@Session() session: UserSession, @Body() dto: CreateOrderDto): Promise<OrderResponseDto> {
