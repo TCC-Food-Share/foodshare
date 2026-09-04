@@ -75,4 +75,27 @@ export class OrdersController {
   ): Promise<OrderResponseDto> {
     return this.ordersService.accept(Number(session.user.id), id);
   }
+
+  @Patch(':id/reject')
+  @ApiOperation({
+    summary: 'Rejeição de pedido de doação',
+    description:
+      'O estabelecimento autenticado rejeita um pedido "Pendente" que recebeu — o pedido ' +
+      'passa para o status terminal "Rejeitado" e o estoque do alimento não é alterado ' +
+      '(pedido "Pendente" nunca reservou quantidade) (RF17). O pedido é resolvido pela ' +
+      'sessão; exclusivo do estabelecimento dono do pedido. Não há motivo de rejeição.',
+  })
+  @ApiOkResponse({ description: 'Pedido rejeitado com sucesso.', type: OrderResponseDto })
+  @ApiNotFoundResponse({
+    description:
+      'Nenhum estabelecimento vinculado ao usuário, ou pedido inexistente / de outro estabelecimento.',
+  })
+  @ApiConflictResponse({ description: 'Pedido não está "Pendente" (já "Aceito" ou "Rejeitado").' })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  reject(
+    @Session() session: UserSession,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.reject(Number(session.user.id), id);
+  }
 }
