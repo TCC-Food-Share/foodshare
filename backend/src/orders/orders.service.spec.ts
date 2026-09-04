@@ -29,8 +29,29 @@ describe('OrdersService', () => {
     beneficiaryEntity: { id: 7, companyName: 'Helping Hands' },
   };
 
+  // Pending order as returned by `order.findFirst` (no relation includes).
+  const pendingOrderRow = {
+    id: 50,
+    quantity: new Prisma.Decimal(4),
+    statusId: 1,
+    foodId: 5,
+    establishmentId: 3,
+    beneficiaryEntityId: 7,
+    deleted: false,
+  };
+
+  const acceptedOrderRow = { ...orderRow, status: { id: 2, name: 'Aceito' } };
+
+  const orderStatusByName: Record<string, { id: number; name: string }> = {
+    Pendente: { id: 1, name: 'Pendente' },
+    Aceito: { id: 2, name: 'Aceito' },
+  };
+
   const prismaMock = {
     beneficiaryEntity: {
+      findUnique: jest.fn<(args: { where: { userId: number } }) => Promise<unknown>>(),
+    },
+    establishment: {
       findUnique: jest.fn<(args: { where: { userId: number } }) => Promise<unknown>>(),
     },
     orderStatus: {
@@ -39,7 +60,14 @@ describe('OrdersService', () => {
     order: {
       count: jest.fn<(args: unknown) => Promise<number>>(),
       create: jest.fn<(args: unknown) => Promise<unknown>>(),
+      findFirst: jest.fn<(args: unknown) => Promise<unknown>>(),
+      findUniqueOrThrow: jest.fn<(args: unknown) => Promise<unknown>>(),
+      updateMany: jest.fn<(args: unknown) => Promise<{ count: number }>>(),
     },
+    food: {
+      updateMany: jest.fn<(args: unknown) => Promise<{ count: number }>>(),
+    },
+    $transaction: jest.fn<(cb: (tx: unknown) => Promise<unknown>) => Promise<unknown>>(),
   };
 
   const foodsServiceMock = {
@@ -51,9 +79,17 @@ describe('OrdersService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     prismaMock.beneficiaryEntity.findUnique.mockResolvedValue({ id: 7, userId: 20 });
-    prismaMock.orderStatus.findUniqueOrThrow.mockResolvedValue({ id: 1, name: 'Pendente' });
+    prismaMock.establishment.findUnique.mockResolvedValue({ id: 3, userId: 30 });
+    prismaMock.orderStatus.findUniqueOrThrow.mockImplementation((args) =>
+      Promise.resolve(orderStatusByName[args.where.name]),
+    );
     prismaMock.order.count.mockResolvedValue(0);
     prismaMock.order.create.mockResolvedValue(orderRow);
+    prismaMock.order.findFirst.mockResolvedValue(pendingOrderRow);
+    prismaMock.order.findUniqueOrThrow.mockResolvedValue(acceptedOrderRow);
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.food.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
     foodsServiceMock.findAvailableById.mockResolvedValue(foodRow);
 
     const moduleRef = await Test.createTestingModule({
@@ -164,5 +200,67 @@ describe('OrdersService', () => {
 
     await expect(service.create(20, dto)).rejects.toBeInstanceOf(ConflictException);
     expect(prismaMock.order.create).not.toHaveBeenCalled();
+  });
+
+  describe('accept', () => {
+    it('moves a pending order to "Aceito" and reserves the food quantity', async () => {
+      const result = await service.accept(30, 50);
+
+      expect(prismaMock.establishment.findUnique).toHaveBeenCalledWith({ where: { userId: 30 } });
+      expect(prismaMock.order.findFirst).toHaveBeenCalledWith({
+        where: { id: 50, establishmentId: 3, deleted: false },
+      });
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 50, statusId: 1 },
+        data: { statusId: 2 },
+      });
+      expect(prismaMock.food.updateMany).toHaveBeenCalledWith({
+        where: { id: 5, quantity: { gte: pendingOrderRow.quantity } },
+        data: { quantity: { decrement: pendingOrderRow.quantity } },
+      });
+      expect(result.status.name).toBe('Aceito');
+    });
+
+    it('throws NotFoundException when the user has no establishment', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+
+      await expect(service.accept(99, 50)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the order is missing, deleted or from another establishment', async () => {
+      prismaMock.order.findFirst.mockResolvedValue(null);
+
+      await expect(service.accept(30, 50)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when the order is not pending', async () => {
+      prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 2 });
+
+      await expect(service.accept(30, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when the linked food is no longer available', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue(null);
+
+      await expect(service.accept(30, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when the remaining food quantity does not cover the order', async () => {
+      prismaMock.food.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.accept(30, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.order.findUniqueOrThrow).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException and does not touch the food when a concurrent accept won the race', async () => {
+      prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.accept(30, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
+    });
   });
 });

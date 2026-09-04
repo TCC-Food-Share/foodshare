@@ -1,9 +1,10 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -46,5 +47,32 @@ export class OrdersController {
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   create(@Session() session: UserSession, @Body() dto: CreateOrderDto): Promise<OrderResponseDto> {
     return this.ordersService.create(Number(session.user.id), dto);
+  }
+
+  @Patch(':id/accept')
+  @ApiOperation({
+    summary: 'Aceite de pedido de doação',
+    description:
+      'O estabelecimento autenticado aceita um pedido "Pendente" que recebeu, reservando a ' +
+      'quantidade do alimento vinculado — a quantidade aceita é subtraída do estoque do ' +
+      'alimento e o pedido passa para "Aceito" (RF16). O pedido é resolvido pela sessão; ' +
+      'exclusivo do estabelecimento dono do pedido.',
+  })
+  @ApiOkResponse({ description: 'Pedido aceito com sucesso.', type: OrderResponseDto })
+  @ApiNotFoundResponse({
+    description:
+      'Nenhum estabelecimento vinculado ao usuário, ou pedido inexistente / de outro estabelecimento.',
+  })
+  @ApiConflictResponse({
+    description:
+      'Pedido não está "Pendente", alimento vinculado indisponível, ou estoque insuficiente ' +
+      'para cobrir a quantidade do pedido.',
+  })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  accept(
+    @Session() session: UserSession,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.accept(Number(session.user.id), id);
   }
 }
