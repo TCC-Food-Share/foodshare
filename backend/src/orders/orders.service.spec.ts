@@ -44,6 +44,57 @@ describe('OrdersService', () => {
   const rejectedOrderRow = { ...orderRow, status: { id: 3, name: 'Rejeitado' } };
   const receivedOrderRow = { ...orderRow, status: { id: 4, name: 'Recebido' } };
 
+  // Full payload as returned by `order.findFirst` with the RF20 detail includes.
+  const orderDetailRow = {
+    id: 50,
+    quantity: new Prisma.Decimal(4),
+    orderDate: new Date('2026-09-03T12:00:00.000Z'),
+    status: { id: 2, name: 'Aceito' },
+    food: {
+      id: 5,
+      image: null,
+      name: 'Arroz branco',
+      quantity: new Prisma.Decimal(6),
+      quantityUnit: 'kg',
+      description: 'Pacotes de 1kg.',
+      expirationDate: new Date('2026-12-31T00:00:00.000Z'),
+      category: { id: 1, name: 'Não Perecíveis' },
+      status: { id: 1, name: 'Ativo' },
+    },
+    establishment: {
+      id: 3,
+      companyName: 'Good Taste Ltda',
+      tradeName: 'Good Taste',
+      description: 'Restaurante.',
+      institutionalEmail: 'contato@goodtaste.com',
+      institutionalPhone: '(11) 3456-7890',
+      address: {
+        id: 1,
+        postalCode: '16200-000',
+        street: 'Rua A',
+        number: '1',
+        city: 'Birigui',
+        state: 'SP',
+      },
+    },
+    beneficiaryEntity: {
+      id: 7,
+      companyName: 'Helping Hands Ltda',
+      tradeName: null,
+      description: 'ONG.',
+      institutionalEmail: 'contato@helpinghands.org',
+      institutionalPhone: '(11) 2222-3333',
+      address: {
+        id: 2,
+        postalCode: '16201-000',
+        street: 'Rua B',
+        number: '2',
+        city: 'Araçatuba',
+        state: 'SP',
+      },
+    },
+  };
+
   const orderStatusByName: Record<string, { id: number; name: string }> = {
     Pendente: { id: 1, name: 'Pendente' },
     Aceito: { id: 2, name: 'Aceito' },
@@ -458,6 +509,69 @@ describe('OrdersService', () => {
         where: { deleted: false, establishmentId: 3, status: { name: 'Recebido' } },
       });
       expect(result.total).toBe(7);
+    });
+  });
+
+  describe('getById', () => {
+    beforeEach(() => {
+      prismaMock.order.findFirst.mockResolvedValue(orderDetailRow);
+    });
+
+    it('returns the full detail for the establishment party', async () => {
+      const result = await service.getById(30, 50);
+
+      expect(prismaMock.order.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 50, deleted: false, establishmentId: 3 },
+        }),
+      );
+      expect(result.food.category).toEqual({ id: 1, name: 'Não Perecíveis' });
+      expect(result.food.description).toBe('Pacotes de 1kg.');
+      expect(result.food.quantity).toBe('6');
+      expect(result.quantity).toBe('4');
+      expect(result.establishment).toEqual({
+        id: 3,
+        companyName: 'Good Taste Ltda',
+        tradeName: 'Good Taste',
+        description: 'Restaurante.',
+        city: 'Birigui',
+        state: 'SP',
+      });
+      expect(result.beneficiaryEntity.city).toBe('Araçatuba');
+    });
+
+    it('resolves the beneficiary entity party when the account is not an establishment', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+
+      await service.getById(20, 50);
+
+      expect(prismaMock.order.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 50, deleted: false, beneficiaryEntityId: 7 },
+        }),
+      );
+    });
+
+    it('throws NotFoundException when the order is missing, deleted or the requester is not a party', async () => {
+      prismaMock.order.findFirst.mockResolvedValue(null);
+
+      await expect(service.getById(30, 50)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws NotFoundException when the account has no establishment nor beneficiary entity', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(null);
+
+      await expect(service.getById(99, 50)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.order.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('does not expose institutional contact, street address or user data of the parties', async () => {
+      const result = await service.getById(30, 50);
+
+      const keys = Object.keys(result.establishment).sort();
+      expect(keys).toEqual(['city', 'companyName', 'description', 'id', 'state', 'tradeName']);
+      expect(Object.keys(result.beneficiaryEntity).sort()).toEqual(keys);
     });
   });
 });
