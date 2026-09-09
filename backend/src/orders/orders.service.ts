@@ -10,6 +10,7 @@ import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto';
 import {
@@ -245,6 +246,86 @@ export class OrdersService {
     ]);
 
     return { data: rows.map((row) => this.toResponse(row)), total, page, pageSize };
+  }
+
+  async getById(userId: number, orderId: number): Promise<OrderDetailResponseDto> {
+    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
+    const beneficiaryEntity = establishment
+      ? null
+      : await this.prisma.beneficiaryEntity.findUnique({ where: { userId } });
+
+    if (!establishment && !beneficiaryEntity) {
+      throw new NotFoundException('Order not found.');
+    }
+
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        deleted: false,
+        ...(establishment
+          ? { establishmentId: establishment.id }
+          : { beneficiaryEntityId: beneficiaryEntity!.id }),
+      },
+      include: {
+        status: true,
+        food: { include: { category: true, status: true } },
+        establishment: { include: { address: true } },
+        beneficiaryEntity: { include: { address: true } },
+      },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+
+    return this.toDetailResponse(order);
+  }
+
+  private mapInstitution(inst: {
+    id: number;
+    companyName: string;
+    tradeName: string | null;
+    description: string;
+    address: { city: string; state: string };
+  }) {
+    return {
+      id: inst.id,
+      companyName: inst.companyName,
+      tradeName: inst.tradeName,
+      description: inst.description,
+      city: inst.address.city,
+      state: inst.address.state,
+    };
+  }
+
+  private toDetailResponse(
+    order: Prisma.OrderGetPayload<{
+      include: {
+        status: true;
+        food: { include: { category: true; status: true } };
+        establishment: { include: { address: true } };
+        beneficiaryEntity: { include: { address: true } };
+      };
+    }>,
+  ): OrderDetailResponseDto {
+    return {
+      id: order.id,
+      quantity: order.quantity.toString(),
+      orderDate: order.orderDate,
+      status: { id: order.status.id, name: order.status.name },
+      food: {
+        id: order.food.id,
+        image: order.food.image,
+        name: order.food.name,
+        quantity: order.food.quantity.toString(),
+        quantityUnit: order.food.quantityUnit,
+        description: order.food.description,
+        expirationDate: order.food.expirationDate,
+        category: { id: order.food.category.id, name: order.food.category.name },
+        status: { id: order.food.status.id, name: order.food.status.name },
+      },
+      establishment: this.mapInstitution(order.establishment),
+      beneficiaryEntity: this.mapInstitution(order.beneficiaryEntity),
+    };
   }
 
   private toResponse(

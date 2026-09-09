@@ -14,6 +14,7 @@ import { Session } from '@thallesp/nestjs-better-auth';
 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto';
 import { OrdersService } from './orders.service';
@@ -76,6 +77,29 @@ export class OrdersController {
     @Query() query: ListOrdersQueryDto,
   ): Promise<PaginatedOrdersResponseDto> {
     return this.ordersService.list(Number(session.user.id), query);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Detalhe de um pedido',
+    description:
+      'Retorna os detalhes completos de um pedido do qual o solicitante é parte — o ' +
+      'estabelecimento de origem do alimento ou a entidade beneficiária que criou o pedido ' +
+      '(RF20). Inclui o alimento por completo (mantido como registro histórico mesmo se ' +
+      'depois ficou indisponível) e a identificação e cidade/UF das duas instituições. ' +
+      'Pedido inexistente, excluído, ou em que o solicitante não é parte responde 404.',
+  })
+  @ApiOkResponse({ description: 'Detalhes completos do pedido.', type: OrderDetailResponseDto })
+  @ApiBadRequestResponse({ description: 'Id em formato inválido.' })
+  @ApiNotFoundResponse({
+    description: 'Pedido inexistente, excluído, ou solicitante não é parte / não tem instituição.',
+  })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  getById(
+    @Session() session: UserSession,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<OrderDetailResponseDto> {
+    return this.ordersService.getById(Number(session.user.id), id);
   }
 
   @Patch(':id/accept')
