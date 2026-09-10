@@ -1,6 +1,7 @@
 import { MenuIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
+import logoUrl from '@/assets/logo-foodshare.png';
 import { navItemsFor } from '@/components/layout/nav-items';
 import { UserMenu } from '@/components/layout/user-menu';
 import {
@@ -19,7 +20,11 @@ export function Topbar() {
   return (
     <header className="bg-background sticky top-0 z-40 border-b">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-        <NavLink to="/feed" className="text-lg font-semibold tracking-tight">
+        <NavLink
+          to="/feed"
+          className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+        >
+          <img src={logoUrl} alt="" className="size-7 object-contain" />
           Food Share
         </NavLink>
 

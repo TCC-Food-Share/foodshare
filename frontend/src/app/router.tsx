@@ -2,13 +2,14 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 import { RoutePlaceholder } from '@/app/route-placeholder';
 import { AppShell } from '@/components/layout/app-shell';
+import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 
 // As telas reais chegam nas changes F1–F8; por ora cada rota renderiza um stub.
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <RoutePlaceholder feature="F1" title="Entrar" />,
+    element: <LoginPage />,
   },
   {
     path: '/cadastro',
