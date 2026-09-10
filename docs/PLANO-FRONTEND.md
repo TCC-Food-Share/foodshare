@@ -34,7 +34,7 @@ organiza a execução.
 | F6 | Solicitar doação + erro de limite | pendente |
 | F7 | Listar pedidos (abas por status) + detalhe do pedido | pendente |
 | F8 | Aceitar / rejeitar / confirmar recebimento | pendente |
-| **X** | Deploy cross-origin (CORS + cookie cross-subdomínio) — ver seção "Deploy" | **pendente, bloqueia staging** |
+| **X** | Deploy cross-origin (CORS + cookie cross-subdomínio) — ver seção "Deploy" | ✅ feito (change `deploy-cross-origin`); falta só setar as vars no Coolify |
 
 Cadência por fase: `/opsx:propose <nome>` → `/opsx:apply` → `/opsx:archive` → commit → PR para `develop`.
 
@@ -184,7 +184,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 | Gap | Fase | O que fazer |
 | --- | ---- | ----------- |
 | `GET /establishments/me` e `GET /beneficiary-entities/me` não existem | F3 | Adicionar um `@Get('me')` em cada controller devolvendo o perfil da sessão (pequeno; RF05 pressupõe "ver para editar"). |
-| CORS + cookie cross-subdomínio para staging | X (antes do 1º deploy de `develop`) | ver seção "Deploy". |
+| ~~CORS + cookie cross-subdomínio para staging~~ | ~~X~~ | ✅ feito na change `deploy-cross-origin`. |
 
 ---
 
@@ -199,33 +199,33 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 ### Staging (`develop` → Coolify) — **CROSS-ORIGIN**
 
 - Front: `https://app.staging.foodshare.com.br` · Back: `https://api.staging.foodshare.com.br`.
-- São origens diferentes (subdomínios distintos) → o setup "mesma origem" do F0 **não basta**.
+- Subdomínios distintos (mas mesmo site `foodshare.com.br`). O CORS + cookie
+  cross-subdomínio já estão no código (change `deploy-cross-origin`); é só setar
+  as variáveis no Coolify.
 
-**`backend/.env` (staging):**
+**Serviço da API (`backend`):**
 ```
 BETTER_AUTH_URL="https://api.staging.foodshare.com.br"
 TRUSTED_ORIGINS="https://app.staging.foodshare.com.br"
+COOKIE_DOMAIN=".staging.foodshare.com.br"
 ```
-(local, quando também quiser rodar contra staging: `TRUSTED_ORIGINS="http://localhost:5173,https://app.staging.foodshare.com.br"` — lista por vírgula.)
+- `TRUSTED_ORIGINS` alimenta o originCheck do better-auth **e** o CORS. Lista por
+  vírgula (ex. incluir `http://localhost:5173` se quiser rodar o front local
+  contra o staging).
+- `COOKIE_DOMAIN` faz o cookie de sessão valer nos dois subdomínios. Deixar
+  **vazio** em dev.
+- `secure` no cookie liga sozinho porque `BETTER_AUTH_URL` é `https://` → o
+  staging **precisa** servir HTTPS.
 
-**`frontend/.env` (build de staging):**
+**Serviço do front (`frontend`):**
 ```
 VITE_API_URL="https://api.staging.foodshare.com.br"
 ```
+(URL absoluta — não `/api`; o proxy do Vite é só de dev.)
 
-**Falta implementar (mudança "X", antes do 1º deploy):**
-1. **CORS no backend** (`main.ts`): `app.enableCors({ origin: TRUSTED_ORIGINS (lista), credentials: true })`.
-   Hoje não há `enableCors` nenhum.
-2. **Cookie cross-subdomínio no better-auth** (`auth.instance.ts`):
-   `advanced: { crossSubDomainCookies: { enabled: true, domain: '.staging.foodshare.com.br' },
-   defaultCookieAttributes: { sameSite: 'none', secure: true } }`.
-   Sem isso o cookie de sessão emitido por `api.` não volta na chamada de `app.`.
-3. Confirmar que o Coolify serve o front como estático e passa HTTPS (o `secure` do cookie exige HTTPS).
-
-> Alternativa que evitaria tudo isso: servir front e API **sob o mesmo host**
-> (`app.staging.foodshare.com.br` + `app.staging.foodshare.com.br/api` roteado pro backend).
-> Aí `VITE_API_URL=/api` e nada de CORS. Decisão de infra — se ficar em subdomínios separados,
-> a mudança "X" é obrigatória.
+> Alternativa que dispensaria CORS/cookie: servir a API sob o **mesmo host**
+> (`app.staging.foodshare.com.br/api` roteado pro backend). Aí `VITE_API_URL=/api`
+> e só o `TRUSTED_ORIGINS` importa. Decisão de infra.
 
 ## Como continuar em outra máquina
 
