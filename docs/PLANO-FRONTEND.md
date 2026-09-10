@@ -23,18 +23,18 @@ organiza a execução.
 
 ## Estado atual
 
-| Fase | Escopo | Status |
-| ---- | ------ | ------ |
-| **F0** | Fundação (deps, tokens, HTTP, auth, layout, roteamento com stubs) + backend `GET /me` retorna `role` + `trustedOrigins` | ✅ feito, merge em `develop` (`chore/frontend-fundacao`) |
-| F1 | Login + erro genérico (RF08) + logout (RF09) | pendente |
-| F2 | Cadastro multi-etapa (estabelecimento + entidade) | pendente |
-| F3 | Edição de perfil (campos travados RF06) | pendente |
-| F4 | Feed + busca + detalhe do alimento | pendente |
-| F5 | Cadastrar alimento (modal) | pendente |
-| F6 | Solicitar doação + erro de limite | pendente |
-| F7 | Listar pedidos (abas por status) + detalhe do pedido | pendente |
-| F8 | Aceitar / rejeitar / confirmar recebimento | pendente |
-| **X** | Deploy cross-origin (CORS + cookie cross-subdomínio) — ver seção "Deploy" | ✅ feito (change `deploy-cross-origin`); falta só setar as vars no Coolify |
+| Fase   | Escopo                                                                                                                  | Status                                                                     |
+| ------ | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **F0** | Fundação (deps, tokens, HTTP, auth, layout, roteamento com stubs) + backend `GET /me` retorna `role` + `trustedOrigins` | ✅ feito, merge em `develop` (`chore/frontend-fundacao`)                   |
+| F1     | Login + erro genérico (RF08) + logout (RF09) + tokens no accent azul + logo/favicon                                     | ✅ feito, merge em `develop` (`feat/rf07-login`)                           |
+| F2     | Cadastro multi-etapa (estabelecimento + entidade)                                                                       | pendente                                                                   |
+| F3     | Edição de perfil (campos travados RF06)                                                                                 | pendente                                                                   |
+| F4     | Feed + busca + detalhe do alimento                                                                                      | pendente                                                                   |
+| F5     | Cadastrar alimento (modal)                                                                                              | pendente                                                                   |
+| F6     | Solicitar doação + erro de limite                                                                                       | pendente                                                                   |
+| F7     | Listar pedidos (abas por status) + detalhe do pedido                                                                    | pendente                                                                   |
+| F8     | Aceitar / rejeitar / confirmar recebimento                                                                              | pendente                                                                   |
+| **X**  | Deploy cross-origin (CORS + cookie cross-subdomínio) — ver seção "Deploy"                                               | ✅ feito (change `deploy-cross-origin`); falta só setar as vars no Coolify |
 
 Cadência por fase: `/opsx:propose <nome>` → `/opsx:apply` → `/opsx:archive` → commit → PR para `develop`.
 
@@ -47,14 +47,14 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 
 ### Telas inteiras FORA do escopo — não implementar
 
-| Tela(s) no protótipo | Motivo (Fora do Escopo em `docs/REQUISITOS.md`) |
-| -------------------- | ----------------------------------------------- |
-| `Admin Dashboard`, `Admin Instituições`, `Admin Alimentos`, `Admin Pedidos`, `Admin Categorias`, `Admin Motivos de Cancelamento`, `Admin Administradores`, `Admin Modais de Exclusão` | "painel administrativo completo" |
-| `Revisar Alimento (Admin)` | painel admin + RF10 diz "disponível imediatamente, sem etapa de revisão" |
-| `Esqueci Minha Senha` (E-mail / Código / Nova Senha) | "recuperação de senha por código" |
-| `Listar Instituições` | nenhum RF; browsing de instituições não existe no MVP |
-| `Perfil Público Estabelecimento`, `Perfil Público Entidade Beneficiária` | "perfil público com histórico entre estabelecimento e entidade" |
-| `Meus Alimentos (Doador)` | edição/encerramento de alimento = "reativação/desativação manual"; e não há `GET /foods?owner=me`. O estabelecimento vê os próprios alimentos no Feed geral (RF11) |
+| Tela(s) no protótipo                                                                                                                                                                  | Motivo (Fora do Escopo em `docs/REQUISITOS.md`)                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Admin Dashboard`, `Admin Instituições`, `Admin Alimentos`, `Admin Pedidos`, `Admin Categorias`, `Admin Motivos de Cancelamento`, `Admin Administradores`, `Admin Modais de Exclusão` | "painel administrativo completo"                                                                                                                                   |
+| `Revisar Alimento (Admin)`                                                                                                                                                            | painel admin + RF10 diz "disponível imediatamente, sem etapa de revisão"                                                                                           |
+| `Esqueci Minha Senha` (E-mail / Código / Nova Senha)                                                                                                                                  | "recuperação de senha por código"                                                                                                                                  |
+| `Listar Instituições`                                                                                                                                                                 | nenhum RF; browsing de instituições não existe no MVP                                                                                                              |
+| `Perfil Público Estabelecimento`, `Perfil Público Entidade Beneficiária`                                                                                                              | "perfil público com histórico entre estabelecimento e entidade"                                                                                                    |
+| `Meus Alimentos (Doador)`                                                                                                                                                             | edição/encerramento de alimento = "reativação/desativação manual"; e não há `GET /foods?owner=me`. O estabelecimento vê os próprios alimentos no Feed geral (RF11) |
 
 ### Regras transversais (valem em TODA tela)
 
@@ -74,7 +74,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 
 ## Fases
 
-### F1 — Login, erro de login, logout  (RF07, RF08, RF09)
+### F1 — Login, erro de login, logout (RF07, RF08, RF09)
 
 - **Rota**: `/login` (pública). Layout de painel (brand à esquerda, form à direita — telas `Desktop - Login`).
 - **Form**: e-mail + senha → `POST /api/auth/sign-in/email` → em sucesso, `AuthProvider.signIn` + redirect para `location.state.from ?? '/feed'`.
@@ -82,8 +82,13 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 - **Logout (RF09)**: já existe no `UserMenu` (menu do avatar → "Sair"). Nada novo, só confirmar.
 - **REMOVER do protótipo**: link "Esqueci minha senha"; qualquer campo além de e-mail/senha.
 - **Validação de form** (RNF06, adiantado): zod — e-mail válido, senha não vazia.
+- **Feito** (change arquivada `openspec/changes/archive/2026-09-10-frontend-login/`):
+  além do acima — reconciliação dos tokens `--primary`/`--primary-foreground`/`--ring`
+  para o accent azul do protótipo (`#1d4ed8`), logo do Food Share
+  (`frontend/src/assets/logo-foodshare.png`) na topbar e no painel de login, e
+  favicon (`frontend/public/favicon.ico`, no lugar do `favicon.svg` do template).
 
-### F2 — Cadastro  (RF01, RF02, RF03, RF04)
+### F2 — Cadastro (RF01, RF02, RF03, RF04)
 
 - **Rota**: `/cadastro` (pública, multi-etapa; `useState`/`sessionStorage` para o rascunho entre passos).
 - **Endpoints**: `POST /api/establishments` e `POST /api/beneficiary-entities` (não `sign-up`).
@@ -105,7 +110,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 - **Regex do backend** (espelhar no zod): telefone `/^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/`;
   CNPJ estabelecimento `/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/`; CEP `/^\d{5}-?\d{3}$/`; UF 2 letras.
 
-### F3 — Edição de perfil  (RF05, RF06)
+### F3 — Edição de perfil (RF05, RF06)
 
 - **Rota**: `/perfil`. Tela `Desktop - Meu Perfil` / `huKcK`.
 - **Leitura**: precisa de `GET /establishments/me` e `GET /beneficiary-entities/me` — **não existem
@@ -116,7 +121,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 - **REMOVER do protótipo**: seção "Zona de perigo" / "Desativar minha conta" (autoexclusão = Fora do Escopo);
   toggle/botão "WhatsApp".
 
-### F4 — Feed + busca + detalhe do alimento  (RF11, RF12, RF13)
+### F4 — Feed + busca + detalhe do alimento (RF11, RF12, RF13)
 
 - **Rotas**: `/feed` (`GET /api/foods` paginado), `/alimentos/:id` (`GET /api/foods/:id`).
 - **RF12 (busca)**: params `name`, `categoryId`, `city`, `state` — combinam por E. Filtros informados
@@ -130,7 +135,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
   - Link "Ver perfil do estabelecimento".
   - Nav "Estabelecimentos".
 
-### F5 — Cadastrar alimento  (RF10)
+### F5 — Cadastrar alimento (RF10)
 
 - **Gatilho**: botão no Feed (para conta estabelecimento). Modal (`Modal Cadastro Alimento` / `oHutt`).
 - **Endpoint**: `POST /api/foods`. Campos (RF10): **imagem**, nome, categoria (`categoryId` da lista fixa),
@@ -141,7 +146,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 - **Faltando, adicionar**: upload de imagem (o Feed mostra imagens; o modal não tem o campo).
 - **Categorias**: seed = Perecíveis, Não Perecíveis, Hortifruti, Laticínios, Carnes, Pães e Massas, Bebidas, Outros.
 
-### F6 — Solicitar doação + limite  (RF14, RF15)
+### F6 — Solicitar doação + limite (RF14, RF15)
 
 - **Gatilho**: botão "Solicitar doação" no detalhe do alimento (conta entidade beneficiária). Modal (`X7Llb6`).
 - **Endpoint**: `POST /api/orders` com `{ foodId, quantity }` (quantidade total ou parcial; fracionário até 2 casas).
@@ -149,7 +154,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
   e precisa encerrar algum. Bloquear/avisar antes se possível.
 - **REMOVER/ajustar no protótipo**: texto "os dados de contato são compartilhados" (RF20 só expõe cidade/UF).
 
-### F7 — Listar pedidos + detalhe do pedido  (RF19, RF20)
+### F7 — Listar pedidos + detalhe do pedido (RF19, RF20)
 
 - **Rotas**: `/pedidos` (`GET /api/orders`), `/pedidos/:id` (`GET /api/orders/:id`).
 - **RF19**: `GET /api/orders?status=<Pendente|Aceito|Rejeitado|Recebido>` — lista paginada plana.
@@ -167,7 +172,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
   - "Cancelar pedido".
   - Links "Ver perfil de…".
 
-### F8 — Aceitar / rejeitar / confirmar recebimento  (RF16, RF17, RF18)
+### F8 — Aceitar / rejeitar / confirmar recebimento (RF16, RF17, RF18)
 
 - Ações no detalhe do pedido (e opcionalmente na listagem):
   - **RF16** (estabelecimento): `PATCH /api/orders/:id/accept` — "Pendente" → "Aceito", reserva a quantidade.
@@ -181,10 +186,10 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 
 ## Gaps de backend a resolver junto das fases
 
-| Gap | Fase | O que fazer |
-| --- | ---- | ----------- |
-| `GET /establishments/me` e `GET /beneficiary-entities/me` não existem | F3 | Adicionar um `@Get('me')` em cada controller devolvendo o perfil da sessão (pequeno; RF05 pressupõe "ver para editar"). |
-| ~~CORS + cookie cross-subdomínio para staging~~ | ~~X~~ | ✅ feito na change `deploy-cross-origin`. |
+| Gap                                                                   | Fase  | O que fazer                                                                                                             |
+| --------------------------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
+| `GET /establishments/me` e `GET /beneficiary-entities/me` não existem | F3    | Adicionar um `@Get('me')` em cada controller devolvendo o perfil da sessão (pequeno; RF05 pressupõe "ver para editar"). |
+| ~~CORS + cookie cross-subdomínio para staging~~                       | ~~X~~ | ✅ feito na change `deploy-cross-origin`.                                                                               |
 
 ---
 
@@ -204,11 +209,13 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
   as variáveis no Coolify.
 
 **Serviço da API (`backend`):**
+
 ```
 BETTER_AUTH_URL="https://api.staging.foodshare.com.br"
 TRUSTED_ORIGINS="https://app.staging.foodshare.com.br"
 COOKIE_DOMAIN=".staging.foodshare.com.br"
 ```
+
 - `TRUSTED_ORIGINS` alimenta o originCheck do better-auth **e** o CORS. Lista por
   vírgula (ex. incluir `http://localhost:5173` se quiser rodar o front local
   contra o staging).
@@ -218,9 +225,11 @@ COOKIE_DOMAIN=".staging.foodshare.com.br"
   staging **precisa** servir HTTPS.
 
 **Serviço do front (`frontend`):**
+
 ```
 VITE_API_URL="https://api.staging.foodshare.com.br"
 ```
+
 (URL absoluta — não `/api`; o proxy do Vite é só de dev.)
 
 > Alternativa que dispensaria CORS/cookie: servir a API sob o **mesmo host**
