@@ -16,3 +16,5 @@ pnpm-debug.log*
 !.vscode/extensions.json
 
 .eslintcache
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

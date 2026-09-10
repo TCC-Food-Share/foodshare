@@ -13,10 +13,20 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 
+// Origens confiáveis para o originCheck do better-auth (login/logout são POST e
+// passam por essa checagem). O frontend chama a API por baixo de um proxy/reverse
+// proxy (mesma origem no browser), então a origem que chega é a do frontend, não
+// a `baseURL`. Configurável por env (lista separada por vírgula) + default de dev.
+const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 export const auth = betterAuth({
   secret: process.env.JWT_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
   basePath: '/auth',
+  trustedOrigins,
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),

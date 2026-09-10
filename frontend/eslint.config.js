@@ -76,6 +76,16 @@ export default defineConfig([
   },
 
   {
+    // Componentes shadcn/ui: fontes canônicas, exportam variantes/hooks ao lado
+    // dos componentes.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+    },
+  },
+
+  {
     files: ['**/*.{js,mjs,cjs}'],
     extends: [js.configs.recommended, prettierRecommended],
     languageOptions: {
