@@ -24,11 +24,16 @@ export class AppController {
   @ApiTags('Autenticação')
   @ApiOperation({
     summary: 'Sessão atual',
-    description: 'Retorna os dados do usuário autenticado na sessão atual.',
+    description:
+      'Retorna os dados do usuário autenticado na sessão atual, junto do nome do papel ' +
+      '(`role`) — o frontend usa isso para saber se é estabelecimento ou entidade beneficiária.',
   })
   @ApiOkResponse({ description: 'Usuário autenticado.' })
-  getMe(@Session() session: UserSession) {
-    return { user: session.user };
+  async getMe(@Session() session: UserSession) {
+    const roleId = (session.user as { roleId?: number }).roleId;
+    const role =
+      roleId === undefined ? null : await this.prisma.role.findUnique({ where: { id: roleId } });
+    return { user: session.user, role: role?.name ?? null };
   }
 
   @Get('health')
