@@ -10,10 +10,18 @@ import express from 'express';
 import { join } from 'path';
 
 import { AppModule } from './app.module';
-import { auth } from './auth/auth.instance';
+import { auth, trustedOrigins } from './auth/auth.instance';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+  // CORS para o frontend quando está em outra origem (subdomínio distinto no
+  // staging/prod). Em dev, o proxy do Vite deixa tudo na mesma origem e isto
+  // não dispara. `credentials: true` exige origem explícita (nunca `*`).
+  app.enableCors({
+    origin: trustedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  });
   app.useStaticAssets(join(process.cwd(), 'public'));
   app.use(express.json());
   app.useGlobalPipes(

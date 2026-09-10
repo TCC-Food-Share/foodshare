@@ -13,14 +13,18 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 
-// Origens confiáveis para o originCheck do better-auth (login/logout são POST e
-// passam por essa checagem). O frontend chama a API por baixo de um proxy/reverse
-// proxy (mesma origem no browser), então a origem que chega é a do frontend, não
-// a `baseURL`. Configurável por env (lista separada por vírgula) + default de dev.
-const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? 'http://localhost:5173')
+// Origens confiáveis do frontend. Usadas pelo originCheck do better-auth
+// (login/logout são POST e passam por essa checagem) e pelo CORS do NestJS
+// (`main.ts`). Configurável por env (lista separada por vírgula) + default de dev.
+export const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+// Quando o front e a API vivem em subdomínios distintos (staging/prod), o cookie
+// de sessão precisa do atributo `Domain` do site pai para voltar nas requisições
+// do front. Sem esta env (dev), o cookie continua host-only + SameSite=Lax.
+const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
 
 export const auth = betterAuth({
   secret: process.env.JWT_SECRET,
@@ -53,6 +57,7 @@ export const auth = betterAuth({
     database: {
       generateId: 'serial',
     },
+    ...(cookieDomain ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } } : {}),
   },
   plugins: [openAPI({ disableDefaultReference: true })],
   hooks: {
