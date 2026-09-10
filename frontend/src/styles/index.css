@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Design tokens portados do protótipo Pencil (shadcn/ui, base Neutral). */
+/* Design tokens portados do protótipo Pencil (shadcn/ui, base Neutral, accent Blue). */
 :root {
   --radius: 0.625rem;
 
@@ -13,8 +13,8 @@
   --card-foreground: #0a0a0a;
   --popover: #fafafa;
   --popover-foreground: #0a0a0a;
-  --primary: #171717;
-  --primary-foreground: #fafafa;
+  --primary: #1d4ed8;
+  --primary-foreground: #eff6ff;
   --secondary: #f5f5f5;
   --secondary-foreground: #171717;
   --muted: #f5f5f5;
@@ -25,7 +25,7 @@
   --destructive-foreground: #fafafa;
   --border: #e5e5e5;
   --input: #e5e5e5;
-  --ring: #a3a3a3;
+  --ring: #3b82f6;
 
   --sidebar: #fafafa;
   --sidebar-foreground: #09090b;
@@ -44,8 +44,8 @@
   --card-foreground: #fafafa;
   --popover: #171717;
   --popover-foreground: #fafafa;
-  --primary: #e5e5e5;
-  --primary-foreground: #171717;
+  --primary: #1d4ed8;
+  --primary-foreground: #eff6ff;
   --secondary: #262626;
   --secondary-foreground: #fafafa;
   --muted: #262626;
@@ -56,7 +56,7 @@
   --destructive-foreground: #fafafa;
   --border: rgb(255 255 255 / 10%);
   --input: rgb(255 255 255 / 15%);
-  --ring: #737373;
+  --ring: #2563eb;
 
   --sidebar: #18181b;
   --sidebar-foreground: #fafafa;
@@ -74,9 +74,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans:
-    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
