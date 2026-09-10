@@ -12,6 +12,8 @@ Leia, nesta ordem:
 2. `docs/MODELO-DE-DADOS.md` — entidades e onde está o schema real
 3. `docs/INFRAESTRUTURA.md` — como o sistema é hospedado e implantado
 4. `docs/CONVENCOES.md` — padrões de código e de commit
+5. `docs/PLANO-FRONTEND.md` — fases do frontend (F0–F8), o que cada uma faz e
+   o que remover do protótipo Pencil; ler antes de qualquer trabalho no `frontend/`
 
 ## Stack
 
