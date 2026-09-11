@@ -4,6 +4,7 @@ import { RoutePlaceholder } from '@/app/route-placeholder';
 import { AppShell } from '@/components/layout/app-shell';
 import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
+import { SignUpPage } from '@/features/auth/sign-up/sign-up-page';
 
 // As telas reais chegam nas changes F1–F8; por ora cada rota renderiza um stub.
 export const router = createBrowserRouter([
@@ -13,7 +14,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/cadastro',
-    element: <RoutePlaceholder feature="F2" title="Criar conta" />,
+    element: <SignUpPage />,
   },
   {
     element: <ProtectedRoute />,
