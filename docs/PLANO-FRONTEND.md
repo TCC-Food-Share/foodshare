@@ -27,7 +27,7 @@ organiza a execução.
 | ------ | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | **F0** | Fundação (deps, tokens, HTTP, auth, layout, roteamento com stubs) + backend `GET /me` retorna `role` + `trustedOrigins` | ✅ feito, merge em `develop` (`chore/frontend-fundacao`)                   |
 | F1     | Login + erro genérico (RF08) + logout (RF09) + tokens no accent azul + logo/favicon                                     | ✅ feito, merge em `develop` (`feat/rf07-login`)                           |
-| F2     | Cadastro multi-etapa (estabelecimento + entidade)                                                                       | pendente                                                                   |
+| F2     | Cadastro multi-etapa (estabelecimento + entidade)                                                                       | implementado (`feat/rf01-cadastro`); falta archive + PR para `develop`     |
 | F3     | Edição de perfil (campos travados RF06)                                                                                 | pendente                                                                   |
 | F4     | Feed + busca + detalhe do alimento                                                                                      | pendente                                                                   |
 | F5     | Cadastrar alimento (modal)                                                                                              | pendente                                                                   |
@@ -98,7 +98,6 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
      `institutionalEmail`, `institutionalPhone`, `description`.
   3. Dados do responsável: `name`, e-mail de login (`email`), `personalPhone`, `password` + confirmação.
   4. Endereço: `postalCode`, `street`, `number`, `complement` (opcional), `city`, `state`. **Uma vez só.**
-  5. (opcional) Foto de perfil — `image` (RF05 lista imagem como editável, então é campo de cadastro).
 - **RF02/RF04**: em `409` (CNPJ/e-mail/celular já usados), mensagem genérica de duplicidade
   (mesma linha do backend `mensagem-generica-duplicidade-cadastro`).
 - **REMOVER do protótipo**:
@@ -109,6 +108,21 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 - **Faltando no protótipo, adicionar**: nome do responsável, celular pessoal, e-mail institucional, celular institucional.
 - **Regex do backend** (espelhar no zod): telefone `/^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/`;
   CNPJ estabelecimento `/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/`; CEP `/^\d{5}-?\d{3}$/`; UF 2 letras.
+- **Foto de perfil — fora do F2.** O `CreateEstablishmentDto` / `CreateBeneficiaryEntityDto` não
+  têm campo `image` (só o `PATCH me`, como URL) e não existe endpoint de upload no backend. Foto
+  de perfil fica para um change futuro, junto de uma história de upload de imagem (problema comum
+  a F2 e F5). O passo 5 "Foto de perfil" saiu do escopo — o wizard tem **4 etapas**.
+- **Feito** (change `frontend-cadastro`, `feat/rf01-cadastro`): o wizard acima em
+  `frontend/src/features/auth/sign-up/`; `AuthLayout` extraído da `LoginPage` (F1) e reusado em
+  `/login` e `/cadastro`; `radio-group` shadcn adicionado; schemas zod espelham o `class-validator`;
+  409 volta para a etapa do campo (institucional explícito, `personal` genérico). E2E no browser:
+  cadastro de estabelecimento e de entidade → `201` → `/login` (sem sessão) → login OK; 409 de CNPJ
+  e de dado pessoal; login sem regressão.
+- **Protótipo Pencil — divergência aceita, não sincronizado.** Só a troca "ConectaFood" → "Food Share"
+  foi aplicada (frames `8rwFj`, `IGtaI`, `WnpJd`). A restruturação (adicionar a etapa "Dados do
+  responsável", separar os campos de endereço, remover as seções de categorias/foto/nome-de-perfil
+  nos ~6–8 frames light+dark) **não foi feita**: é redesenho multi-frame de mockup e o código é a
+  fonte da verdade. Os frames de cadastro do `.pen` ficam desatualizados em relação às telas reais.
 
 ### F3 — Edição de perfil (RF05, RF06)
 
