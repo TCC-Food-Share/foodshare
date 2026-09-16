@@ -80,7 +80,14 @@ export function SignUpPage() {
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
-    mode: 'onTouched',
+    // 'onChange' (não 'onTouched'): as etapas usam `form.trigger(...)` pra
+    // validar ao clicar "Continuar" — isso seta erro sem marcar o campo como
+    // "touched". Com 'onTouched', a revalidação por tecla só liga depois do
+    // primeiro blur do campo (regra interna do RHF), então um campo marcado
+    // inválido pelo `trigger()` ficava inválido até o usuário clicar fora,
+    // mesmo já tendo corrigido o valor. 'onChange' revalida a cada tecla desde
+    // o início, sem depender de blur.
+    mode: 'onChange',
     defaultValues: {
       companyName: '',
       tradeName: '',
