@@ -7,8 +7,8 @@
 - Idioma do código: tudo em inglês — nomes de módulo/arquivo/classe/variável,
   schema do banco (`schema.prisma`), rotas, DTOs, corpo de request/response
   da API (JSON) e mensagens de erro retornadas pela API. Comentário no
-  código só quando estritamente necessário (lógica não óbvia); quando
-  existir, também em inglês.
+  código, quando existir (ver "Comentários no código" abaixo), também em
+  inglês.
 - Idioma da documentação: pt-BR em tudo — Markdown em `docs/` e
   `openspec/`, e a documentação OpenAPI/Scalar (`summary`/`description`
   de `@ApiOperation`, `@ApiProperty`, `@ApiTags`, `DocumentBuilder`).
@@ -18,6 +18,35 @@
 - Na prática: se é algo que roda ou que a API devolve como dado, é
   inglês; se é texto pra humano ler sobre o sistema (doc, prosa de
   spec), é pt-BR.
+
+## Comentários no código
+
+Comentário só quando for **extremamente necessário** para explicar algo
+complexo que o código sozinho não deixa claro — nunca por hábito. Antes de
+escrever um, pergunte: "sem isso, alguém competente lendo este código correria
+risco real de errar ou quebrar algo?" Se não, não comenta.
+
+Não fazer:
+
+- Documentar código como documentário — comentário de bloco no topo de
+  função/componente/arquivo dizendo "o que isto faz" (estilo JSDoc/docstring).
+  O nome e a assinatura de tipos já fazem esse trabalho.
+- Registrar decisão de projeto no código (por que se escolheu X em vez de Y,
+  referência a RF/número de decisão de design, contexto histórico). Isso vive
+  em `openspec/` (proposal/design das changes) e em `docs/`, nunca no
+  código-fonte.
+- Narrar o óbvio — repetir em prosa o que a linha de código já diz.
+
+Quando comentar (raro):
+
+- Lógica genuinely não óbvia (ex: um algoritmo de concorrência, um cálculo
+  cuja regra não salta aos olhos lendo a expressão).
+- Um risco real de regressão que o código sozinho não sinaliza (ex: duas
+  implementações que precisam ficar sincronizadas, um valor espelhado de
+  outra camada/repositório, uma supressão de lint cuja causa não é óbvia).
+
+Nesses casos, comentário curto e na linha relevante — nunca um bloco de
+documentação no topo do arquivo ou da função.
 
 ## Backend
 
