@@ -8,6 +8,7 @@ import type { SignUpInput } from '@/features/auth/sign-up/sign-up-schema';
 import { cn } from '@/lib/cn';
 
 const MAX_RESULTS = 8;
+const MIN_QUERY_LENGTH = 3;
 
 /**
  * Campo "Cidade" com autocomplete dos municípios da UF selecionada (dados do
@@ -41,7 +42,7 @@ export function CityAutocomplete({ uf }: { uf: string }) {
       render={({ field }) => {
         const query = field.value ?? '';
         const matches =
-          query.trim().length >= 1
+          query.trim().length >= MIN_QUERY_LENGTH
             ? cities
                 .filter((c) => c.toLowerCase().includes(query.trim().toLowerCase()))
                 .slice(0, MAX_RESULTS)
