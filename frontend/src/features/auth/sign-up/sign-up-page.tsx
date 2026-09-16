@@ -80,13 +80,9 @@ export function SignUpPage() {
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
-    // 'onChange' (não 'onTouched'): as etapas usam `form.trigger(...)` pra
-    // validar ao clicar "Continuar" — isso seta erro sem marcar o campo como
-    // "touched". Com 'onTouched', a revalidação por tecla só liga depois do
-    // primeiro blur do campo (regra interna do RHF), então um campo marcado
-    // inválido pelo `trigger()` ficava inválido até o usuário clicar fora,
-    // mesmo já tendo corrigido o valor. 'onChange' revalida a cada tecla desde
-    // o início, sem depender de blur.
+    // Not 'onTouched': steps validate via form.trigger(), which sets an error
+    // without marking the field touched, so onTouched's per-keystroke
+    // revalidation never kicks in until an actual blur.
     mode: 'onChange',
     defaultValues: {
       companyName: '',
@@ -177,9 +173,8 @@ export function SignUpPage() {
       )}
 
       <Form {...form}>
-        {/* No native submit: the wizard advances/submits through explicit button
-            clicks. A submit button whose JSX slot flips between "Continuar" and
-            "Finalizar" lets React reuse the same <button> node and a click that
+        {/* No type="submit" button: React reuses the same <button> node when a
+            slot's type flips between "Continuar" and "Finalizar", so a click
             started on "Continuar" can land as a submit. */}
         <form onSubmit={(e) => e.preventDefault()} noValidate className="flex flex-col gap-6">
           {step === 0 && <ProfileTypeStep control={form.control} />}

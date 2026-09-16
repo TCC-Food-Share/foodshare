@@ -6,13 +6,9 @@ import { Input } from '@/components/ui/input';
 type MaskedInputProps = Omit<React.ComponentProps<typeof Input>, 'type' | 'value'> &
   Pick<MaskOptions, 'mask' | 'replacement' | 'modify'>;
 
-/**
- * `Input` do shadcn com máscara de `@react-input/mask`. É **não controlado** de
- * propósito: a máscara é dona do valor exibido no DOM e reporta o valor
- * mascarado (com pontuação) pelo `onChange`. `value` do react-hook-form entra
- * como `defaultValue` (seed inicial) — os campos mascarados nunca são setados
- * programaticamente neste form.
- */
+// Uncontrolled on purpose: the mask library owns the DOM value and reports the
+// masked value via onChange. A controlled `value` here drops characters on
+// fast typing/programmatic fill — react-hook-form's value is a defaultValue only.
 function MaskedInput({
   mask,
   replacement = { _: /\d/ },

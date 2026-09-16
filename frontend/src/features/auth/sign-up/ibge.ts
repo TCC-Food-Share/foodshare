@@ -1,10 +1,5 @@
 const cache = new Map<string, Promise<string[]>>();
 
-/**
- * Nomes dos municípios de uma UF (sigla), ordenados. Cacheado por UF em memória;
- * chamadas concorrentes para a mesma UF compartilham a mesma Promise. Devolve
- * `[]` em caso de falha (e limpa o cache para permitir nova tentativa).
- */
 export function citiesOf(uf: string): Promise<string[]> {
   const key = uf.toUpperCase();
   let entry = cache.get(key);

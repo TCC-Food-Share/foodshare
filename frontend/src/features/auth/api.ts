@@ -9,7 +9,7 @@ export interface SessionUser {
   personalPhone: string;
 }
 
-/** Papel bruto vindo do backend (nome da tabela `role`). */
+// Raw role from the backend, distinct from the normalized `Role` in auth-context.ts.
 export type BackendRole = 'Establishment' | 'BeneficiaryEntity';
 
 export interface MeResponse {

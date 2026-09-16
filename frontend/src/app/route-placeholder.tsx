@@ -2,7 +2,6 @@ import { useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/features/auth/use-auth';
 
-/** Stub temporário até a change da feature correspondente ser implementada. */
 export function RoutePlaceholder({ feature, title }: { feature: string; title: string }) {
   const location = useLocation();
   const { role } = useAuth();

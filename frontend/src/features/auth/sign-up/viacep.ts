@@ -4,10 +4,6 @@ export interface CepAddress {
   state: string;
 }
 
-/**
- * Consulta o endereço de um CEP na ViaCEP. Devolve `null` quando o CEP não tem
- * 8 dígitos, não existe (`{ erro: true }`), ou a chamada falha / expira (~4 s).
- */
 export async function lookupCep(cep: string): Promise<CepAddress | null> {
   const digits = cep.replace(/\D/g, '');
   if (digits.length !== 8) return null;

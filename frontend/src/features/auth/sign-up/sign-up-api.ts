@@ -29,7 +29,6 @@ interface CreatedResource {
 const orUndefined = (value: string): string | undefined =>
   value.trim() ? value.trim() : undefined;
 
-/** Corpo achatado dos endpoints REST a partir dos valores do wizard. */
 export function toSignUpPayload(v: SignUpInput): SignUpPayload {
   return {
     name: v.name,

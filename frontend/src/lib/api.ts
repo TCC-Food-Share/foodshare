@@ -24,7 +24,6 @@ function extractMessage(body: unknown): string | undefined {
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
-  /** Query params appended to the path. */
   query?: Record<string, string | number | undefined>;
 }
 

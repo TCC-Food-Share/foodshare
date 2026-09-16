@@ -10,11 +10,6 @@ import { cn } from '@/lib/cn';
 const MAX_RESULTS = 8;
 const MIN_QUERY_LENGTH = 3;
 
-/**
- * Campo "Cidade" com autocomplete dos municípios da UF selecionada (dados do
- * IBGE, decisão 16). Aceita valor digitado livre. Desabilitado enquanto não há
- * UF; trocar a UF recarrega a lista.
- */
 export function CityAutocomplete({ uf }: { uf: string }) {
   const { control } = useFormContext<SignUpInput>();
   const [cities, setCities] = useState<string[]>([]);
@@ -22,8 +17,8 @@ export function CityAutocomplete({ uf }: { uf: string }) {
   const [active, setActive] = useState(0);
   const listId = useId();
 
-  // O componente é remontado por UF (`key={uf}` no pai), então `cities` já
-  // começa vazio a cada troca de estado — sem setState síncrono aqui.
+  // Parent remounts this on UF change (`key={uf}`), so `cities` already starts
+  // empty — no synchronous setState needed here.
   useEffect(() => {
     if (!uf) return;
     let alive = true;

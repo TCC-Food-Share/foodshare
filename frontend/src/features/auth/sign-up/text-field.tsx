@@ -9,8 +9,6 @@ import type { SignUpInput } from '@/features/auth/sign-up/sign-up-schema';
 
 type MaskProps = Pick<MaskOptions, 'mask' | 'replacement' | 'modify'>;
 
-/** Campo de texto do wizard: `FormField` + `Input` + rótulo + mensagem de erro.
- * Passe `mask` para renderizar um `MaskedInput` no lugar do `Input`. */
 export function TextField({
   control,
   name,

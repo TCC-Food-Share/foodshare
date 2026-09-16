@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-/** Siglas de UF — populam o `<select>` de estado e garantem `/^[A-Z]{2}$/`. */
 export const UFS = [
   'AC',
   'AL',
@@ -31,7 +30,7 @@ export const UFS = [
   'TO',
 ] as const;
 
-// Regex espelhados do `class-validator` do backend (create-*.dto.ts / address.dto.ts).
+// Mirrored from the backend's class-validator regexes (create-*.dto.ts / address.dto.ts) — keep in sync.
 const PHONE_RE = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
 const CNPJ_RE = /^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/;
 const POSTAL_CODE_RE = /^\d{5}-?\d{3}$/;
@@ -50,7 +49,6 @@ export const signUpSchema = z
   .object({
     profileType: z.enum(['establishment', 'beneficiary'], { error: 'Selecione um perfil.' }),
 
-    // Etapa 2 — dados institucionais
     companyName: z.string().min(1, 'Informe a razão social.').max(300),
     tradeName: z.string().max(200),
     cnpj: z.string().min(1, 'Informe o CNPJ.').regex(CNPJ_RE, 'CNPJ inválido.'),
@@ -58,14 +56,12 @@ export const signUpSchema = z
     institutionalPhone: phoneField('Informe o celular institucional.'),
     description: z.string().min(1, 'Escreva uma descrição.').max(2000),
 
-    // Etapa 3 — dados do responsável
     name: z.string().min(1, 'Informe o nome do responsável.').max(200),
     email: emailField('Informe o e-mail de acesso.'),
     personalPhone: phoneField('Informe o celular pessoal.'),
     password: z.string().min(8, 'Mínimo de 8 caracteres.').max(72, 'Máximo de 72 caracteres.'),
     passwordConfirmation: z.string().min(1, 'Confirme a senha.'),
 
-    // Etapa 4 — endereço
     postalCode: z.string().min(1, 'Informe o CEP.').regex(POSTAL_CODE_RE, 'CEP inválido.'),
     street: z.string().min(1, 'Informe o logradouro.').max(300),
     number: z.string().min(1, 'Informe o número.').max(10),
@@ -80,7 +76,6 @@ export const signUpSchema = z
 
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
-/** Campos validados ao clicar "Continuar", uma lista por etapa (ordem = etapas). */
 export const STEP_FIELDS = [
   ['profileType'],
   ['companyName', 'tradeName', 'cnpj', 'institutionalEmail', 'institutionalPhone', 'description'],
