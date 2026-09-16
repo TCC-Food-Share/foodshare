@@ -29,7 +29,6 @@ describe('OrdersService', () => {
     beneficiaryEntity: { id: 7, companyName: 'Helping Hands' },
   };
 
-  // Pending order as returned by `order.findFirst` (no relation includes).
   const pendingOrderRow = {
     id: 50,
     quantity: new Prisma.Decimal(4),
@@ -44,7 +43,6 @@ describe('OrdersService', () => {
   const rejectedOrderRow = { ...orderRow, status: { id: 3, name: 'Rejeitado' } };
   const receivedOrderRow = { ...orderRow, status: { id: 4, name: 'Recebido' } };
 
-  // Full payload as returned by `order.findFirst` with the RF20 detail includes.
   const orderDetailRow = {
     id: 50,
     quantity: new Prisma.Decimal(4),

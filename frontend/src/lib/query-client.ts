@@ -2,7 +2,7 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 
 import { ApiError } from '@/lib/api';
 
-/** Registrado pelo AuthProvider; chamado quando qualquer request devolve 401. */
+// Set by AuthProvider; invoked whenever a query/mutation gets a 401.
 let onUnauthorized: (() => void) | null = null;
 
 export function setUnauthorizedHandler(handler: (() => void) | null): void {

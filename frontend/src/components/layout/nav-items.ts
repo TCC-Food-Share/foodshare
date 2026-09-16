@@ -5,10 +5,6 @@ export interface NavItem {
   to: string;
 }
 
-/**
- * Navegação recortada ao escopo do MVP (RF01–RF20). Sem "Estabelecimentos"/
- * "Instituições" (perfil público — fora do escopo) e sem área administrativa.
- */
 export function navItemsFor(role: Role | null): NavItem[] {
   const items: NavItem[] = [{ label: 'Feed', to: '/feed' }];
 

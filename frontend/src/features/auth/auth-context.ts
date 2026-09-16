@@ -2,7 +2,7 @@ import { createContext } from 'react';
 
 import type { SessionUser } from '@/features/auth/api';
 
-/** Papel normalizado para uso no frontend. */
+// Normalized role, distinct from the raw `BackendRole` values in api.ts.
 export type Role = 'establishment' | 'beneficiary';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';

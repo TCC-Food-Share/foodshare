@@ -58,8 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [reset]);
 
   useEffect(() => {
-    // Bootstrap da sessão no mount; os setState acontecem de forma assíncrona
-    // dentro de loadSession, não sincronamente no corpo do efeito.
+    // loadSession's setState calls happen async, not in the effect body itself.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadSession();
   }, [loadSession]);
