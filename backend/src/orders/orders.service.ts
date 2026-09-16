@@ -39,8 +39,6 @@ export class OrdersService {
       throw new NotFoundException('Beneficiary entity not found.');
     }
 
-    // "In progress" is the non-terminal set ("Pendente", "Aceito"); "Rejeitado" (and RF18's
-    // "Recebido") are terminal and excluded via this whitelist.
     const ordersInProgress = await this.prisma.order.count({
       where: {
         beneficiaryEntityId: beneficiaryEntity.id,
@@ -108,8 +106,7 @@ export class OrdersService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      // Conditional transition: a concurrent accept of the same order sees count 0
-      // here and bails out, so the food quantity is never decremented twice.
+      // Conditional update as a compare-and-swap: a concurrent accept sees count 0 here.
       const moved = await tx.order.updateMany({
         where: { id: order.id, statusId: pending.id },
         data: { statusId: accepted.id },
@@ -156,8 +153,7 @@ export class OrdersService {
       throw new ConflictException('Order is not pending.');
     }
 
-    // Conditional transition: a concurrent accept or reject of the same order sees
-    // count 0 here and loses the race with a clean conflict.
+    // Conditional update as a compare-and-swap: a concurrent accept/reject sees count 0 here.
     const moved = await this.prisma.order.updateMany({
       where: { id: order.id, statusId: pending.id },
       data: { statusId: rejected.id },
@@ -195,8 +191,7 @@ export class OrdersService {
       throw new ConflictException('Order is not accepted.');
     }
 
-    // Conditional transition: a concurrent confirmation of the same order sees
-    // count 0 here and loses the race with a clean conflict.
+    // Conditional update as a compare-and-swap: a concurrent confirmation sees count 0 here.
     const moved = await this.prisma.order.updateMany({
       where: { id: order.id, statusId: accepted.id },
       data: { statusId: received.id },

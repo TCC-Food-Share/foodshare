@@ -60,9 +60,8 @@ export class FoodsService {
     const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const skip = (page - 1) * pageSize;
 
-    // `unaccent()` is not expressible through the Prisma query builder, so the
-    // filtered page is resolved with raw SQL (ids + count), then hydrated with a
-    // regular Prisma query to keep the category/status/establishment includes.
+    // `unaccent()` has no Prisma query-builder equivalent, so the filtered page is
+    // resolved via raw SQL and hydrated afterwards with a regular Prisma query.
     const from = Prisma.sql`
       FROM food f
       JOIN establishment e ON e.id = f."establishmentId"
@@ -96,8 +95,6 @@ export class FoodsService {
     return this.toResponse(food);
   }
 
-  // Raw available-food record (or null), shared by `getById` and by the orders
-  // module (RF14), which needs `establishmentId` and the `Decimal` quantity.
   findAvailableById(id: number): Promise<Prisma.FoodGetPayload<{
     include: { category: true; status: true; establishment: true };
   }> | null> {
@@ -107,9 +104,8 @@ export class FoodsService {
     });
   }
 
-  // Prisma form of the "available food" rule (RF11). The RF12 listing keeps a raw
-  // SQL form of the same base filter in `buildAvailableAndFilteredWhere` because
-  // `unaccent` cannot go through the query builder; both must stay in sync.
+  // Mirrors `buildAvailableAndFilteredWhere`'s base filter (kept separate because
+  // that one needs raw SQL for `unaccent`) — keep both in sync.
   private availableFoodWhereInput(id?: number): Prisma.FoodWhereInput {
     return {
       deleted: false,

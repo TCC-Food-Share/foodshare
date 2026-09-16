@@ -32,8 +32,6 @@ describe('FoodsService', () => {
     establishment: { id: 30, companyName: 'Test Establishment Ltd' },
   };
 
-  // Literal text of every `$queryRaw` call, joined; used to tell the id query
-  // from the count query and to assert which filters made it into the SQL.
   const sqlText = (sql: Prisma.Sql): string => sql.strings.join(' ');
 
   let idRows: { id: number }[];
@@ -139,7 +137,6 @@ describe('FoodsService', () => {
       expect(sqlText(sql)).not.toContain('unaccent');
       expect(sqlText(sql)).not.toContain('"categoryId" =');
       expect(sqlText(sql)).not.toContain('a.state =');
-      // base availability params + LIMIT/OFFSET
       expect(sql.values).toEqual(['Ativo', expect.any(Date), 20, 0]);
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(20);
