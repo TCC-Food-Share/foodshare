@@ -31,13 +31,13 @@ export function BrandPanel() {
           {stats.map((stat) => (
             <div key={stat.label} className="flex flex-col gap-1">
               <dt className="text-2xl font-bold">{stat.value}</dt>
-              <dd className="text-xs text-white/70">{stat.label}</dd>
+              <dd className="text-xs text-[#ffffffaa]">{stat.label}</dd>
             </div>
           ))}
         </dl>
       </div>
 
-      <p className="text-xs text-white/60">© 2026 Food Share. Todos os direitos reservados.</p>
+      <p className="text-xs text-[#ffffff66]">© 2026 Food Share. Todos os direitos reservados.</p>
     </div>
   );
 }

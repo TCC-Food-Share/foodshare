@@ -44,11 +44,11 @@ export function ProfileTypeStep({ control }: { control: Control<SignUpInput> }) 
                   className={cn(
                     'group flex cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-colors outline-none',
                     'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-                    'data-[state=checked]:border-primary data-[state=checked]:bg-primary/5',
+                    'data-[state=checked]:border-primary data-[state=checked]:bg-primary-foreground',
                     'data-[state=unchecked]:hover:bg-accent/50',
                   )}
                 >
-                  <span className="bg-muted text-muted-foreground group-data-[state=checked]:bg-primary group-data-[state=checked]:text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-md">
+                  <span className="bg-muted text-muted-foreground group-data-[state=checked]:bg-primary group-data-[state=checked]:text-white flex size-10 shrink-0 items-center justify-center rounded-md">
                     <Icon className="size-5" />
                   </span>
                   <span className="flex flex-col gap-1">
