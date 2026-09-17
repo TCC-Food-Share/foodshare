@@ -12,3 +12,11 @@ export const phoneModify: Modify = (data) => {
       : Math.max(0, digitsSoFar - 1);
   return { mask: digits > 10 ? '(__) _____-____' : '(__) ____-____' };
 };
+
+// `modify` only adjusts the mask as the user types — it never runs against a
+// value the input already had at mount. A pre-filled phone (from the backend,
+// 10 or 11 digits) needs the matching mask picked up front, or `useMask` throws
+// ("initialized value ... longer than ... mask") on mount.
+export function phoneMaskFor(value: string): string {
+  return value.replace(/\D/g, '').length > 10 ? '(__) _____-____' : PHONE_MASK;
+}

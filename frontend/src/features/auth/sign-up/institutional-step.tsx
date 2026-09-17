@@ -2,9 +2,9 @@ import type { Control } from 'react-hook-form';
 
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { CNPJ_MASK, PHONE_MASK, phoneModify } from '@/features/auth/sign-up/masks';
 import type { SignUpInput } from '@/features/auth/sign-up/sign-up-schema';
 import { TextField } from '@/features/auth/sign-up/text-field';
+import { CNPJ_MASK, PHONE_MASK, phoneModify } from '@/lib/masks';
 
 export function InstitutionalStep({ control }: { control: Control<SignUpInput> }) {
   return (

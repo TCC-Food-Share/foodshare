@@ -2,6 +2,7 @@ import { Loader2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 
+import { CityAutocomplete } from '@/components/city-autocomplete';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { MaskedInput } from '@/components/ui/masked-input';
 import {
@@ -11,11 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CityAutocomplete } from '@/features/auth/sign-up/city-autocomplete';
-import { CEP_MASK } from '@/features/auth/sign-up/masks';
 import { type SignUpInput, UFS } from '@/features/auth/sign-up/sign-up-schema';
 import { TextField } from '@/features/auth/sign-up/text-field';
-import { lookupCep } from '@/features/auth/sign-up/viacep';
+import { CEP_MASK } from '@/lib/masks';
+import { lookupCep } from '@/lib/viacep';
 
 type CepStatus = 'idle' | 'loading' | 'notfound';
 
@@ -108,7 +108,27 @@ export function AddressStep() {
       </div>
 
       <div className="grid grid-cols-[1fr_7rem] gap-3">
-        <CityAutocomplete key={uf || 'no-uf'} uf={uf} />
+        <FormField
+          control={form.control}
+          name="city"
+          render={({ field }) => (
+            <FormItem className="relative">
+              <FormLabel>Cidade</FormLabel>
+              <FormControl>
+                <CityAutocomplete
+                  key={uf || 'no-uf'}
+                  uf={uf}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  inputRef={field.ref}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="state"

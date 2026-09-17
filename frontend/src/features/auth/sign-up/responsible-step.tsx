@@ -2,9 +2,9 @@ import { CircleAlertIcon } from 'lucide-react';
 import type { Control } from 'react-hook-form';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { PHONE_MASK, phoneModify } from '@/features/auth/sign-up/masks';
 import type { SignUpInput } from '@/features/auth/sign-up/sign-up-schema';
 import { TextField } from '@/features/auth/sign-up/text-field';
+import { PHONE_MASK, phoneModify } from '@/lib/masks';
 
 export function ResponsibleStep({
   control,
