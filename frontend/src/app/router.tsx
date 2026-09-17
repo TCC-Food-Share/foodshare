@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 import { SignUpPage } from '@/features/auth/sign-up/sign-up-page';
+import { ProfilePage } from '@/features/profile/profile-page';
 
 export const router = createBrowserRouter([
   {
@@ -31,7 +32,7 @@ export const router = createBrowserRouter([
             path: '/pedidos/:id',
             element: <RoutePlaceholder feature="F7" title="Detalhe do pedido" />,
           },
-          { path: '/perfil', element: <RoutePlaceholder feature="F3" title="Meu perfil" /> },
+          { path: '/perfil', element: <ProfilePage /> },
         ],
       },
     ],
