@@ -33,7 +33,7 @@ export function Topbar() {
                 cn(
                   'rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-primary-foreground text-primary hover:bg-primary/15'
+                    ? 'bg-primary-foreground text-primary'
                     : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground',
                 )
               }
