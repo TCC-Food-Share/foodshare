@@ -28,7 +28,7 @@ organiza a execução.
 | **F0** | Fundação (deps, tokens, HTTP, auth, layout, roteamento com stubs) + backend `GET /me` retorna `role` + `trustedOrigins` | ✅ feito, merge em `develop` (`chore/frontend-fundacao`)                   |
 | F1     | Login + erro genérico (RF08) + logout (RF09) + tokens no accent azul + logo/favicon                                     | ✅ feito, merge em `develop` (`feat/rf07-login`)                           |
 | F2     | Cadastro multi-etapa (estabelecimento + entidade)                                                                       | implementado (`feat/rf01-cadastro`); falta archive + PR para `develop`     |
-| F3     | Edição de perfil (campos travados RF06)                                                                                 | pendente                                                                   |
+| F3     | Edição de perfil (campos travados RF06)                                                                                 | implementado (`feat/rf05-edicao-perfil`); falta PR para `develop`          |
 | F4     | Feed + busca + detalhe do alimento                                                                                      | pendente                                                                   |
 | F5     | Cadastrar alimento (modal)                                                                                              | pendente                                                                   |
 | F6     | Solicitar doação + erro de limite                                                                                       | pendente                                                                   |
@@ -127,13 +127,23 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 ### F3 — Edição de perfil (RF05, RF06)
 
 - **Rota**: `/perfil`. Tela `Desktop - Meu Perfil` / `huKcK`.
-- **Leitura**: precisa de `GET /establishments/me` e `GET /beneficiary-entities/me` — **não existem
-  no backend** (só `PATCH me`). **Gap de backend a resolver no F3** (pequeno: um `GET` por controller).
+- **Leitura**: precisava de `GET /establishments/me` e `GET /beneficiary-entities/me` — não existiam
+  no backend (só `PATCH me`). Gap resolvido no F3 (um `GET` por controller, reaproveitando `toResponse`).
 - **Edição** (`PATCH /api/establishments/me` | `/api/beneficiary-entities/me`):
   - **RF06**: renderizar `email pessoal`, `CNPJ` e `razão social` **somente leitura** no modo edição.
   - **RF05**: editáveis = contato (institucional), imagem, descrição, endereço.
 - **REMOVER do protótipo**: seção "Zona de perigo" / "Desativar minha conta" (autoexclusão = Fora do Escopo);
   toggle/botão "WhatsApp".
+- **Feito** (change `frontend-perfil`, `feat/rf05-edicao-perfil`): tela com alternância
+  visualização/edição fiel ao protótipo (`huKcK`) em `frontend/src/features/profile/`; backend
+  `GET /establishments/me` e `GET /beneficiary-entities/me` novos; `viacep.ts`/`ibge.ts`/`masks.ts`/
+  `city-autocomplete.tsx` relocados de `features/auth/sign-up/` para `lib/`/`components/`
+  (compartilhados agora entre cadastro e perfil), com `city-autocomplete.tsx` desacoplado do schema
+  do form; `lib/validation.ts` novo centraliza os regex/UFs espelhados do backend. Durante a
+  verificação, corrigidas divergências de cor entre o app e o protótipo Pencil (Topbar, `UserMenu`,
+  `BrandPanel`, wizard de cadastro) e um bug de mount do `@react-input/mask` com telefone de 11
+  dígitos pré-preenchido. E2E no browser: visualizar/editar/cancelar/409 nos dois papéis, sem
+  regressão no cadastro (F2).
 
 ### F4 — Feed + busca + detalhe do alimento (RF11, RF12, RF13)
 
@@ -202,7 +212,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 
 | Gap                                                                   | Fase  | O que fazer                                                                                                             |
 | --------------------------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
-| `GET /establishments/me` e `GET /beneficiary-entities/me` não existem | F3    | Adicionar um `@Get('me')` em cada controller devolvendo o perfil da sessão (pequeno; RF05 pressupõe "ver para editar"). |
+| ~~`GET /establishments/me` e `GET /beneficiary-entities/me` não existem~~ | ~~F3~~ | ✅ feito na change `frontend-perfil`. |
 | ~~CORS + cookie cross-subdomínio para staging~~                       | ~~X~~ | ✅ feito na change `deploy-cross-origin`.                                                                               |
 
 ---
