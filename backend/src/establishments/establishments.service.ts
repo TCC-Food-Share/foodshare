@@ -97,6 +97,17 @@ export class EstablishmentsService {
     }
   }
 
+  async findMe(userId: number): Promise<EstablishmentResponseDto> {
+    const establishment = await this.prisma.establishment.findUnique({
+      where: { userId },
+      include: { user: true, address: true },
+    });
+    if (!establishment) {
+      throw new NotFoundException('Establishment not found.');
+    }
+    return this.toResponse(establishment);
+  }
+
   async update(userId: number, dto: UpdateEstablishmentDto): Promise<EstablishmentResponseDto> {
     const existing = await this.prisma.establishment.findUnique({ where: { userId } });
     if (!existing) {

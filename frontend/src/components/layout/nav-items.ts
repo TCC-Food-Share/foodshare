@@ -14,6 +14,6 @@ export function navItemsFor(role: Role | null): NavItem[] {
     items.push({ label: 'Meus pedidos', to: '/pedidos' });
   }
 
-  items.push({ label: 'Meu perfil', to: '/perfil' });
+  items.push({ label: 'Perfil', to: '/perfil' });
   return items;
 }

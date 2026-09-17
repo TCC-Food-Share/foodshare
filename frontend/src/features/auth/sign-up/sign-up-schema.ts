@@ -1,40 +1,14 @@
 import { z } from 'zod';
 
-export const UFS = [
-  'AC',
-  'AL',
-  'AP',
-  'AM',
-  'BA',
-  'CE',
-  'DF',
-  'ES',
-  'GO',
-  'MA',
-  'MT',
-  'MS',
-  'MG',
-  'PA',
-  'PB',
-  'PR',
-  'PE',
-  'PI',
-  'RJ',
-  'RN',
-  'RS',
-  'RO',
-  'RR',
-  'SC',
-  'SP',
-  'SE',
-  'TO',
-] as const;
+import { PHONE_REGEX, POSTAL_CODE_REGEX, UF_REGEX, UFS } from '@/lib/validation';
 
-// Mirrored from the backend's class-validator regexes (create-*.dto.ts / address.dto.ts) — keep in sync.
-const PHONE_RE = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
+export { UFS };
+
+// CNPJ is only collected at sign-up (profile editing never touches it — RF06).
 const CNPJ_RE = /^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/;
-const POSTAL_CODE_RE = /^\d{5}-?\d{3}$/;
-const UF_RE = /^[A-Z]{2}$/;
+const PHONE_RE = PHONE_REGEX;
+const POSTAL_CODE_RE = POSTAL_CODE_REGEX;
+const UF_RE = UF_REGEX;
 
 const emailField = (required: string) =>
   z

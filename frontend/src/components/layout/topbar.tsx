@@ -20,12 +20,8 @@ export function Topbar() {
   return (
     <header className="bg-background sticky top-0 z-40 border-b">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-        <NavLink
-          to="/feed"
-          className="flex items-center gap-2 text-lg font-semibold tracking-tight"
-        >
-          <img src={logoUrl} alt="" className="size-7 object-contain" />
-          Food Share
+        <NavLink to="/feed" className="flex items-center">
+          <img src={logoUrl} alt="Food Share" className="size-10 object-contain" />
         </NavLink>
 
         <nav className="hidden flex-1 items-center gap-1 md:flex">
@@ -35,8 +31,10 @@ export function Topbar() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'hover:bg-accent hover:text-accent-foreground rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
+                  'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary-foreground text-primary'
+                    : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground',
                 )
               }
             >

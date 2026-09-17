@@ -32,7 +32,7 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="bg-secondary text-secondary-foreground focus-visible:ring-ring flex size-9 items-center justify-center rounded-full text-sm font-medium outline-none focus-visible:ring-2"
+        className="bg-primary text-primary-foreground focus-visible:ring-ring flex size-9 items-center justify-center rounded-full text-sm font-medium outline-none focus-visible:ring-2"
         aria-label="Menu do usuário"
       >
         {user ? initials(user.name) : <UserIcon className="size-4" />}
@@ -51,7 +51,7 @@ export function UserMenu() {
         )}
         <DropdownMenuItem onClick={() => navigate('/perfil')}>
           <UserIcon />
-          Meu perfil
+          Perfil
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={() => void handleSignOut()}>
           <LogOutIcon />

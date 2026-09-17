@@ -21,7 +21,7 @@ export function WizardProgress({ step }: { step: number }) {
         {[0, 1, 2, 3].map((i) => (
           <span
             key={i}
-            className={cn('h-1 flex-1 rounded-full', i <= step ? 'bg-primary' : 'bg-muted')}
+            className={cn('h-1 flex-1 rounded-full', i <= step ? 'bg-primary' : 'bg-border')}
           />
         ))}
       </div>

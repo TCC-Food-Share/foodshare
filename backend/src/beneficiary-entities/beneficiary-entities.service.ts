@@ -97,6 +97,17 @@ export class BeneficiaryEntitiesService {
     }
   }
 
+  async findMe(userId: number): Promise<BeneficiaryEntityResponseDto> {
+    const beneficiaryEntity = await this.prisma.beneficiaryEntity.findUnique({
+      where: { userId },
+      include: { user: true, address: true },
+    });
+    if (!beneficiaryEntity) {
+      throw new NotFoundException('Beneficiary entity not found.');
+    }
+    return this.toResponse(beneficiaryEntity);
+  }
+
   async update(
     userId: number,
     dto: UpdateBeneficiaryEntityDto,

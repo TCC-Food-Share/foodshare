@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -39,6 +39,20 @@ export class EstablishmentsController {
   })
   create(@Body() dto: CreateEstablishmentDto): Promise<EstablishmentResponseDto> {
     return this.establishmentsService.create(dto);
+  }
+
+  @Get('me')
+  @ApiOperation({
+    summary: 'Consulta do próprio cadastro',
+    description: 'Retorna o cadastro completo do estabelecimento autenticado, sem a senha.',
+  })
+  @ApiOkResponse({
+    description: 'Cadastro do estabelecimento autenticado.',
+    type: EstablishmentResponseDto,
+  })
+  @ApiNotFoundResponse({ description: 'Nenhum estabelecimento vinculado ao usuário autenticado.' })
+  findMe(@Session() session: UserSession): Promise<EstablishmentResponseDto> {
+    return this.establishmentsService.findMe(Number(session.user.id));
   }
 
   @Patch('me')
