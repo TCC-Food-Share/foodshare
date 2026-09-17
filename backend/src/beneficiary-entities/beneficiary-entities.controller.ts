@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -39,6 +39,22 @@ export class BeneficiaryEntitiesController {
   })
   create(@Body() dto: CreateBeneficiaryEntityDto): Promise<BeneficiaryEntityResponseDto> {
     return this.beneficiaryEntitiesService.create(dto);
+  }
+
+  @Get('me')
+  @ApiOperation({
+    summary: 'Consulta do próprio cadastro',
+    description: 'Retorna o cadastro completo da entidade beneficiária autenticada, sem a senha.',
+  })
+  @ApiOkResponse({
+    description: 'Cadastro da entidade beneficiária autenticada.',
+    type: BeneficiaryEntityResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Nenhuma entidade beneficiária vinculada ao usuário autenticado.',
+  })
+  findMe(@Session() session: UserSession): Promise<BeneficiaryEntityResponseDto> {
+    return this.beneficiaryEntitiesService.findMe(Number(session.user.id));
   }
 
   @Patch('me')
