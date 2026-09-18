@@ -1,10 +1,4 @@
-# alimentos/detalhe Specification
-
-## Purpose
-
-Permitir que um usuário autenticado obtenha os dados completos de um único alimento disponível, identificado por id, para decidir sobre um pedido de doação.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Visualização dos dados completos de um alimento disponível
 O sistema SHALL permitir que qualquer usuário autenticado (estabelecimento ou entidade beneficiária) obtenha, por id, os dados completos de um alimento — imagem, nome, categoria, quantidade e unidade, descrição, data de vencimento, status e estabelecimento de origem (identificação, razão social, cidade e UF). O alimento SHALL ser retornado apenas quando estiver disponível, aplicando o mesmo recorte da listagem: status "Ativo", não excluído logicamente e não vencido (data de vencimento a partir da data atual).
