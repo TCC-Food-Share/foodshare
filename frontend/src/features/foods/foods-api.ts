@@ -30,7 +30,19 @@ export interface FoodFilters {
   page?: number;
 }
 
+export interface CreateFoodPayload {
+  name: string;
+  categoryId: number;
+  description: string;
+  quantity: number;
+  quantityUnit: string;
+  expirationDate: string;
+  image?: string;
+}
+
 export const listFoods = (filters: FoodFilters) =>
   api.get<PaginatedFoods>('/foods', { query: filters });
 
 export const getFood = (id: number) => api.get<FoodListItem>(`/foods/${id}`);
+
+export const createFood = (payload: CreateFoodPayload) => api.post<FoodListItem>('/foods', payload);

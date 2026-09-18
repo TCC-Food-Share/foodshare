@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
+import { PlusIcon } from 'lucide-react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { Button } from '@/components/ui/button';
 import {
   Pagination,
   PaginationContent,
@@ -10,6 +13,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/features/auth/use-auth';
+import { CreateFoodDialog } from '@/features/foods/create-food-dialog';
 import { EmptyState } from '@/features/foods/empty-state';
 import { FoodCard } from '@/features/foods/food-card';
 import { listFoods } from '@/features/foods/foods-api';
@@ -26,7 +31,9 @@ function pageWindow(page: number, totalPages: number): number[] {
 }
 
 export function FeedPage() {
+  const { role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const page = Number(searchParams.get('page') ?? '1') || 1;
   const filters = {
@@ -62,12 +69,26 @@ export function FeedPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-foreground text-2xl font-bold">Feed de Alimentos</h1>
-        <p className="text-muted-foreground text-sm">Encontre alimentos disponíveis para doação</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-foreground text-2xl font-bold">Feed de Alimentos</h1>
+          <p className="text-muted-foreground text-sm">
+            Encontre alimentos disponíveis para doação
+          </p>
+        </div>
+        {role === 'establishment' && (
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <PlusIcon />
+            Cadastrar alimento
+          </Button>
+        )}
       </div>
 
       <SearchFilters searchParams={searchParams} setSearchParams={setSearchParams} />
+
+      {role === 'establishment' && (
+        <CreateFoodDialog open={createOpen} onOpenChange={setCreateOpen} />
+      )}
 
       {query.isLoading && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
