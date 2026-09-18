@@ -49,7 +49,7 @@ export class FoodsService {
         establishmentId: establishment.id,
         statusId: status.id,
       },
-      include: { category: true, status: true, establishment: true },
+      include: { category: true, status: true, establishment: { include: { address: true } } },
     });
 
     return this.toResponse(food);
@@ -96,11 +96,15 @@ export class FoodsService {
   }
 
   findAvailableById(id: number): Promise<Prisma.FoodGetPayload<{
-    include: { category: true; status: true; establishment: true };
+    include: {
+      category: true;
+      status: true;
+      establishment: { include: { address: true } };
+    };
   }> | null> {
     return this.prisma.food.findFirst({
       where: this.availableFoodWhereInput(id),
-      include: { category: true, status: true, establishment: true },
+      include: { category: true, status: true, establishment: { include: { address: true } } },
     });
   }
 
@@ -141,7 +145,7 @@ export class FoodsService {
   private async hydrate(ids: number[]): Promise<FoodResponseDto[]> {
     const foods = await this.prisma.food.findMany({
       where: { id: { in: ids } },
-      include: { category: true, status: true, establishment: true },
+      include: { category: true, status: true, establishment: { include: { address: true } } },
     });
     const byId = new Map(foods.map((food) => [food.id, food]));
 
@@ -153,7 +157,11 @@ export class FoodsService {
 
   private toResponse(
     food: Prisma.FoodGetPayload<{
-      include: { category: true; status: true; establishment: true };
+      include: {
+        category: true;
+        status: true;
+        establishment: { include: { address: true } };
+      };
     }>,
   ): FoodResponseDto {
     return {
@@ -167,7 +175,12 @@ export class FoodsService {
       publishedAt: food.publishedAt,
       category: { id: food.category.id, name: food.category.name },
       status: { id: food.status.id, name: food.status.name },
-      establishment: { id: food.establishment.id, companyName: food.establishment.companyName },
+      establishment: {
+        id: food.establishment.id,
+        companyName: food.establishment.companyName,
+        city: food.establishment.address.city,
+        state: food.establishment.address.state,
+      },
     };
   }
 }
