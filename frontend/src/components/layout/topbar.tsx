@@ -18,7 +18,7 @@ export function Topbar() {
   const items = navItemsFor(role);
 
   return (
-    <header className="bg-background sticky top-0 z-40 border-b">
+    <header className="bg-background sticky top-0 z-40 border-b shadow-xs">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
         <NavLink to="/feed" className="flex items-center">
           <img src={logoUrl} alt="Food Share" className="size-10 object-contain" />

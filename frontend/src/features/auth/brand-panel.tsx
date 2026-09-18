@@ -10,7 +10,7 @@ export function BrandPanel() {
   return (
     <div className="hidden flex-col justify-between bg-linear-to-b from-[#1d4ed8] to-[#1e3a8a] p-12 text-white md:flex md:w-[45%] lg:w-[40%]">
       <div className="flex items-center gap-3">
-        <span className="flex size-11 items-center justify-center rounded-full bg-white p-1.5">
+        <span className="flex size-11 items-center justify-center rounded-full bg-white p-1.5 shadow-lg">
           <img src={logoUrl} alt="" className="size-full object-contain" />
         </span>
         <span className="text-2xl font-semibold tracking-tight">Food Share</span>

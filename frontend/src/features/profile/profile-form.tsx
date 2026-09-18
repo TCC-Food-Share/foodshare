@@ -1,4 +1,11 @@
-import { Loader2Icon, LockIcon, MapPinIcon } from 'lucide-react';
+import {
+  Building2Icon,
+  ContactIcon,
+  FileTextIcon,
+  Loader2Icon,
+  LockIcon,
+  MapPinIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { Control } from 'react-hook-form';
 import { useFormContext, useWatch } from 'react-hook-form';
@@ -46,7 +53,12 @@ function LockedField({ label, value }: { label: string; value: string }) {
         {label}
         <LockIcon className="size-3" />
       </Label>
-      <Input value={value} disabled readOnly />
+      <Input
+        value={value}
+        disabled
+        readOnly
+        className="bg-muted text-muted-foreground disabled:opacity-100"
+      />
     </div>
   );
 }
@@ -100,9 +112,13 @@ export function ProfileForm({
       <Card>
         <CardContent className="flex items-center gap-4">
           {data.user.image ? (
-            <img src={data.user.image} alt="" className="size-14 rounded-full object-cover" />
+            <img
+              src={data.user.image}
+              alt=""
+              className="size-14 rounded-full object-cover shadow-sm"
+            />
           ) : (
-            <div className="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-full text-lg font-medium">
+            <div className="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-full text-lg font-medium shadow-sm">
               {initials(data.companyName)}
             </div>
           )}
@@ -158,7 +174,10 @@ export function ProfileForm({
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Dados institucionais</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Building2Icon className="text-muted-foreground size-4" />
+              Dados institucionais
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <LockedField label="CNPJ" value={data.cnpj} />
@@ -202,7 +221,10 @@ export function ProfileForm({
 
         <Card>
           <CardHeader>
-            <CardTitle>Contato do responsável</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <ContactIcon className="text-muted-foreground size-4" />
+              Contato do responsável
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <LockedField label="Nome" value={data.user.name} />
@@ -235,7 +257,10 @@ export function ProfileForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Endereço</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MapPinIcon className="text-muted-foreground size-4" />
+            Endereço
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <FormField
@@ -379,7 +404,10 @@ export function ProfileForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Descrição</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <FileTextIcon className="text-muted-foreground size-4" />
+            Descrição
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <FormField
