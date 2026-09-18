@@ -22,6 +22,12 @@ class EstablishmentSummaryDto {
 
   @ApiProperty({ example: 'Good Taste Restaurant Ltd' })
   companyName!: string;
+
+  @ApiProperty({ example: 'Birigui' })
+  city!: string;
+
+  @ApiProperty({ example: 'SP' })
+  state!: string;
 }
 
 export class FoodResponseDto {

@@ -5,6 +5,8 @@ import { AppShell } from '@/components/layout/app-shell';
 import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 import { SignUpPage } from '@/features/auth/sign-up/sign-up-page';
+import { FeedPage } from '@/features/foods/feed-page';
+import { FoodDetailPage } from '@/features/foods/food-detail-page';
 import { ProfilePage } from '@/features/profile/profile-page';
 
 export const router = createBrowserRouter([
@@ -22,10 +24,10 @@ export const router = createBrowserRouter([
       {
         element: <AppShell />,
         children: [
-          { path: '/feed', element: <RoutePlaceholder feature="F4" title="Feed de alimentos" /> },
+          { path: '/feed', element: <FeedPage /> },
           {
             path: '/alimentos/:id',
-            element: <RoutePlaceholder feature="F4" title="Detalhe do alimento" />,
+            element: <FoodDetailPage />,
           },
           { path: '/pedidos', element: <RoutePlaceholder feature="F7" title="Pedidos" /> },
           {

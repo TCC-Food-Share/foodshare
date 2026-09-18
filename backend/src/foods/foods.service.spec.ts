@@ -29,7 +29,11 @@ describe('FoodsService', () => {
     publishedAt: new Date('2026-08-28T12:00:00.000Z'),
     category: { id: 1, name: 'Não Perecíveis' },
     status: { id: 1, name: 'Ativo' },
-    establishment: { id: 30, companyName: 'Test Establishment Ltd' },
+    establishment: {
+      id: 30,
+      companyName: 'Test Establishment Ltd',
+      address: { city: 'Birigui', state: 'SP' },
+    },
   };
 
   const sqlText = (sql: Prisma.Sql): string => sql.strings.join(' ');
@@ -213,6 +217,8 @@ describe('FoodsService', () => {
       expect(result.data[0].establishment).toEqual({
         id: 30,
         companyName: 'Test Establishment Ltd',
+        city: 'Birigui',
+        state: 'SP',
       });
     });
   });
@@ -229,13 +235,18 @@ describe('FoodsService', () => {
             status: { name: 'Ativo' },
             expirationDate: { gte: expect.any(Date) },
           },
-          include: { category: true, status: true, establishment: true },
+          include: { category: true, status: true, establishment: { include: { address: true } } },
         }),
       );
       expect(typeof result.quantity).toBe('string');
       expect(result.category).toEqual({ id: 1, name: 'Não Perecíveis' });
       expect(result.status).toEqual({ id: 1, name: 'Ativo' });
-      expect(result.establishment).toEqual({ id: 30, companyName: 'Test Establishment Ltd' });
+      expect(result.establishment).toEqual({
+        id: 30,
+        companyName: 'Test Establishment Ltd',
+        city: 'Birigui',
+        state: 'SP',
+      });
     });
 
     it('throws NotFoundException when no available food matches the id', async () => {
