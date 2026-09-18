@@ -1,9 +1,17 @@
-import { LockIcon, MapPinIcon, PencilIcon } from 'lucide-react';
+import {
+  Building2Icon,
+  ContactIcon,
+  FileTextIcon,
+  LockIcon,
+  MapPinIcon,
+  PencilIcon,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Role } from '@/features/auth/auth-context';
 import type { ProfileResponse } from '@/features/profile/profile-api';
+import { cn } from '@/lib/cn';
 
 const ROLE_LABEL: Record<Role, string> = {
   establishment: 'Estabelecimento',
@@ -24,7 +32,10 @@ function Field({ label, value, locked }: { label: string; value: string; locked?
     <div className="flex flex-col gap-1">
       <span className="text-muted-foreground text-xs">{label}</span>
       <span
-        className={`flex items-center gap-1.5 text-sm ${locked ? 'text-muted-foreground' : ''}`}
+        className={cn(
+          'flex items-center gap-1.5 text-sm',
+          locked && 'bg-muted text-muted-foreground -mx-2 rounded-md px-2 py-1',
+        )}
       >
         {value || '—'}
         {locked && <LockIcon className="size-3" />}
@@ -47,9 +58,13 @@ export function ProfileView({
       <Card>
         <CardContent className="flex items-center gap-4">
           {data.user.image ? (
-            <img src={data.user.image} alt="" className="size-14 rounded-full object-cover" />
+            <img
+              src={data.user.image}
+              alt=""
+              className="size-14 rounded-full object-cover shadow-sm"
+            />
           ) : (
-            <div className="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-full text-lg font-medium">
+            <div className="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-full text-lg font-medium shadow-sm">
               {initials(data.companyName)}
             </div>
           )}
@@ -78,7 +93,10 @@ export function ProfileView({
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Dados institucionais</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Building2Icon className="text-muted-foreground size-4" />
+              Dados institucionais
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Field label="Razão social" value={data.companyName} locked />
@@ -91,7 +109,10 @@ export function ProfileView({
 
         <Card>
           <CardHeader>
-            <CardTitle>Contato do responsável</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <ContactIcon className="text-muted-foreground size-4" />
+              Contato do responsável
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Field label="Nome" value={data.user.name} locked />
@@ -103,7 +124,10 @@ export function ProfileView({
 
       <Card>
         <CardHeader>
-          <CardTitle>Endereço</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MapPinIcon className="text-muted-foreground size-4" />
+            Endereço
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field label="CEP" value={data.address.postalCode} />
@@ -116,7 +140,10 @@ export function ProfileView({
 
       <Card>
         <CardHeader>
-          <CardTitle>Descrição</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <FileTextIcon className="text-muted-foreground size-4" />
+            Descrição
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm whitespace-pre-wrap">{data.description}</p>

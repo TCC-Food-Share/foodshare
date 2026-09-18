@@ -42,9 +42,9 @@ export function ProfileTypeStep({ control }: { control: Control<SignUpInput> }) 
                   key={value}
                   value={value}
                   className={cn(
-                    'group flex cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-colors outline-none',
+                    'group flex cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-all outline-none',
                     'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-                    'data-[state=checked]:border-primary data-[state=checked]:bg-primary-foreground',
+                    'data-[state=checked]:border-primary data-[state=checked]:bg-primary-foreground data-[state=checked]:shadow-sm',
                     'data-[state=unchecked]:hover:bg-accent/50',
                   )}
                 >
