@@ -30,7 +30,7 @@ organiza a execução.
 | F2     | Cadastro multi-etapa (estabelecimento + entidade)                                                                       | ✅ feito, merge em `develop` (`feat/rf01-cadastro`)                        |
 | F3     | Edição de perfil (campos travados RF06)                                                                                 | ✅ feito, merge em `develop` (`feat/rf05-edicao-perfil`)                   |
 | F4     | Feed + busca + detalhe do alimento                                                                                      | ✅ feito, merge em `develop` (`feat/rf11-feed`)                            |
-| F5     | Cadastrar alimento (modal)                                                                                              | implementado (RF10, change `frontend-cadastro-alimento`); falta commit + PR para `develop` |
+| F5     | Cadastrar alimento (modal)                                                                                              | ✅ feito, merge em `develop` (`feat/rf10-modal-cadastro`)                  |
 | F6     | Solicitar doação + erro de limite                                                                                       | pendente                                                                   |
 | F7     | Listar pedidos (abas por status) + detalhe do pedido                                                                    | pendente                                                                   |
 | F8     | Aceitar / rejeitar / confirmar recebimento                                                                              | pendente                                                                   |
