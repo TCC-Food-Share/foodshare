@@ -20,6 +20,7 @@ import {
   IN_PROGRESS_STATUSES,
   INITIAL_STATUS,
   MAX_PAGE_SIZE,
+  ORDER_CONFLICT_CODES,
   RECEIVED_STATUS,
   REJECTED_STATUS,
 } from './orders.constants';
@@ -40,21 +41,33 @@ export class OrdersService {
     }
 
     const ordersInProgress = await this.prisma.order.count({
-      where: {
-        beneficiaryEntityId: beneficiaryEntity.id,
-        deleted: false,
-        status: { name: { in: IN_PROGRESS_STATUSES } },
-      },
+      where: this.inProgressWhere(beneficiaryEntity.id),
     });
     if (ordersInProgress >= MAX_ORDERS_IN_PROGRESS) {
-      throw new ConflictException(
-        'Beneficiary entity has reached the limit of orders in progress.',
-      );
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'Conflict',
+        message: 'Beneficiary entity has reached the limit of orders in progress.',
+        code: ORDER_CONFLICT_CODES.limitReached,
+      });
     }
 
     const food = await this.foodsService.findAvailableById(dto.foodId);
     if (!food) {
       throw new NotFoundException('Food not found.');
+    }
+
+    const duplicate = await this.prisma.order.findFirst({
+      where: { ...this.inProgressWhere(beneficiaryEntity.id), foodId: food.id },
+      select: { id: true },
+    });
+    if (duplicate) {
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'Conflict',
+        message: 'Beneficiary entity already has an order in progress for this food.',
+        code: ORDER_CONFLICT_CODES.duplicateInProgress,
+      });
     }
 
     if (new Prisma.Decimal(dto.quantity).greaterThan(food.quantity)) {
@@ -273,6 +286,14 @@ export class OrdersService {
     }
 
     return this.toDetailResponse(order);
+  }
+
+  private inProgressWhere(beneficiaryEntityId: number): Prisma.OrderWhereInput {
+    return {
+      beneficiaryEntityId,
+      deleted: false,
+      status: { name: { in: IN_PROGRESS_STATUSES } },
+    };
   }
 
   private mapInstitution(inst: {
