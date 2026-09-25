@@ -1,17 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeftIcon } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/use-auth';
+import { OrderActionsCard } from '@/features/orders/order-actions-card';
 import {
   CounterpartCard,
   OrderFoodCard,
   OrderSummaryCard,
 } from '@/features/orders/order-detail-cards';
 import { OrderStatusBadge } from '@/features/orders/order-status-badge';
-import { getOrder } from '@/features/orders/orders-api';
+import { getOrder, orderDetailKey } from '@/features/orders/orders-api';
 import { ApiError } from '@/lib/api';
 import { formatLocalDateTime } from '@/lib/format';
 
@@ -29,11 +30,12 @@ function NotFoundState() {
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { role } = useAuth();
+  const navigate = useNavigate();
   const orderId = Number(id);
   const validId = Number.isInteger(orderId) && orderId > 0;
 
   const query = useQuery({
-    queryKey: ['orders', 'detail', orderId],
+    queryKey: orderDetailKey(orderId),
     queryFn: () => getOrder(orderId),
     enabled: validId,
   });
@@ -96,6 +98,12 @@ export function OrderDetailPage() {
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1fr_360px]">
         <OrderFoodCard key={order.id} food={order.food} />
         <div className="flex flex-col gap-6">
+          <OrderActionsCard
+            key={order.id}
+            order={order}
+            role={role}
+            onNotFound={() => navigate('/pedidos')}
+          />
           <OrderSummaryCard order={order} />
           <CounterpartCard order={order} role={role} />
         </div>
