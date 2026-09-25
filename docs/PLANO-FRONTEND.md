@@ -31,7 +31,7 @@ organiza a execução.
 | F3     | Edição de perfil (campos travados RF06)                                                                                 | ✅ feito, merge em `develop` (`feat/rf05-edicao-perfil`)                   |
 | F4     | Feed + busca + detalhe do alimento                                                                                      | ✅ feito, merge em `develop` (`feat/rf11-feed`)                            |
 | F5     | Cadastrar alimento (modal)                                                                                              | ✅ feito, merge em `develop` (`feat/rf10-modal-cadastro`)                  |
-| F6     | Solicitar doação + erro de limite                                                                                       | pendente                                                                   |
+| F6     | Solicitar doação + erro de limite                                                                                       | ✅ feito (change `frontend-solicitar-doacao`)                              |
 | F7     | Listar pedidos (abas por status) + detalhe do pedido                                                                    | pendente                                                                   |
 | F8     | Aceitar / rejeitar / confirmar recebimento                                                                              | pendente                                                                   |
 | **X**  | Deploy cross-origin (CORS + cookie cross-subdomínio) — ver seção "Deploy"                                               | ✅ feito (change `deploy-cross-origin`); falta só setar as vars no Coolify |
@@ -177,6 +177,40 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 - **RF15**: em `409` ("limit of orders in progress"), mostrar que a entidade já tem 10+ pedidos em andamento
   e precisa encerrar algum. Bloquear/avisar antes se possível.
 - **REMOVER/ajustar no protótipo**: texto "os dados de contato são compartilhados" (RF20 só expõe cidade/UF).
+- **Feito** (change `frontend-solicitar-doacao`): modal `CreateOrderDialog` em
+  `frontend/src/features/orders/` (pasta que o F7/F8 estendem), aberto pelo card
+  `RequestDonationCard` do detalhe do alimento (`/alimentos/:id`, só entidade
+  beneficiária). Cartões Total/Parcial → `POST /api/orders` com `quantity` (total =
+  quantidade do alimento; parcial > 0, até 2 casas, ≤ disponível), unidade de
+  medida como sufixo do campo. Erro de limite (RF15) em duas camadas: **proativa**
+  — o card lê os pedidos `Pendente` + `Aceito` (`GET /orders?status=&pageSize=50`),
+  avisa e desabilita o botão a partir de 10; **reativa** — `409`
+  do `POST` troca o corpo do modal pelo aviso com o atalho "Ver meus pedidos". A
+  checagem proativa é consultiva (falhou/carregando → botão habilitado; o backend
+  decide). Sem mudança de backend. Tratados também `400` (estoque mudou → banner e
+  recarga do alimento), `404` (alimento saiu do ar → toast e fecha) e alimento com
+  `quantity = 0` (o "disponível" do backend não olha a quantidade → card
+  desabilitado com aviso). E2E no browser: total/parcial fracionário, validação
+  inline, `409` reativo e limite proativo, liberar vaga (rejeitar/receber),
+  `400`/`404`, estoque zero, estabelecimento sem o card, modal a 400px, console limpo.
+- **Regra: um pedido em andamento por alimento** (change `bloqueio-pedido-duplicado`,
+  backend + frontend): `POST /orders` recusa com `409` quando a entidade já tem um pedido
+  `Pendente` ou `Aceito` do mesmo alimento (`Rejeitado` e `Recebido` liberam um novo).
+  Os dois `409` da rota passam a se distinguir pelo `code` do corpo —
+  `ORDERS_IN_PROGRESS_LIMIT_REACHED` (limite de 10) e `DUPLICATE_ORDER_IN_PROGRESS`
+  (duplicidade); `409` sem código conhecido cai no banner genérico. No frontend: aviso
+  no card (as mesmas duas consultas do limite, agora com as linhas; o limite vence a
+  duplicidade, como no backend) e estado equivalente no modal quando o `409` chega com
+  o modal aberto. A regra não está em `docs/REQUISITOS.md` (RF14/RF15 não a citam).
+- **Protótipo Pencil — divergência aceita, não sincronizado.** Passo 3 do "Como
+  funciona" (contato compartilhado) e passo 4 (comparecer no momento combinado)
+  reescritos para o que RF16/RF18 fazem; unidade no campo em vez de fixa
+  "(unidades)"; o estado de limite e o card "sem quantidade" **não têm frame** no
+  `.pen`; os avisos de limite e de duplicidade usam estilo **warning** (variante nova
+  do `Alert` sobre o token `--warning`, âmbar) por serem estados esperados e não
+  erros — o protótipo não tem cor de warning. Mesmo precedente do F2–F5: o código é a fonte da verdade. O "Ver meus
+  pedidos" do estado de limite aponta para `/pedidos`, ainda `RoutePlaceholder`
+  até o F7.
 
 ### F7 — Listar pedidos + detalhe do pedido (RF19, RF20)
 

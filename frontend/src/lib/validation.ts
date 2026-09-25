@@ -2,6 +2,7 @@
 export const PHONE_REGEX = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
 export const POSTAL_CODE_REGEX = /^\d{5}-?\d{3}$/;
 export const UF_REGEX = /^[A-Z]{2}$/;
+export const QUANTITY_REGEX = /^\d+(\.\d{1,2})?$/;
 
 export const UFS = [
   'AC',

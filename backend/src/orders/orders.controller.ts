@@ -33,7 +33,8 @@ export class OrdersController {
       'com status "Pendente"; os vínculos com a entidade e com o estabelecimento são ' +
       'resolvidos pela sessão e pelo alimento. Exclusivo de entidade beneficiária. ' +
       'A entidade é impedida de criar um novo pedido enquanto tiver 10 ou mais pedidos ' +
-      'em andamento (RF15).',
+      'em andamento (RF15) e enquanto já tiver um pedido em andamento ("Pendente" ou ' +
+      '"Aceito") para o mesmo alimento.',
   })
   @ApiCreatedResponse({ description: 'Pedido criado com sucesso.', type: OrderResponseDto })
   @ApiBadRequestResponse({
@@ -44,8 +45,12 @@ export class OrdersController {
   })
   @ApiConflictResponse({
     description:
-      'A entidade beneficiária já possui 10 ou mais pedidos em andamento e não pode criar ' +
-      'um novo pedido até encerrar algum deles (RF15).',
+      'Pedido recusado por conflito com o estado da entidade beneficiária. O corpo traz o ' +
+      'campo `code` com o motivo: `ORDERS_IN_PROGRESS_LIMIT_REACHED` quando a entidade já ' +
+      'possui 10 ou mais pedidos em andamento e não pode criar um novo até encerrar algum ' +
+      'deles (RF15); `DUPLICATE_ORDER_IN_PROGRESS` quando a entidade já possui um pedido em ' +
+      'andamento ("Pendente" ou "Aceito") para o mesmo alimento — depois de "Rejeitado" ou ' +
+      '"Recebido" ela pode pedir o alimento de novo.',
   })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   create(@Session() session: UserSession, @Body() dto: CreateOrderDto): Promise<OrderResponseDto> {

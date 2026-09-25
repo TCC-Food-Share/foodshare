@@ -1,12 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  CalendarIcon,
-  Clock3Icon,
-  HeartHandshakeIcon,
-  ImageOffIcon,
-  PackageIcon,
-  StoreIcon,
-} from 'lucide-react';
+import { CalendarIcon, Clock3Icon, ImageOffIcon, PackageIcon, StoreIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -15,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/use-auth';
 import { getFood } from '@/features/foods/foods-api';
+import { RequestDonationCard } from '@/features/orders/request-donation-card';
 import { ApiError } from '@/lib/api';
 import { formatDate, formatQuantity } from '@/lib/format';
 
@@ -168,21 +162,7 @@ export function FoodDetailPage() {
             </div>
           </div>
 
-          {role === 'beneficiary' && (
-            <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-6">
-              <h2 className="text-foreground text-base font-semibold">
-                Interessado neste alimento?
-              </h2>
-              <p className="text-muted-foreground text-[13px] leading-relaxed">
-                Solicite a doação para sua entidade beneficiária e ajude a combater o desperdício de
-                alimentos.
-              </p>
-              <Button disabled className="gap-2">
-                <HeartHandshakeIcon />
-                Solicitar doação
-              </Button>
-            </div>
-          )}
+          {role === 'beneficiary' && <RequestDonationCard food={food} />}
         </div>
       </div>
     </div>

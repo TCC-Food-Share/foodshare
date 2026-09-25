@@ -158,107 +158,174 @@ describe('OrdersService', () => {
     service = moduleRef.get(OrdersService);
   });
 
-  it('creates a "Pendente" order linked to the session entity and the food establishment', async () => {
-    const result = await service.create(20, dto);
-
-    expect(prismaMock.beneficiaryEntity.findUnique).toHaveBeenCalledWith({ where: { userId: 20 } });
-    expect(foodsServiceMock.findAvailableById).toHaveBeenCalledWith(5);
-    expect(prismaMock.order.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          quantity: 4,
-          foodId: 5,
-          statusId: 1,
-          establishmentId: 3,
-          beneficiaryEntityId: 7,
-        }),
-      }),
-    );
-    expect(result.status.name).toBe('Pendente');
-    expect(typeof result.quantity).toBe('string');
-    expect(result.quantity).toBe('4');
-  });
-
-  it('throws NotFoundException when the user has no beneficiary entity', async () => {
-    prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(null);
-
-    await expect(service.create(99, dto)).rejects.toBeInstanceOf(NotFoundException);
-    expect(prismaMock.order.create).not.toHaveBeenCalled();
-  });
-
-  it('throws NotFoundException when the food is not available', async () => {
-    foodsServiceMock.findAvailableById.mockResolvedValue(null);
-
-    await expect(service.create(20, dto)).rejects.toBeInstanceOf(NotFoundException);
-    expect(prismaMock.order.create).not.toHaveBeenCalled();
-  });
-
-  it('throws BadRequestException when the requested quantity exceeds the food quantity', async () => {
-    await expect(service.create(20, { foodId: 5, quantity: 10.5 })).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    expect(prismaMock.order.create).not.toHaveBeenCalled();
-  });
-
-  it('allows a quantity equal to the full food quantity', async () => {
-    await service.create(20, { foodId: 5, quantity: 10 });
-
-    expect(prismaMock.order.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ quantity: 10 }) }),
-    );
-  });
-
-  it('links the establishment from the food, not from any client input', async () => {
-    foodsServiceMock.findAvailableById.mockResolvedValue({ ...foodRow, establishmentId: 999 });
-
-    await service.create(20, dto);
-
-    expect(prismaMock.order.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ establishmentId: 999 }) }),
-    );
-  });
-
-  it('creates the order when the entity has fewer than 10 orders in progress', async () => {
-    prismaMock.order.count.mockResolvedValue(9);
-
-    await service.create(20, dto);
-
-    expect(prismaMock.order.create).toHaveBeenCalled();
-  });
-
-  it('throws ConflictException when the entity already has 10 orders in progress', async () => {
-    prismaMock.order.count.mockResolvedValue(10);
-
-    await expect(service.create(20, dto)).rejects.toBeInstanceOf(ConflictException);
-    expect(foodsServiceMock.findAvailableById).not.toHaveBeenCalled();
-    expect(prismaMock.order.create).not.toHaveBeenCalled();
-  });
-
-  it('throws ConflictException when the entity is already above the limit', async () => {
-    prismaMock.order.count.mockResolvedValue(15);
-
-    await expect(service.create(20, dto)).rejects.toBeInstanceOf(ConflictException);
-    expect(prismaMock.order.create).not.toHaveBeenCalled();
-  });
-
-  it('counts orders in progress scoped to the entity, excluding soft-deleted and terminal statuses', async () => {
-    await service.create(20, dto);
-
-    expect(prismaMock.order.count).toHaveBeenCalledWith({
-      where: {
-        beneficiaryEntityId: 7,
-        deleted: false,
-        status: { name: { in: ['Pendente', 'Aceito'] } },
-      },
+  describe('create', () => {
+    beforeEach(() => {
+      prismaMock.order.findFirst.mockResolvedValue(null);
     });
-  });
 
-  it('checks the limit before validating the food', async () => {
-    prismaMock.order.count.mockResolvedValue(10);
-    foodsServiceMock.findAvailableById.mockResolvedValue(null);
+    const conflictBody = async (input: CreateOrderDto = dto): Promise<unknown> => {
+      const error = await service.create(20, input).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ConflictException);
+      return (error as ConflictException).getResponse();
+    };
 
-    await expect(service.create(20, dto)).rejects.toBeInstanceOf(ConflictException);
-    expect(prismaMock.order.create).not.toHaveBeenCalled();
+    it('creates a "Pendente" order linked to the session entity and the food establishment', async () => {
+      const result = await service.create(20, dto);
+
+      expect(prismaMock.beneficiaryEntity.findUnique).toHaveBeenCalledWith({
+        where: { userId: 20 },
+      });
+      expect(foodsServiceMock.findAvailableById).toHaveBeenCalledWith(5);
+      expect(prismaMock.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            quantity: 4,
+            foodId: 5,
+            statusId: 1,
+            establishmentId: 3,
+            beneficiaryEntityId: 7,
+          }),
+        }),
+      );
+      expect(result.status.name).toBe('Pendente');
+      expect(typeof result.quantity).toBe('string');
+      expect(result.quantity).toBe('4');
+    });
+
+    it('throws NotFoundException when the user has no beneficiary entity', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(null);
+
+      await expect(service.create(99, dto)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the food is not available', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue(null);
+
+      await expect(service.create(20, dto)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when the requested quantity exceeds the food quantity', async () => {
+      await expect(service.create(20, { foodId: 5, quantity: 10.5 })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('allows a quantity equal to the full food quantity', async () => {
+      await service.create(20, { foodId: 5, quantity: 10 });
+
+      expect(prismaMock.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ quantity: 10 }) }),
+      );
+    });
+
+    it('links the establishment from the food, not from any client input', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({ ...foodRow, establishmentId: 999 });
+
+      await service.create(20, dto);
+
+      expect(prismaMock.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ establishmentId: 999 }) }),
+      );
+    });
+
+    it('creates the order when the entity has fewer than 10 orders in progress', async () => {
+      prismaMock.order.count.mockResolvedValue(9);
+
+      await service.create(20, dto);
+
+      expect(prismaMock.order.create).toHaveBeenCalled();
+    });
+
+    it('throws ConflictException with the limit code when the entity already has 10 orders in progress', async () => {
+      prismaMock.order.count.mockResolvedValue(10);
+
+      expect(await conflictBody()).toMatchObject({ code: 'ORDERS_IN_PROGRESS_LIMIT_REACHED' });
+      expect(foodsServiceMock.findAvailableById).not.toHaveBeenCalled();
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when the entity is already above the limit', async () => {
+      prismaMock.order.count.mockResolvedValue(15);
+
+      await expect(service.create(20, dto)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('counts orders in progress scoped to the entity, excluding soft-deleted and terminal statuses', async () => {
+      await service.create(20, dto);
+
+      expect(prismaMock.order.count).toHaveBeenCalledWith({
+        where: {
+          beneficiaryEntityId: 7,
+          deleted: false,
+          status: { name: { in: ['Pendente', 'Aceito'] } },
+        },
+      });
+    });
+
+    it('checks the limit before validating the food', async () => {
+      prismaMock.order.count.mockResolvedValue(10);
+      foodsServiceMock.findAvailableById.mockResolvedValue(null);
+
+      await expect(service.create(20, dto)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('creates the order when the entity has no order in progress for the food', async () => {
+      await service.create(20, dto);
+
+      expect(prismaMock.order.findFirst).toHaveBeenCalled();
+      expect(prismaMock.order.create).toHaveBeenCalled();
+    });
+
+    it('throws ConflictException with the duplicate code when the entity already has an order in progress for the food', async () => {
+      prismaMock.order.findFirst.mockResolvedValue({ id: 50 });
+
+      expect(await conflictBody()).toMatchObject({ code: 'DUPLICATE_ORDER_IN_PROGRESS' });
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('looks for the duplicate scoped to the entity and the food, excluding soft-deleted and terminal statuses', async () => {
+      await service.create(20, dto);
+
+      expect(prismaMock.order.findFirst).toHaveBeenCalledWith({
+        where: {
+          beneficiaryEntityId: 7,
+          foodId: 5,
+          deleted: false,
+          status: { name: { in: ['Pendente', 'Aceito'] } },
+        },
+        select: { id: true },
+      });
+    });
+
+    it('does not look for a duplicate when the food is not available', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue(null);
+
+      await expect(service.create(20, dto)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.order.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('reports the limit, not the duplicate, when both apply', async () => {
+      prismaMock.order.count.mockResolvedValue(10);
+      prismaMock.order.findFirst.mockResolvedValue({ id: 50 });
+
+      expect(await conflictBody()).toMatchObject({ code: 'ORDERS_IN_PROGRESS_LIMIT_REACHED' });
+      expect(foodsServiceMock.findAvailableById).not.toHaveBeenCalled();
+      expect(prismaMock.order.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('reports the duplicate before validating the quantity', async () => {
+      prismaMock.order.findFirst.mockResolvedValue({ id: 50 });
+
+      expect(await conflictBody({ foodId: 5, quantity: 10.5 })).toMatchObject({
+        code: 'DUPLICATE_ORDER_IN_PROGRESS',
+      });
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('accept', () => {

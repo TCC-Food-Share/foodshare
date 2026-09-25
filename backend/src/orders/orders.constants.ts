@@ -12,6 +12,11 @@ export const ORDER_STATUS_NAMES = [
 
 export const IN_PROGRESS_STATUSES = [INITIAL_STATUS, ACCEPTED_STATUS];
 
+export const ORDER_CONFLICT_CODES = {
+  limitReached: 'ORDERS_IN_PROGRESS_LIMIT_REACHED',
+  duplicateInProgress: 'DUPLICATE_ORDER_IN_PROGRESS',
+} as const;
+
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 50;

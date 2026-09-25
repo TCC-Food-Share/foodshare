@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const QUANTITY_REGEX = /^\d+(\.\d{1,2})?$/;
+import { QUANTITY_REGEX } from '@/lib/validation';
 
 export const createFoodSchema = z.object({
   name: z.string().min(1, 'Informe o nome do alimento.').max(200),
