@@ -7,7 +7,7 @@ Permitir que um usuário autenticado visualize a listagem paginada dos alimentos
 ## Requirements
 
 ### Requirement: Listagem de alimentos disponíveis para usuário autenticado
-O sistema SHALL permitir que qualquer usuário autenticado (estabelecimento ou entidade beneficiária) obtenha a listagem dos alimentos disponíveis na plataforma. Um alimento é considerado disponível quando tem status "Ativo", não está excluído logicamente e ainda não venceu (data de vencimento a partir da data atual). A listagem abrange alimentos de qualquer estabelecimento, sem recorte por quem cadastrou, e cada item traz os mesmos dados retornados no cadastro do alimento (imagem, nome, categoria, quantidade e unidade, descrição, data de vencimento, status e estabelecimento de origem).
+O sistema SHALL permitir que qualquer usuário autenticado (estabelecimento ou entidade beneficiária) obtenha a listagem dos alimentos disponíveis na plataforma. Um alimento é considerado disponível quando tem status "Ativo", não está excluído logicamente, ainda não venceu (data de vencimento a partir da data atual) e tem quantidade atual maior que zero. A listagem abrange alimentos de qualquer estabelecimento, sem recorte por quem cadastrou, e cada item traz os mesmos dados retornados no cadastro do alimento (imagem, nome, categoria, quantidade e unidade, descrição, data de vencimento, status e estabelecimento de origem).
 
 #### Scenario: Usuário autenticado obtém a listagem
 - **WHEN** um usuário autenticado solicita a listagem de alimentos
@@ -18,8 +18,16 @@ O sistema SHALL permitir que qualquer usuário autenticado (estabelecimento ou e
 - **THEN** o sistema nega o acesso e não retorna nenhum alimento
 
 #### Scenario: Alimento indisponível não aparece
-- **WHEN** existe um alimento excluído logicamente, ou com data de vencimento já passada, ou com status diferente de "Ativo"
+- **WHEN** existe um alimento excluído logicamente, ou com data de vencimento já passada, ou com status diferente de "Ativo", ou com quantidade atual igual a zero
 - **THEN** esse alimento não aparece na listagem
+
+#### Scenario: Alimento esgotado por pedidos aceitos deixa de aparecer
+- **WHEN** um alimento aparece na listagem com quantidade 5 e os pedidos aceitos reservam, somados, toda a quantidade (por exemplo 3 e depois 2), deixando a quantidade atual em zero
+- **THEN** esse alimento deixa de aparecer na listagem, para qualquer usuário
+
+#### Scenario: Alimento com estoque restante continua aparecendo
+- **WHEN** os pedidos aceitos reservam parte da quantidade de um alimento, deixando a quantidade atual maior que zero
+- **THEN** esse alimento continua aparecendo na listagem, com a quantidade restante
 
 #### Scenario: Alimento que vence no dia atual ainda aparece
 - **WHEN** existe um alimento disponível cuja data de vencimento é a data de hoje
@@ -41,7 +49,7 @@ O sistema SHALL permitir que o usuário autenticado refine a listagem de aliment
 - `city` — casa alimentos cujo estabelecimento de origem tem o município do endereço contendo o trecho informado, ignorando caixa e acentuação.
 - `state` — casa alimentos cujo estabelecimento de origem tem a UF do endereço exatamente igual à informada (2 letras).
 
-Os parâmetros informados SHALL ser combinados por E (todos precisam casar). A busca SHALL ser aplicada sempre dentro do conjunto de alimentos disponíveis (status "Ativo", não excluído, não vencido) — um filtro nunca traz alimento indisponível. Parâmetro ausente, vazio ou só com espaços SHALL ser ignorado.
+Os parâmetros informados SHALL ser combinados por E (todos precisam casar). A busca SHALL ser aplicada sempre dentro do conjunto de alimentos disponíveis (status "Ativo", não excluído, não vencido e com quantidade maior que zero) — um filtro nunca traz alimento indisponível. Parâmetro ausente, vazio ou só com espaços SHALL ser ignorado.
 
 #### Scenario: Busca por nome, ignorando caixa e acento
 - **WHEN** o usuário solicita a listagem com `name` igual a "feijao"
@@ -68,7 +76,7 @@ Os parâmetros informados SHALL ser combinados por E (todos precisam casar). A b
 - **THEN** o sistema retorna uma lista de itens vazia e `total` igual a 0, sem erro
 
 #### Scenario: Busca não traz alimento indisponível
-- **WHEN** existe um alimento vencido, excluído logicamente ou com status diferente de "Ativo" cujo nome casa com o `name` informado
+- **WHEN** existe um alimento vencido, excluído logicamente, com status diferente de "Ativo" ou com quantidade atual igual a zero cujo nome casa com o `name` informado
 - **THEN** esse alimento não é retornado
 
 ### Requirement: Paginação e ordenação da listagem
