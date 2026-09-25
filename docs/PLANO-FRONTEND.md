@@ -33,7 +33,7 @@ organiza a execução.
 | F5     | Cadastrar alimento (modal)                                                                                              | ✅ feito, merge em `develop` (`feat/rf10-modal-cadastro`)                  |
 | F6     | Solicitar doação + erro de limite                                                                                       | ✅ feito (change `frontend-solicitar-doacao`)                              |
 | F7     | Listar pedidos (abas por status) + detalhe do pedido                                                                    | ✅ feito (change `frontend-listar-pedidos`)                                |
-| F8     | Aceitar / rejeitar / confirmar recebimento                                                                              | pendente                                                                   |
+| F8     | Aceitar / rejeitar / confirmar recebimento                                                                              | ✅ feito (change `frontend-acoes-pedido`)                                  |
 | **X**  | Deploy cross-origin (CORS + cookie cross-subdomínio) — ver seção "Deploy"                                               | ✅ feito (change `deploy-cross-origin`); falta só setar as vars no Coolify |
 
 Cadência por fase: `/opsx:propose <nome>` → `/opsx:apply` → `/opsx:archive` → commit → PR para `develop`.
@@ -255,7 +255,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
 - **Protótipo Pencil — divergência aceita, não sincronizado.** Frames `MyFw0`, `vRf3b`,
   `NYKRt`, `I0EByf` seguem com "Ativo/Em andamento/Doado/Cancelado", busca, histórico,
   contato/WhatsApp, "Ver perfil", "Cancelar pedido" e ações de aceite/rejeição — nada disso
-  entra no F7 (as ações são do F8). Diferenças intencionais no código: abas sublinhadas com
+  entra no F7 (as ações são do F8, que já entrou). Diferenças intencionais no código: abas sublinhadas com
   contador, sem miniatura do alimento na lista (a listagem não devolve `image`), só a
   instituição da outra ponta no detalhe, sem "Ver alimento" (o `GET /foods/:id` dá `404`
   para alimento vencido/inativo e o detalhe do pedido já traz o alimento por inteiro).
@@ -270,6 +270,36 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
   - **RF18** (entidade beneficiária): `PATCH /api/orders/:id/receive` — "Aceito" → "Recebido", encerra o pedido.
 - Após a mutation, invalidar as queries de listagem/detalhe (React Query).
 - Confirmar recebimento é irreversível — texto de confirmação, sem "desfazer".
+- **Feito** (change `frontend-acoes-pedido`): card "Ações do pedido" no **topo** da coluna
+  lateral do detalhe (`/pedidos/:id`), em `frontend/src/features/orders/`
+  (`order-actions-card.tsx`, `order-action-dialog.tsx`, `use-order-action.ts` e as regras puras
+  em `order-actions.ts`). O que aparece depende de papel × status: estabelecimento + `Pendente` →
+  Aceitar / Rejeitar; entidade + `Aceito` → Confirmar recebimento; nos demais casos o card vira
+  "Situação do pedido" só com texto (sem botão desabilitado). As três ações abrem um `Dialog` de
+  confirmação (irreversíveis no MVP) com a consequência escrita — o aceite mostra o estoque
+  ("50 kg → 42 kg"), o rejeitar usa botão destrutivo e **não tem campo de motivo**; foco inicial em
+  "Cancelar", botões travados durante o envio, texto congelado na abertura, foco devolvido ao
+  botão de origem (cancelar) ou ao card (sucesso). **Aviso proativo** no card do estabelecimento
+  quando o estoque atual é menor que a quantidade pedida (desabilita "Aceitar", "Rejeitar"
+  continua) — consultivo, o backend decide. **Erros**: `409` fecha o diálogo, recarrega o
+  pedido e mostra um toast com a causa deduzida do pedido recarregado (o `accept` tem três
+  `409` sem `code`: "já foi atualizado", "estoque insuficiente" ou "alimento indisponível";
+  `reject`/`receive` têm um só); `404` → toast e volta a `/pedidos`; rede/`5xx` → banner no
+  diálogo e nova tentativa. **Cache**: sucesso invalida `['orders']` (detalhe, listas, contadores
+  das abas e o limite de 10 do F6) e, no aceite, `['foods']`/`['food']` (estoque). **A listagem
+  segue só de leitura** (sem "Aceitar" na linha: a lista não mostra o estoque). Sem mudança de
+  backend. E2E no browser (dados montados pela API, `409` forçados por uma segunda sessão):
+  aceitar (estoque 50 → 42 no detalhe, no feed e nos contadores), rejeitar (estoque intacto),
+  confirmar recebimento e liberação da vaga do limite (F6), aviso proativo e `409` reativo de
+  estoque, alimento vencido, pedido já atualizado, `404`/`5xx` simulados, envio lento (botões
+  travados, Esc ignorado), foco, 400 px sem rolagem horizontal, tema escuro, console limpo.
+- **Protótipo Pencil — divergência aceita, não sincronizado.** Frames `NYKRt` e `I0EByf`
+  (card de ações) e `vRf3b` (botão "Aceitar" na linha). Diferenças intencionais no código:
+  botões no azul primário do Food Share em vez de verde (o selo `Aceito` também é azul); card no
+  topo da lateral, não no fim; **sem** "Rejeitar com um motivo", "Cancelar pedido" nem histórico
+  (fora do MVP); "Recebido" em vez de "Doado"; sem "Aceitar" na linha da tabela; os diálogos de
+  confirmação e o aviso de estoque **não têm frame** no `.pen`. Mesmo precedente do F2–F7: o
+  código é a fonte da verdade.
 
 ---
 
