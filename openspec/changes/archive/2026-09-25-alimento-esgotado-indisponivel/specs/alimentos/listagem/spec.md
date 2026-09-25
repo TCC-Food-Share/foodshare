@@ -1,10 +1,4 @@
-# alimentos/listagem Specification
-
-## Purpose
-
-Permitir que um usuário autenticado visualize a listagem paginada dos alimentos disponíveis na plataforma — cadastrados por qualquer estabelecimento —, viabilizando os fluxos seguintes do MVP que partem de uma lista de alimentos (busca e pedido de doação).
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Listagem de alimentos disponíveis para usuário autenticado
 O sistema SHALL permitir que qualquer usuário autenticado (estabelecimento ou entidade beneficiária) obtenha a listagem dos alimentos disponíveis na plataforma. Um alimento é considerado disponível quando tem status "Ativo", não está excluído logicamente, ainda não venceu (data de vencimento a partir da data atual) e tem quantidade atual maior que zero. A listagem abrange alimentos de qualquer estabelecimento, sem recorte por quem cadastrou, e cada item traz os mesmos dados retornados no cadastro do alimento (imagem, nome, categoria, quantidade e unidade, descrição, data de vencimento, status e estabelecimento de origem).
@@ -78,26 +72,3 @@ Os parâmetros informados SHALL ser combinados por E (todos precisam casar). A b
 #### Scenario: Busca não traz alimento indisponível
 - **WHEN** existe um alimento vencido, excluído logicamente, com status diferente de "Ativo" ou com quantidade atual igual a zero cujo nome casa com o `name` informado
 - **THEN** esse alimento não é retornado
-
-### Requirement: Paginação e ordenação da listagem
-O sistema SHALL paginar a listagem de alimentos por meio dos parâmetros `page` (número da página, começando em 1) e `pageSize` (quantidade de itens por página). Na ausência dos parâmetros, o sistema SHALL usar `page` igual a 1 e `pageSize` igual a 20; o sistema SHALL limitar `pageSize` a no máximo 50. A listagem SHALL ser ordenada da publicação mais recente para a mais antiga. A paginação e a ordenação SHALL ser aplicadas sobre o resultado já filtrado pelos parâmetros de busca, quando houver. A resposta SHALL incluir, além dos itens da página, o total de alimentos que atendem aos critérios de busca aplicados (ou o total de disponíveis, quando não há busca) e os valores de `page` e `pageSize` aplicados.
-
-#### Scenario: Listagem sem parâmetros de paginação
-- **WHEN** um usuário autenticado solicita a listagem sem informar `page` nem `pageSize`
-- **THEN** o sistema retorna a primeira página com até 20 alimentos, ordenados da publicação mais recente para a mais antiga, e informa `total`, `page` igual a 1 e `pageSize` igual a 20
-
-#### Scenario: Página além do total de resultados
-- **WHEN** o `page` solicitado está além da última página com resultados
-- **THEN** o sistema retorna uma lista de itens vazia e informa o `total` real, sem erro
-
-#### Scenario: pageSize acima do teto permitido
-- **WHEN** um usuário solicita a listagem com `pageSize` maior que 50
-- **THEN** o sistema retorna no máximo 50 itens e informa `pageSize` igual a 50
-
-#### Scenario: Parâmetro de paginação inválido
-- **WHEN** um usuário solicita a listagem com `page` ou `pageSize` não numérico, igual a zero ou negativo
-- **THEN** o sistema rejeita a requisição e informa qual parâmetro é inválido, sem retornar a listagem
-
-#### Scenario: Total reflete o filtro de busca
-- **WHEN** o usuário solicita a listagem com um filtro de busca que casa com 3 alimentos disponíveis, com `pageSize` igual a 2
-- **THEN** o sistema retorna 2 itens na primeira página e informa `total` igual a 3

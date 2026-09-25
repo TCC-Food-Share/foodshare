@@ -115,6 +115,7 @@ export class FoodsService {
       deleted: false,
       status: { name: ACTIVE_STATUS },
       expirationDate: { gte: startOfTodayUtc() },
+      quantity: { gt: 0 },
       ...(id !== undefined ? { id } : {}),
     };
   }
@@ -124,6 +125,7 @@ export class FoodsService {
       Prisma.sql`f.deleted = false`,
       Prisma.sql`s.name = ${ACTIVE_STATUS}`,
       Prisma.sql`f."expirationDate" >= ${startOfTodayUtc()}`,
+      Prisma.sql`f.quantity > 0`,
     ];
 
     if (query.name) {

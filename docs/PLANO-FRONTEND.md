@@ -189,8 +189,11 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
   checagem proativa é consultiva (falhou/carregando → botão habilitado; o backend
   decide). Sem mudança de backend. Tratados também `400` (estoque mudou → banner e
   recarga do alimento), `404` (alimento saiu do ar → toast e fecha) e alimento com
-  `quantity = 0` (o "disponível" do backend não olha a quantidade → card
-  desabilitado com aviso). E2E no browser: total/parcial fracionário, validação
+  `quantity = 0` (card desabilitado com aviso; **desde a change
+  `alimento-esgotado-indisponivel` o backend não considera mais disponível um alimento
+  com quantidade 0** — ele some da listagem/busca, o detalhe dá `404` e o pedido/aceite são
+  recusados —, então esse card ficou como rede de segurança para uma página aberta antes de
+  o estoque zerar). E2E no browser: total/parcial fracionário, validação
   inline, `409` reativo e limite proativo, liberar vaga (rejeitar/receber),
   `400`/`404`, estoque zero, estabelecimento sem o card, modal a 400px, console limpo.
 - **Regra: um pedido em andamento por alimento** (change `bloqueio-pedido-duplicado`,
