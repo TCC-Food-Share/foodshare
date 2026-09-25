@@ -75,6 +75,14 @@ export const listOrders = (params: ListOrdersParams) =>
 
 export const getOrder = (id: number) => api.get<OrderDetail>(`/orders/${id}`);
 
+export const orderDetailKey = (id: number) => ['orders', 'detail', id] as const;
+
+export const acceptOrder = (id: number) => api.patch<Order>(`/orders/${id}/accept`);
+
+export const rejectOrder = (id: number) => api.patch<Order>(`/orders/${id}/reject`);
+
+export const receiveOrder = (id: number) => api.patch<Order>(`/orders/${id}/receive`);
+
 // Mirrors ORDER_CONFLICT_CODES in backend/src/orders/orders.constants.ts — keep in sync.
 export const ORDER_CONFLICT_CODES = {
   limitReached: 'ORDERS_IN_PROGRESS_LIMIT_REACHED',
