@@ -138,6 +138,7 @@ describe('FoodsService', () => {
 
       const sql = idQueryCall();
       expect(sqlText(sql)).toContain('ORDER BY f."publishedAt" DESC');
+      expect(sqlText(sql)).toContain('f.quantity > 0');
       expect(sqlText(sql)).not.toContain('unaccent');
       expect(sqlText(sql)).not.toContain('"categoryId" =');
       expect(sqlText(sql)).not.toContain('a.state =');
@@ -163,6 +164,7 @@ describe('FoodsService', () => {
       await service.list({ name: 'feijao', categoryId: 2, city: 'birigui', state: 'SP' });
 
       const sql = idQueryCall();
+      expect(sqlText(sql)).toContain('f.quantity > 0');
       expect(sqlText(sql)).toContain('unaccent(f.name) ILIKE');
       expect(sqlText(sql)).toContain('f."categoryId" =');
       expect(sqlText(sql)).toContain('unaccent(a.city) ILIKE');
@@ -234,6 +236,7 @@ describe('FoodsService', () => {
             deleted: false,
             status: { name: 'Ativo' },
             expirationDate: { gte: expect.any(Date) },
+            quantity: { gt: 0 },
           },
           include: { category: true, status: true, establishment: { include: { address: true } } },
         }),
@@ -267,6 +270,7 @@ describe('FoodsService', () => {
             deleted: false,
             status: { name: 'Ativo' },
             expirationDate: { gte: expect.any(Date) },
+            quantity: { gt: 0 },
           },
         }),
       );
