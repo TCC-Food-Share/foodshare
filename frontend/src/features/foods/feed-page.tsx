@@ -3,15 +3,8 @@ import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { PaginationBar } from '@/components/pagination-bar';
 import { Button } from '@/components/ui/button';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/use-auth';
 import { CreateFoodDialog } from '@/features/foods/create-food-dialog';
@@ -21,14 +14,6 @@ import { listFoods } from '@/features/foods/foods-api';
 import { SearchFilters } from '@/features/foods/search-filters';
 
 const FILTER_KEYS = ['name', 'categoryId', 'city', 'state'] as const;
-
-function pageWindow(page: number, totalPages: number): number[] {
-  const start = Math.max(1, Math.min(page - 2, totalPages - 4));
-  const end = Math.min(totalPages, Math.max(page + 2, 5));
-  const pages: number[] = [];
-  for (let p = Math.max(1, start); p <= end; p++) pages.push(p);
-  return pages;
-}
 
 export function FeedPage() {
   const { role } = useAuth();
@@ -116,29 +101,7 @@ export function FeedPage() {
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                {page > 1 && (
-                  <PaginationItem>
-                    <PaginationPrevious onClick={() => goToPage(page - 1)} />
-                  </PaginationItem>
-                )}
-                {pageWindow(page, totalPages).map((p) => (
-                  <PaginationItem key={p}>
-                    <PaginationLink isActive={p === page} onClick={() => goToPage(p)}>
-                      {p}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                {page < totalPages && (
-                  <PaginationItem>
-                    <PaginationNext onClick={() => goToPage(page + 1)} />
-                  </PaginationItem>
-                )}
-              </PaginationContent>
-            </Pagination>
-          )}
+          <PaginationBar page={page} totalPages={totalPages} onPageChange={goToPage} />
         </>
       )}
     </div>
