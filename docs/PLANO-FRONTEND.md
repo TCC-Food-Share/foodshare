@@ -32,7 +32,7 @@ organiza a execução.
 | F4     | Feed + busca + detalhe do alimento                                                                                      | ✅ feito, merge em `develop` (`feat/rf11-feed`)                            |
 | F5     | Cadastrar alimento (modal)                                                                                              | ✅ feito, merge em `develop` (`feat/rf10-modal-cadastro`)                  |
 | F6     | Solicitar doação + erro de limite                                                                                       | ✅ feito (change `frontend-solicitar-doacao`)                              |
-| F7     | Listar pedidos (abas por status) + detalhe do pedido                                                                    | pendente                                                                   |
+| F7     | Listar pedidos (abas por status) + detalhe do pedido                                                                    | ✅ feito (change `frontend-listar-pedidos`)                                |
 | F8     | Aceitar / rejeitar / confirmar recebimento                                                                              | pendente                                                                   |
 | **X**  | Deploy cross-origin (CORS + cookie cross-subdomínio) — ver seção "Deploy"                                               | ✅ feito (change `deploy-cross-origin`); falta só setar as vars no Coolify |
 
@@ -209,8 +209,7 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
   `.pen`; os avisos de limite e de duplicidade usam estilo **warning** (variante nova
   do `Alert` sobre o token `--warning`, âmbar) por serem estados esperados e não
   erros — o protótipo não tem cor de warning. Mesmo precedente do F2–F5: o código é a fonte da verdade. O "Ver meus
-  pedidos" do estado de limite aponta para `/pedidos`, ainda `RoutePlaceholder`
-  até o F7.
+  pedidos" do estado de limite aponta para `/pedidos` (a listagem do F7).
 
 ### F7 — Listar pedidos + detalhe do pedido (RF19, RF20)
 
@@ -229,6 +228,38 @@ Arquivo: `/home/maria-vasconcelos/IFSP/Downloads/updated/pencil-design-apresenta
   - Contato institucional (e-mail/telefone/WhatsApp) no detalhe.
   - "Cancelar pedido".
   - Links "Ver perfil de…".
+- **Feito** (change `frontend-listar-pedidos`): `OrdersPage` (`/pedidos`) e
+  `OrderDetailPage` (`/pedidos/:id`) em `frontend/src/features/orders/`, no lugar dos
+  `RoutePlaceholder` (removido). **Listagem**: uma aba por status (Pendente → Aceito →
+  Rejeitado → Recebido, sem "Todos"), cada uma um `GET /orders?status=&page=&pageSize=10`;
+  aba e página na URL (`?status=&page=`, padrão `Pendente`, valor inválido cai no padrão,
+  página além do fim redireciona para a última); contador por aba (4 consultas
+  `pageSize=1`, chaves `['orders', 'count', status]`); tabela no desktop, cartões abaixo de
+  `md`; colunas Alimento (+ "Pedido #N"), Quantidade, Data, Status, instituição da outra
+  ponta (Estabelecimento para a entidade, Entidade beneficiária para o estabelecimento) e
+  "Ver detalhes"; linha clicável; rodapé "Mostrando X–Y de N" + paginação extraída do feed
+  (`components/pagination-bar.tsx`); estados de carregamento, erro e vazio por aba/papel
+  (CTA "Ver alimentos" só para a entidade em `Pendente`). **Detalhe**: "Pedido #N" + selo +
+  "Solicitado em dd/mm/aaaa às HH:mm", link "← Pedidos" de volta à aba do status, card do
+  alimento por inteiro ("Disponível agora" = estoque atual, distinto da "Quantidade
+  solicitada"), "Resumo do pedido" e card só da instituição da outra ponta
+  (`companyName`, `tradeName`, cidade/UF, descrição — nada além de RF20); `404`/id inválido
+  → "Pedido não encontrado". `OrderStatusBadge` (ponto + texto, claro/escuro), variante
+  `line` (sublinhada) no `Tabs` shadcn, `formatLocalDate`/`formatLocalDateTime` (fuso
+  local — `orderDate` é um instante; o `formatDate` UTC segue só para `expirationDate`).
+  Sem mudança de backend. E2E no browser (dados montados pela API): abas/contadores/URL nos
+  dois papéis, paginação (12 rejeitados → 2 páginas), página fora do intervalo, status
+  inválido, vazio por aba, erro (`500` simulado) nas duas telas, detalhe com estoque
+  reduzido após aceite, `404`/id inválido/pedido de outra instituição, 400 px sem rolagem
+  horizontal, tema escuro, console limpo, feed (F4) sem regressão.
+- **Protótipo Pencil — divergência aceita, não sincronizado.** Frames `MyFw0`, `vRf3b`,
+  `NYKRt`, `I0EByf` seguem com "Ativo/Em andamento/Doado/Cancelado", busca, histórico,
+  contato/WhatsApp, "Ver perfil", "Cancelar pedido" e ações de aceite/rejeição — nada disso
+  entra no F7 (as ações são do F8). Diferenças intencionais no código: abas sublinhadas com
+  contador, sem miniatura do alimento na lista (a listagem não devolve `image`), só a
+  instituição da outra ponta no detalhe, sem "Ver alimento" (o `GET /foods/:id` dá `404`
+  para alimento vencido/inativo e o detalhe do pedido já traz o alimento por inteiro).
+  Mesmo precedente do F2–F6: o código é a fonte da verdade.
 
 ### F8 — Aceitar / rejeitar / confirmar recebimento (RF16, RF17, RF18)
 
