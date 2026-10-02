@@ -3,9 +3,11 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { Test } from '@nestjs/testing';
 
 import { Prisma } from '../../generated/prisma/client';
+import { FOOD_STATUS } from '../foods/foods.constants';
 import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { OPEN_ORDER_STATUSES, ORDER_STATUS } from './orders.constants';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
@@ -23,7 +25,7 @@ describe('OrdersService', () => {
     id: 50,
     quantity: new Prisma.Decimal(4),
     orderDate: new Date('2026-09-03T12:00:00.000Z'),
-    status: { id: 1, name: 'Pendente' },
+    status: { id: 1, name: ORDER_STATUS.PENDING },
     food: { id: 5, name: 'Arroz branco', quantityUnit: 'kg' },
     establishment: { id: 3, companyName: 'Good Taste Ltd' },
     beneficiaryEntity: { id: 7, companyName: 'Helping Hands' },
@@ -39,15 +41,15 @@ describe('OrdersService', () => {
     deleted: false,
   };
 
-  const acceptedOrderRow = { ...orderRow, status: { id: 2, name: 'Aceito' } };
-  const rejectedOrderRow = { ...orderRow, status: { id: 3, name: 'Rejeitado' } };
-  const receivedOrderRow = { ...orderRow, status: { id: 4, name: 'Recebido' } };
+  const inProgressOrderRow = { ...orderRow, status: { id: 2, name: ORDER_STATUS.IN_PROGRESS } };
+  const rejectedOrderRow = { ...orderRow, status: { id: 3, name: ORDER_STATUS.REJECTED } };
+  const donatedOrderRow = { ...orderRow, status: { id: 4, name: ORDER_STATUS.DONATED } };
 
   const orderDetailRow = {
     id: 50,
     quantity: new Prisma.Decimal(4),
     orderDate: new Date('2026-09-03T12:00:00.000Z'),
-    status: { id: 2, name: 'Aceito' },
+    status: { id: 2, name: ORDER_STATUS.IN_PROGRESS },
     food: {
       id: 5,
       image: null,
@@ -57,7 +59,7 @@ describe('OrdersService', () => {
       description: 'Pacotes de 1kg.',
       expirationDate: new Date('2026-12-31T00:00:00.000Z'),
       category: { id: 1, name: 'Não Perecíveis' },
-      status: { id: 1, name: 'Ativo' },
+      status: { id: 1, name: FOOD_STATUS.ACTIVE },
     },
     establishment: {
       id: 3,
@@ -94,10 +96,11 @@ describe('OrdersService', () => {
   };
 
   const orderStatusByName: Record<string, { id: number; name: string }> = {
-    Pendente: { id: 1, name: 'Pendente' },
-    Aceito: { id: 2, name: 'Aceito' },
-    Rejeitado: { id: 3, name: 'Rejeitado' },
-    Recebido: { id: 4, name: 'Recebido' },
+    [ORDER_STATUS.PENDING]: { id: 1, name: ORDER_STATUS.PENDING },
+    [ORDER_STATUS.IN_PROGRESS]: { id: 2, name: ORDER_STATUS.IN_PROGRESS },
+    [ORDER_STATUS.REJECTED]: { id: 3, name: ORDER_STATUS.REJECTED },
+    [ORDER_STATUS.DONATED]: { id: 4, name: ORDER_STATUS.DONATED },
+    [ORDER_STATUS.CANCELLED]: { id: 5, name: ORDER_STATUS.CANCELLED },
   };
 
   const prismaMock = {
@@ -141,7 +144,7 @@ describe('OrdersService', () => {
     prismaMock.order.create.mockResolvedValue(orderRow);
     prismaMock.order.findFirst.mockResolvedValue(pendingOrderRow);
     prismaMock.order.findMany.mockResolvedValue([orderRow]);
-    prismaMock.order.findUniqueOrThrow.mockResolvedValue(acceptedOrderRow);
+    prismaMock.order.findUniqueOrThrow.mockResolvedValue(inProgressOrderRow);
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.food.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
@@ -187,7 +190,7 @@ describe('OrdersService', () => {
           }),
         }),
       );
-      expect(result.status.name).toBe('Pendente');
+      expect(result.status.name).toBe(ORDER_STATUS.PENDING);
       expect(typeof result.quantity).toBe('string');
       expect(result.quantity).toBe('4');
     });
@@ -231,7 +234,7 @@ describe('OrdersService', () => {
       );
     });
 
-    it('creates the order when the entity has fewer than 10 orders in progress', async () => {
+    it('creates the order when the entity has fewer than 10 open orders', async () => {
       prismaMock.order.count.mockResolvedValue(9);
 
       await service.create(20, dto);
@@ -239,7 +242,7 @@ describe('OrdersService', () => {
       expect(prismaMock.order.create).toHaveBeenCalled();
     });
 
-    it('throws ConflictException with the limit code when the entity already has 10 orders in progress', async () => {
+    it('throws ConflictException with the limit code when the entity already has 10 open orders', async () => {
       prismaMock.order.count.mockResolvedValue(10);
 
       expect(await conflictBody()).toMatchObject({ code: 'ORDERS_IN_PROGRESS_LIMIT_REACHED' });
@@ -254,16 +257,19 @@ describe('OrdersService', () => {
       expect(prismaMock.order.create).not.toHaveBeenCalled();
     });
 
-    it('counts orders in progress scoped to the entity, excluding soft-deleted and terminal statuses', async () => {
+    it('counts open orders scoped to the entity, excluding soft-deleted and final statuses', async () => {
       await service.create(20, dto);
 
       expect(prismaMock.order.count).toHaveBeenCalledWith({
         where: {
           beneficiaryEntityId: 7,
           deleted: false,
-          status: { name: { in: ['Pendente', 'Aceito'] } },
+          status: { name: { in: [ORDER_STATUS.PENDING, ORDER_STATUS.IN_PROGRESS] } },
         },
       });
+      expect(OPEN_ORDER_STATUSES).not.toContain(ORDER_STATUS.REJECTED);
+      expect(OPEN_ORDER_STATUSES).not.toContain(ORDER_STATUS.DONATED);
+      expect(OPEN_ORDER_STATUSES).not.toContain(ORDER_STATUS.CANCELLED);
     });
 
     it('checks the limit before validating the food', async () => {
@@ -274,21 +280,21 @@ describe('OrdersService', () => {
       expect(prismaMock.order.create).not.toHaveBeenCalled();
     });
 
-    it('creates the order when the entity has no order in progress for the food', async () => {
+    it('creates the order when the entity has no open order for the food', async () => {
       await service.create(20, dto);
 
       expect(prismaMock.order.findFirst).toHaveBeenCalled();
       expect(prismaMock.order.create).toHaveBeenCalled();
     });
 
-    it('throws ConflictException with the duplicate code when the entity already has an order in progress for the food', async () => {
+    it('throws ConflictException with the duplicate code when the entity already has an open order for the food', async () => {
       prismaMock.order.findFirst.mockResolvedValue({ id: 50 });
 
       expect(await conflictBody()).toMatchObject({ code: 'DUPLICATE_ORDER_IN_PROGRESS' });
       expect(prismaMock.order.create).not.toHaveBeenCalled();
     });
 
-    it('looks for the duplicate scoped to the entity and the food, excluding soft-deleted and terminal statuses', async () => {
+    it('looks for the duplicate scoped to the entity and the food, excluding soft-deleted and final statuses', async () => {
       await service.create(20, dto);
 
       expect(prismaMock.order.findFirst).toHaveBeenCalledWith({
@@ -296,7 +302,7 @@ describe('OrdersService', () => {
           beneficiaryEntityId: 7,
           foodId: 5,
           deleted: false,
-          status: { name: { in: ['Pendente', 'Aceito'] } },
+          status: { name: { in: [ORDER_STATUS.PENDING, ORDER_STATUS.IN_PROGRESS] } },
         },
         select: { id: true },
       });
@@ -329,7 +335,7 @@ describe('OrdersService', () => {
   });
 
   describe('accept', () => {
-    it('moves a pending order to "Aceito" and reserves the food quantity', async () => {
+    it('moves a pending order to "Em andamento" and reserves the food quantity', async () => {
       const result = await service.accept(30, 50);
 
       expect(prismaMock.establishment.findUnique).toHaveBeenCalledWith({ where: { userId: 30 } });
@@ -344,7 +350,7 @@ describe('OrdersService', () => {
         where: { id: 5, quantity: { gte: pendingOrderRow.quantity } },
         data: { quantity: { decrement: pendingOrderRow.quantity } },
       });
-      expect(result.status.name).toBe('Aceito');
+      expect(result.status.name).toBe(ORDER_STATUS.IN_PROGRESS);
     });
 
     it('throws NotFoundException when the user has no establishment', async () => {
@@ -406,7 +412,7 @@ describe('OrdersService', () => {
         where: { id: 50, statusId: 1 },
         data: { statusId: 3 },
       });
-      expect(result.status.name).toBe('Rejeitado');
+      expect(result.status.name).toBe(ORDER_STATUS.REJECTED);
       expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
       expect(prismaMock.$transaction).not.toHaveBeenCalled();
     });
@@ -443,10 +449,10 @@ describe('OrdersService', () => {
   describe('receive', () => {
     beforeEach(() => {
       prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 2 });
-      prismaMock.order.findUniqueOrThrow.mockResolvedValue(receivedOrderRow);
+      prismaMock.order.findUniqueOrThrow.mockResolvedValue(donatedOrderRow);
     });
 
-    it('moves an accepted order to "Recebido" without touching the food', async () => {
+    it('moves an in-progress order to "Doado" without touching the food', async () => {
       const result = await service.receive(20, 50);
 
       expect(prismaMock.beneficiaryEntity.findUnique).toHaveBeenCalledWith({
@@ -459,7 +465,7 @@ describe('OrdersService', () => {
         where: { id: 50, statusId: 2 },
         data: { statusId: 4 },
       });
-      expect(result.status.name).toBe('Recebido');
+      expect(result.status.name).toBe(ORDER_STATUS.DONATED);
       expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
       expect(prismaMock.$transaction).not.toHaveBeenCalled();
     });
@@ -478,7 +484,7 @@ describe('OrdersService', () => {
       expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     });
 
-    it('throws ConflictException when the order is not accepted', async () => {
+    it('throws ConflictException when the order is not in progress', async () => {
       prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 1 });
 
       await expect(service.receive(20, 50)).rejects.toBeInstanceOf(ConflictException);
@@ -539,13 +545,31 @@ describe('OrdersService', () => {
     });
 
     it('applies the status filter', async () => {
-      await service.list(30, { status: 'Aceito' });
+      await service.list(30, { status: ORDER_STATUS.IN_PROGRESS });
 
       expect(prismaMock.order.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { deleted: false, establishmentId: 3, status: { name: 'Aceito' } },
+          where: {
+            deleted: false,
+            establishmentId: 3,
+            status: { name: ORDER_STATUS.IN_PROGRESS },
+          },
         }),
       );
+    });
+
+    it('accepts "Cancelado" as a status filter', async () => {
+      prismaMock.order.findMany.mockResolvedValue([]);
+      prismaMock.order.count.mockResolvedValue(0);
+
+      const result = await service.list(30, { status: ORDER_STATUS.CANCELLED });
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deleted: false, establishmentId: 3, status: { name: ORDER_STATUS.CANCELLED } },
+        }),
+      );
+      expect(result).toMatchObject({ data: [], total: 0 });
     });
 
     it('applies page and pageSize', async () => {
@@ -568,10 +592,10 @@ describe('OrdersService', () => {
     it('reports the total from order.count using the same where as findMany', async () => {
       prismaMock.order.count.mockResolvedValue(7);
 
-      const result = await service.list(30, { status: 'Recebido' });
+      const result = await service.list(30, { status: ORDER_STATUS.DONATED });
 
       expect(prismaMock.order.count).toHaveBeenCalledWith({
-        where: { deleted: false, establishmentId: 3, status: { name: 'Recebido' } },
+        where: { deleted: false, establishmentId: 3, status: { name: ORDER_STATUS.DONATED } },
       });
       expect(result.total).toBe(7);
     });

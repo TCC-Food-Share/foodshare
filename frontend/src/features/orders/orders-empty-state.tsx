@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import type { Role } from '@/features/auth/auth-context';
-import type { OrderStatusName } from '@/features/orders/orders-api';
+import { ORDER_STATUS, type OrderStatusName } from '@/features/orders/order-status';
 
 interface EmptyCopy {
   title: string;
@@ -12,39 +12,47 @@ interface EmptyCopy {
 
 const EMPTY_COPY: Record<Role, Record<OrderStatusName, EmptyCopy>> = {
   establishment: {
-    Pendente: {
+    [ORDER_STATUS.PENDING]: {
       title: 'Nenhum pedido pendente',
       description: 'Novas solicitações de doação aparecem aqui.',
     },
-    Aceito: {
-      title: 'Nenhum pedido aceito',
-      description: 'Os pedidos que você aceitar ficam aqui até serem recebidos.',
+    [ORDER_STATUS.IN_PROGRESS]: {
+      title: 'Nenhum pedido em andamento',
+      description: 'Os pedidos que você aceitar ficam aqui até a entidade confirmar o recebimento.',
     },
-    Rejeitado: {
+    [ORDER_STATUS.REJECTED]: {
       title: 'Nenhum pedido rejeitado',
       description: 'Os pedidos que você rejeitar aparecem aqui.',
     },
-    Recebido: {
-      title: 'Nenhum pedido recebido',
+    [ORDER_STATUS.DONATED]: {
+      title: 'Nenhum pedido doado',
       description: 'Doações confirmadas pelas entidades aparecem aqui.',
+    },
+    [ORDER_STATUS.CANCELLED]: {
+      title: 'Nenhum pedido cancelado',
+      description: 'Pedidos cancelados aparecem aqui.',
     },
   },
   beneficiary: {
-    Pendente: {
+    [ORDER_STATUS.PENDING]: {
       title: 'Você não tem pedidos pendentes',
       description: 'Encontre um alimento no feed e solicite uma doação.',
     },
-    Aceito: {
-      title: 'Nenhum pedido aceito',
+    [ORDER_STATUS.IN_PROGRESS]: {
+      title: 'Nenhum pedido em andamento',
       description: 'Quando um estabelecimento aceitar sua solicitação, ela aparece aqui.',
     },
-    Rejeitado: {
+    [ORDER_STATUS.REJECTED]: {
       title: 'Nenhum pedido rejeitado',
       description: 'Solicitações recusadas pelos estabelecimentos aparecem aqui.',
     },
-    Recebido: {
-      title: 'Nenhum pedido recebido',
+    [ORDER_STATUS.DONATED]: {
+      title: 'Nenhum pedido doado',
       description: 'Doações com o recebimento confirmado por você aparecem aqui.',
+    },
+    [ORDER_STATUS.CANCELLED]: {
+      title: 'Nenhum pedido cancelado',
+      description: 'Pedidos cancelados aparecem aqui.',
     },
   },
 };
@@ -56,7 +64,7 @@ interface OrdersEmptyStateProps {
 
 export function OrdersEmptyState({ status, role }: OrdersEmptyStateProps) {
   const copy = EMPTY_COPY[role ?? 'beneficiary'][status];
-  const showFeedShortcut = role === 'beneficiary' && status === 'Pendente';
+  const showFeedShortcut = role === 'beneficiary' && status === ORDER_STATUS.PENDING;
 
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">

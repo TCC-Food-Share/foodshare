@@ -4,7 +4,7 @@ class OrderStatusDetailDto {
   @ApiProperty({ example: 2 })
   id!: number;
 
-  @ApiProperty({ example: 'Aceito' })
+  @ApiProperty({ example: 'Em andamento' })
   name!: string;
 }
 

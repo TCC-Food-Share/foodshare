@@ -30,7 +30,7 @@ export class ListOrdersQueryDto {
   pageSize?: number;
 
   @ApiPropertyOptional({
-    example: 'Aceito',
+    example: 'Em andamento',
     description: 'Filtra os pedidos por status. Ausente retorna todos os status.',
     enum: ORDER_STATUS_NAMES,
   })

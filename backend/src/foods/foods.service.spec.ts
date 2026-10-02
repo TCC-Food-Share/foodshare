@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFoodDto } from './dto/create-food.dto';
+import { FOOD_STATUS } from './foods.constants';
 import { FoodsService } from './foods.service';
 
 describe('FoodsService', () => {
@@ -28,7 +29,7 @@ describe('FoodsService', () => {
     expirationDate: new Date(dto.expirationDate),
     publishedAt: new Date('2026-08-28T12:00:00.000Z'),
     category: { id: 1, name: 'Não Perecíveis' },
-    status: { id: 1, name: 'Ativo' },
+    status: { id: 1, name: FOOD_STATUS.ACTIVE },
     establishment: {
       id: 30,
       companyName: 'Test Establishment Ltd',
@@ -70,7 +71,7 @@ describe('FoodsService', () => {
     countValue = 1n;
     prismaMock.establishment.findUnique.mockResolvedValue({ id: 30, userId: 20 });
     prismaMock.category.findUnique.mockResolvedValue({ id: 1, name: 'Não Perecíveis' });
-    prismaMock.foodStatus.findUniqueOrThrow.mockResolvedValue({ id: 1, name: 'Ativo' });
+    prismaMock.foodStatus.findUniqueOrThrow.mockResolvedValue({ id: 1, name: FOOD_STATUS.ACTIVE });
     prismaMock.food.create.mockResolvedValue(foodRow);
     prismaMock.food.findMany.mockResolvedValue([foodRow]);
     prismaMock.food.findFirst.mockResolvedValue(foodRow);
@@ -92,14 +93,14 @@ describe('FoodsService', () => {
 
     expect(prismaMock.establishment.findUnique).toHaveBeenCalledWith({ where: { userId: 20 } });
     expect(prismaMock.foodStatus.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { name: 'Ativo' },
+      where: { name: FOOD_STATUS.ACTIVE },
     });
     expect(prismaMock.food.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ establishmentId: 30, categoryId: 1, statusId: 1 }),
       }),
     );
-    expect(result.status.name).toBe('Ativo');
+    expect(result.status.name).toBe(FOOD_STATUS.ACTIVE);
     expect(result.establishment.id).toBe(30);
   });
 
@@ -142,7 +143,7 @@ describe('FoodsService', () => {
       expect(sqlText(sql)).not.toContain('unaccent');
       expect(sqlText(sql)).not.toContain('"categoryId" =');
       expect(sqlText(sql)).not.toContain('a.state =');
-      expect(sql.values).toEqual(['Ativo', expect.any(Date), 20, 0]);
+      expect(sql.values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 20, 0]);
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(20);
     });
@@ -150,13 +151,13 @@ describe('FoodsService', () => {
     it('builds LIMIT/OFFSET from the requested page and pageSize', async () => {
       await service.list({ page: 3, pageSize: 5 });
 
-      expect(idQueryCall().values).toEqual(['Ativo', expect.any(Date), 5, 10]);
+      expect(idQueryCall().values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 5, 10]);
     });
 
     it('clamps pageSize to 50', async () => {
       const result = await service.list({ pageSize: 999 });
 
-      expect(idQueryCall().values).toEqual(['Ativo', expect.any(Date), 50, 0]);
+      expect(idQueryCall().values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 50, 0]);
       expect(result.pageSize).toBe(50);
     });
 
@@ -169,7 +170,16 @@ describe('FoodsService', () => {
       expect(sqlText(sql)).toContain('f."categoryId" =');
       expect(sqlText(sql)).toContain('unaccent(a.city) ILIKE');
       expect(sqlText(sql)).toContain('a.state =');
-      expect(sql.values).toEqual(['Ativo', expect.any(Date), 'feijao', 2, 'birigui', 'SP', 20, 0]);
+      expect(sql.values).toEqual([
+        FOOD_STATUS.ACTIVE,
+        expect.any(Date),
+        'feijao',
+        2,
+        'birigui',
+        'SP',
+        20,
+        0,
+      ]);
     });
 
     it('hydrates by id and preserves the SQL result order', async () => {
@@ -215,7 +225,7 @@ describe('FoodsService', () => {
       expect(typeof result.data[0].quantity).toBe('string');
       expect(result.data[0].quantity).toBe('5');
       expect(result.data[0].category).toEqual({ id: 1, name: 'Não Perecíveis' });
-      expect(result.data[0].status).toEqual({ id: 1, name: 'Ativo' });
+      expect(result.data[0].status).toEqual({ id: 1, name: FOOD_STATUS.ACTIVE });
       expect(result.data[0].establishment).toEqual({
         id: 30,
         companyName: 'Test Establishment Ltd',
@@ -234,7 +244,7 @@ describe('FoodsService', () => {
           where: {
             id: 100,
             deleted: false,
-            status: { name: 'Ativo' },
+            status: { name: FOOD_STATUS.ACTIVE },
             expirationDate: { gte: expect.any(Date) },
             quantity: { gt: 0 },
           },
@@ -243,7 +253,7 @@ describe('FoodsService', () => {
       );
       expect(typeof result.quantity).toBe('string');
       expect(result.category).toEqual({ id: 1, name: 'Não Perecíveis' });
-      expect(result.status).toEqual({ id: 1, name: 'Ativo' });
+      expect(result.status).toEqual({ id: 1, name: FOOD_STATUS.ACTIVE });
       expect(result.establishment).toEqual({
         id: 30,
         companyName: 'Test Establishment Ltd',
@@ -268,7 +278,7 @@ describe('FoodsService', () => {
           where: {
             id: 100,
             deleted: false,
-            status: { name: 'Ativo' },
+            status: { name: FOOD_STATUS.ACTIVE },
             expirationDate: { gte: expect.any(Date) },
             quantity: { gt: 0 },
           },

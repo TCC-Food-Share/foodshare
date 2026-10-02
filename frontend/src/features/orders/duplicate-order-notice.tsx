@@ -7,10 +7,10 @@ export function DuplicateOrderNotice({ className }: { className?: string }) {
     <Alert variant="warning" className={className}>
       <TriangleAlertIcon />
       <AlertTitle className="line-clamp-none">
-        Sua entidade já tem um pedido em andamento para este alimento
+        Sua entidade já tem um pedido em aberto para este alimento
       </AlertTitle>
       <AlertDescription>
-        Esse pedido ainda está pendente ou aceito. Acompanhe em Meus pedidos; quando ele for
+        Esse pedido ainda está pendente ou em andamento. Acompanhe em Meus pedidos; quando ele for
         concluído, você poderá solicitar este alimento novamente.
       </AlertDescription>
     </Alert>

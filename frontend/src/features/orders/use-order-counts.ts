@@ -1,6 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 
-import { listOrders, ORDER_STATUSES, type OrderStatusName } from '@/features/orders/orders-api';
+import { ORDER_STATUSES, type OrderStatusName } from '@/features/orders/order-status';
+import { listOrders } from '@/features/orders/orders-api';
 
 export function useOrderCounts(): Record<OrderStatusName, number | undefined> {
   const results = useQueries({

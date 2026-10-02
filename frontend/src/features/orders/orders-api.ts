@@ -1,12 +1,5 @@
+import type { OrderStatusName } from '@/features/orders/order-status';
 import { api, ApiError } from '@/lib/api';
-
-export type OrderStatusName = 'Pendente' | 'Aceito' | 'Rejeitado' | 'Recebido';
-
-export const ORDER_STATUSES: OrderStatusName[] = ['Pendente', 'Aceito', 'Rejeitado', 'Recebido'];
-
-export function isOrderStatus(value: unknown): value is OrderStatusName {
-  return ORDER_STATUSES.some((status) => status === value);
-}
 
 export interface Order {
   id: number;
