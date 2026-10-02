@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que um estabelecimento autenticado aceite um pedido de doação "Pendente" que recebeu, reservando a quantidade do alimento vinculado (a quantidade aceita sai do estoque disponível do alimento) e movendo o pedido para o status "Aceito", habilitando a confirmação de recebimento do MVP.
+Permitir que um estabelecimento autenticado aceite um pedido de doação "Pendente" que recebeu, reservando a quantidade do alimento vinculado (a quantidade aceita sai do estoque disponível do alimento) e movendo o pedido para o status "Aceito", habilitando a confirmação de recebimento.
 
 ## Requirements
 
@@ -50,10 +50,10 @@ O sistema SHALL, ao aceitar um pedido, reservar a quantidade do pedido subtraind
 
 #### Scenario: Quantidade do alimento passa a refletir o restante
 - **WHEN** um pedido é aceito e sua quantidade é reservada
-- **THEN** as consultas de listagem e de detalhe do alimento passam a exibir a quantidade restante, e uma nova solicitação de pedido (RF14) é validada contra essa quantidade restante
+- **THEN** as consultas de listagem e de detalhe do alimento passam a exibir a quantidade restante, e uma nova solicitação de pedido (RF22) é validada contra essa quantidade restante
 
 ### Requirement: Aceite exige alimento ainda disponível
-O sistema SHALL recusar o aceite quando o alimento vinculado ao pedido não estiver mais disponível — mesmo recorte da listagem (RF11): status "Ativo", não vencido, não excluído logicamente e com quantidade atual maior que zero. Nesse caso o sistema SHALL responder com conflito de estado, sem mover o pedido nem alterar o estoque.
+O sistema SHALL recusar o aceite quando o alimento vinculado ao pedido não estiver mais disponível — mesmo recorte da listagem (RF20): status "Ativo", não vencido, não excluído logicamente e com quantidade atual maior que zero. Nesse caso o sistema SHALL responder com conflito de estado, sem mover o pedido nem alterar o estoque.
 
 #### Scenario: Alimento vinculado vencido, inativo ou excluído
 - **WHEN** um estabelecimento tenta aceitar um pedido "Pendente" cujo alimento vinculado está vencido, com status diferente de "Ativo" ou excluído logicamente

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que um usuário autenticado visualize a listagem paginada dos alimentos disponíveis na plataforma — cadastrados por qualquer estabelecimento —, viabilizando os fluxos seguintes do MVP que partem de uma lista de alimentos (busca e pedido de doação).
+Permitir que um usuário autenticado visualize a listagem paginada dos alimentos disponíveis na plataforma — cadastrados por qualquer estabelecimento —, viabilizando os fluxos seguintes que partem de uma lista de alimentos (busca e pedido de doação).
 
 ## Requirements
 

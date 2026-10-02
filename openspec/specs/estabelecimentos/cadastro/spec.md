@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que um estabelecimento crie uma conta na plataforma informando dados pessoais do responsável, dados institucionais e endereço, viabilizando os demais fluxos do MVP que dependem de um estabelecimento cadastrado.
+Permitir que um estabelecimento crie uma conta na plataforma informando dados pessoais do responsável, dados institucionais e endereço, viabilizando os demais fluxos que dependem de um estabelecimento cadastrado.
 
 ## Requirements
 

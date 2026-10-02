@@ -34,7 +34,7 @@ O sistema SHALL permitir que uma entidade beneficiária autenticada confirme o r
 - **THEN** o sistema recusa a operação por conflito de estado e não altera o pedido
 
 ### Requirement: Confirmação de recebimento não altera o estoque do alimento
-O sistema SHALL confirmar o recebimento sem alterar a quantidade do alimento vinculado. A quantidade do pedido já foi subtraída do alimento no aceite (RF16); a confirmação apenas torna esse consumo definitivo.
+O sistema SHALL confirmar o recebimento sem alterar a quantidade do alimento vinculado. A quantidade do pedido já foi subtraída do alimento no aceite (RF23); a confirmação apenas torna esse consumo definitivo.
 
 #### Scenario: Quantidade do alimento inalterada após a confirmação
 - **WHEN** uma entidade beneficiária confirma o recebimento de um pedido "Aceito" de quantidade Q para um alimento com quantidade atual X

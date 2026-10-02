@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que uma entidade beneficiária crie uma conta na plataforma informando dados pessoais do responsável, dados institucionais e endereço, viabilizando os demais fluxos do MVP que dependem de uma entidade beneficiária cadastrada.
+Permitir que uma entidade beneficiária crie uma conta na plataforma informando dados pessoais do responsável, dados institucionais e endereço, viabilizando os demais fluxos que dependem de uma entidade beneficiária cadastrada.
 
 ## Requirements
 

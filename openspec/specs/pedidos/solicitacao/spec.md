@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que uma entidade beneficiária autenticada crie um pedido de doação para um alimento disponível, informando a quantidade desejada, viabilizando os fluxos de aceite, rejeição e confirmação de recebimento do MVP.
+Permitir que uma entidade beneficiária autenticada crie um pedido de doação para um alimento disponível, informando a quantidade desejada, viabilizando os fluxos de aceite, rejeição e confirmação de recebimento.
 
 ## Requirements
 

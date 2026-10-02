@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que um estabelecimento autenticado cadastre um alimento vinculado ao próprio cadastro, viabilizando os demais fluxos do MVP que dependem de alimento disponível (listagem, busca, pedido).
+Permitir que um estabelecimento autenticado cadastre um alimento vinculado ao próprio cadastro, viabilizando os demais fluxos que dependem de alimento disponível (listagem, busca, pedido).
 
 ## Requirements
 
