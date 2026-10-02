@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleAlertIcon, Loader2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -72,9 +72,14 @@ function extractDuplicateFields(body: unknown): string[] {
   return [];
 }
 
+function parseProfileType(value: string | null): SignUpInput['profileType'] | undefined {
+  return value === 'establishment' || value === 'beneficiary' ? value : undefined;
+}
+
 export function SignUpPage() {
   const { status } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState(0);
   const [serverError, setServerError] = useState<ServerError | null>(null);
 
@@ -85,6 +90,7 @@ export function SignUpPage() {
     // revalidation never kicks in until an actual blur.
     mode: 'onChange',
     defaultValues: {
+      profileType: parseProfileType(searchParams.get('profile')),
       companyName: '',
       tradeName: '',
       cnpj: '',
