@@ -22,7 +22,7 @@ O sistema SHALL permitir que uma entidade beneficiária autenticada edite, em qu
 - **THEN** o sistema rejeita a edição informando que o endereço deve ser enviado completo, sem alterar nenhum campo
 
 ### Requirement: Validação de formato na edição da entidade beneficiária
-O sistema SHALL validar o formato de cada campo editável enviado, usando as mesmas regras de formato aplicadas no cadastro (RF03), e SHALL rejeitar a edição inteira sem persistir nenhuma alteração quando algum campo enviado estiver em formato inválido.
+O sistema SHALL validar o formato de cada campo editável enviado, usando as mesmas regras de formato aplicadas no cadastro (RF02), e SHALL rejeitar a edição inteira sem persistir nenhuma alteração quando algum campo enviado estiver em formato inválido.
 
 #### Scenario: Campo em formato inválido
 - **WHEN** uma entidade beneficiária autenticada envia um campo em formato inválido (ex: e-mail institucional sem `@`, estado fora da sigla de 2 letras)

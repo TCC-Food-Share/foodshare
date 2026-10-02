@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que um estabelecimento ou uma entidade beneficiária autenticada liste os próprios pedidos — recorte pela sessão —, de forma paginada e ordenada da criação mais recente para a mais antiga, com filtro opcional por status, viabilizando o acompanhamento dos pedidos separados por status (RF19).
+Permitir que um estabelecimento ou uma entidade beneficiária autenticada liste os próprios pedidos — recorte pela sessão —, de forma paginada e ordenada da criação mais recente para a mais antiga, com filtro opcional por status, viabilizando o acompanhamento dos pedidos separados por status (RF27).
 
 ## Requirements
 

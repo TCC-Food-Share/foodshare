@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que um usuário autenticado obtenha a lista fixa de categorias de alimento, viabilizando o filtro de busca por categoria (RF12) e, futuramente, a seleção de categoria no cadastro de alimento (RF10).
+Permitir que um usuário autenticado obtenha a lista fixa de categorias de alimento, viabilizando o filtro de busca por categoria (RF20) e, futuramente, a seleção de categoria no cadastro de alimento (RF14).
 
 ## Requirements
 

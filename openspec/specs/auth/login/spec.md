@@ -18,7 +18,7 @@ O sistema SHALL permitir que um estabelecimento, entidade beneficiária ou admin
 - **THEN** o sistema rejeita a requisição e não emite nenhuma sessão
 
 ### Requirement: Credencial de login é a definida no cadastro
-O sistema SHALL aceitar, como credencial de login, a mesma senha definida pelo responsável no momento do cadastro (RF01/RF03), sem exigir nenhuma configuração adicional.
+O sistema SHALL aceitar, como credencial de login, a mesma senha definida pelo responsável no momento do cadastro (RF01/RF02), sem exigir nenhuma configuração adicional.
 
 #### Scenario: Primeiro login após o cadastro
 - **WHEN** um estabelecimento ou entidade beneficiária recém-cadastrado faz login usando o e-mail pessoal e a senha definidos no cadastro

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Permitir que o estabelecimento de origem ou a entidade beneficiária de um pedido obtenha, por id, os detalhes completos desse pedido — o alimento vinculado por inteiro, o status, a quantidade, a data e a identificação e localização (cidade/UF) das duas instituições envolvidas —, viabilizando o acompanhamento de um pedido específico (RF20).
+Permitir que o estabelecimento de origem ou a entidade beneficiária de um pedido obtenha, por id, os detalhes completos desse pedido — o alimento vinculado por inteiro, o status, a quantidade, a data e a identificação e localização (cidade/UF) das duas instituições envolvidas —, viabilizando o acompanhamento de um pedido específico (RF28).
 
 ## Requirements
 
