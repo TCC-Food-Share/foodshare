@@ -1,0 +1,169 @@
+# pedidos/solicitacao Specification
+
+## Purpose
+
+Permitir que uma entidade beneficiária autenticada crie um pedido de doação para um alimento disponível, informando a quantidade desejada, viabilizando os fluxos de aceite, rejeição e confirmação de recebimento.
+
+## Requirements
+
+### Requirement: Solicitação de pedido de doação pela entidade beneficiária
+O sistema SHALL permitir que uma entidade beneficiária autenticada crie um pedido de doação informando o alimento (por id) e a quantidade desejada (valor numérico positivo, aceitando fracionário). O pedido SHALL ser vinculado exclusivamente à entidade beneficiária autenticada e ao estabelecimento de origem do alimento, sem que o cliente informe qualquer um desses vínculos.
+
+#### Scenario: Pedido com dados válidos
+- **WHEN** uma entidade beneficiária autenticada solicita um pedido para um alimento disponível, com quantidade positiva que não excede a quantidade atual do alimento
+- **THEN** o sistema cria o pedido vinculado à entidade autenticada e ao estabelecimento do alimento, e retorna confirmação com os dados do pedido
+
+#### Scenario: Requisição sem autenticação
+- **WHEN** uma solicitação de pedido é enviada sem sessão autenticada válida
+- **THEN** o sistema nega o acesso e não cria nenhum pedido
+
+#### Scenario: Conta autenticada não é entidade beneficiária
+- **WHEN** um estabelecimento autenticado tenta criar um pedido
+- **THEN** o sistema rejeita a requisição e não cria nenhum pedido
+
+#### Scenario: Vínculos resolvidos pela sessão e pelo alimento
+- **WHEN** uma entidade beneficiária autenticada cria um pedido válido
+- **THEN** o sistema vincula o pedido à entidade beneficiária da sessão e ao estabelecimento de origem do alimento, sem que esses vínculos venham do corpo da requisição
+
+#### Scenario: Identificador de vínculo enviado no corpo
+- **WHEN** a solicitação inclui um identificador de entidade beneficiária ou de estabelecimento no corpo da requisição
+- **THEN** o sistema recusa a requisição como dado inválido, sem criar pedido
+
+### Requirement: Pedido só para alimento disponível
+O sistema SHALL aceitar o pedido apenas quando o `foodId` corresponder a um alimento disponível — status "Ativo", não excluído logicamente, não vencido e com quantidade atual maior que zero, o mesmo recorte da listagem. Alimento inexistente ou fora desse conjunto SHALL resultar em resposta de não encontrado, sem criar pedido.
+
+#### Scenario: Alimento inexistente
+- **WHEN** a entidade beneficiária solicita um pedido com um `foodId` que não corresponde a nenhum alimento
+- **THEN** o sistema responde que o alimento não foi encontrado e não cria pedido
+
+#### Scenario: Alimento indisponível
+- **WHEN** a entidade beneficiária solicita um pedido para um alimento vencido, excluído logicamente ou com status diferente de "Ativo"
+- **THEN** o sistema responde que o alimento não foi encontrado e não cria pedido
+
+#### Scenario: Alimento esgotado
+- **WHEN** a entidade beneficiária solicita um pedido para um alimento cuja quantidade atual é zero, por exemplo depois de pedidos aceitos reservarem toda a quantidade
+- **THEN** o sistema responde que o alimento não foi encontrado e não cria pedido
+
+### Requirement: Quantidade do pedido validada contra o estoque
+O sistema SHALL exigir que a quantidade do pedido seja maior que zero e não maior que a quantidade atual do alimento. Quantidade ausente, não numérica, igual a zero ou negativa SHALL ser rejeitada como dado inválido; quantidade acima da quantidade do alimento SHALL ser rejeitada informando que excede o disponível. Em nenhum dos casos o pedido é criado.
+
+#### Scenario: Quantidade acima do estoque
+- **WHEN** a entidade beneficiária solicita uma quantidade maior que a quantidade atual do alimento
+- **THEN** o sistema rejeita o pedido informando que a quantidade excede o disponível, sem criar pedido
+
+#### Scenario: Quantidade igual à quantidade total do alimento
+- **WHEN** a entidade beneficiária solicita exatamente a quantidade atual do alimento
+- **THEN** o sistema cria o pedido normalmente
+
+#### Scenario: Quantidade inválida
+- **WHEN** a entidade beneficiária envia a solicitação sem quantidade, com quantidade não numérica, igual a zero ou negativa
+- **THEN** o sistema rejeita a requisição informando o campo inválido, sem criar pedido
+
+### Requirement: Pedido inicia com status "Pendente"
+O sistema SHALL atribuir automaticamente o status "Pendente" a todo pedido no momento da criação, sem permitir que o cliente informe ou escolha o status inicial.
+
+#### Scenario: Status inicial automático
+- **WHEN** uma entidade beneficiária cria um pedido com dados válidos
+- **THEN** o sistema atribui o status "Pendente" ao pedido criado, independentemente de qualquer valor de status presente na requisição
+
+### Requirement: Limite de pedidos em andamento por entidade beneficiária
+O sistema SHALL recusar a criação de um novo pedido quando a entidade beneficiária autenticada já possuir 10 ou mais pedidos em andamento, sem criar o pedido. Um pedido conta como **em andamento** quando pertence à entidade, não está excluído logicamente e seu status não é um status terminal. Os status "Pendente" e "Aceito" são status em andamento; "Rejeitado" e "Recebido" são terminais e não contam para o limite. Pedidos de outras entidades beneficiárias não contam.
+
+A verificação do limite SHALL ocorrer depois de resolver a entidade beneficiária da sessão e antes de qualquer validação do alimento ou da quantidade, de modo que uma entidade no limite receba a mesma recusa independentemente do conteúdo da requisição.
+
+#### Scenario: Entidade abaixo do limite cria pedido
+- **WHEN** uma entidade beneficiária autenticada com 9 pedidos em andamento solicita um pedido válido para um alimento disponível
+- **THEN** o sistema cria o pedido normalmente, passando a entidade a ter 10 pedidos em andamento
+
+#### Scenario: Entidade no limite tem o pedido recusado
+- **WHEN** uma entidade beneficiária autenticada com 10 pedidos em andamento solicita um novo pedido
+- **THEN** o sistema recusa a requisição por conflito de estado, informando que o limite de pedidos em andamento foi atingido, e não cria nenhum pedido
+
+#### Scenario: Entidade acima do limite tem o pedido recusado
+- **WHEN** uma entidade beneficiária autenticada com mais de 10 pedidos em andamento solicita um novo pedido
+- **THEN** o sistema recusa a requisição da mesma forma e não cria nenhum pedido
+
+#### Scenario: Pedidos excluídos logicamente não contam para o limite
+- **WHEN** uma entidade beneficiária autenticada possui 9 pedidos em andamento e outros pedidos marcados como excluídos logicamente, e solicita um pedido válido
+- **THEN** o sistema considera apenas os 9 pedidos em andamento, fica abaixo do limite e cria o pedido
+
+#### Scenario: Pedidos rejeitados não contam para o limite
+- **WHEN** uma entidade beneficiária autenticada possui 9 pedidos em andamento ("Pendente" ou "Aceito") e outros pedidos com status "Rejeitado", e solicita um pedido válido
+- **THEN** o sistema considera apenas os 9 pedidos em andamento, fica abaixo do limite e cria o pedido
+
+#### Scenario: Pedidos recebidos não contam para o limite
+- **WHEN** uma entidade beneficiária autenticada possui 9 pedidos em andamento ("Pendente" ou "Aceito") e outros pedidos com status "Recebido", e solicita um pedido válido
+- **THEN** o sistema considera apenas os 9 pedidos em andamento, fica abaixo do limite e cria o pedido
+
+#### Scenario: Limite é isolado por entidade beneficiária
+- **WHEN** uma entidade beneficiária autenticada sem pedidos em andamento solicita um pedido válido, enquanto outra entidade possui 10 ou mais pedidos em andamento
+- **THEN** o sistema cria o pedido da entidade autenticada, sem considerar os pedidos de outras entidades
+
+#### Scenario: Limite é verificado antes da validação do alimento
+- **WHEN** uma entidade beneficiária autenticada com 10 pedidos em andamento solicita um pedido informando um alimento inexistente ou indisponível
+- **THEN** o sistema recusa a requisição pelo limite de pedidos em andamento, sem chegar a avaliar o alimento, e não cria nenhum pedido
+
+### Requirement: Um pedido em andamento por entidade e alimento
+O sistema SHALL recusar a criação de um novo pedido quando a entidade beneficiária autenticada já possuir um pedido em andamento para o mesmo alimento, sem criar o pedido. Um pedido conta como **em andamento** pelo mesmo critério do limite de pedidos em andamento: pertence à entidade, não está excluído logicamente e seu status é "Pendente" ou "Aceito". Os status "Rejeitado" e "Recebido" são terminais e não bloqueiam um novo pedido. Pedidos de outras entidades beneficiárias para o mesmo alimento, e pedidos da mesma entidade para outros alimentos, não contam. A quantidade solicitada não influencia o bloqueio.
+
+A verificação SHALL ocorrer depois do limite de pedidos em andamento e depois de confirmar que o alimento está disponível, e antes da validação da quantidade.
+
+#### Scenario: Primeiro pedido da entidade para o alimento
+- **WHEN** uma entidade beneficiária autenticada sem pedido em andamento para um alimento disponível solicita um pedido válido para ele
+- **THEN** o sistema cria o pedido normalmente
+
+#### Scenario: Novo pedido com o anterior pendente
+- **WHEN** uma entidade beneficiária autenticada com um pedido "Pendente" para um alimento solicita outro pedido para o mesmo alimento
+- **THEN** o sistema recusa a requisição por conflito de estado, informando que já existe um pedido em andamento para o alimento, e não cria nenhum pedido
+
+#### Scenario: Novo pedido com o anterior aceito
+- **WHEN** uma entidade beneficiária autenticada com um pedido "Aceito" para um alimento solicita outro pedido para o mesmo alimento
+- **THEN** o sistema recusa a requisição da mesma forma e não cria nenhum pedido
+
+#### Scenario: Novo pedido depois de o anterior ser rejeitado
+- **WHEN** uma entidade beneficiária autenticada cujo único pedido para um alimento está "Rejeitado" solicita um novo pedido válido para o mesmo alimento
+- **THEN** o sistema cria o pedido normalmente
+
+#### Scenario: Novo pedido depois de o anterior ser recebido
+- **WHEN** uma entidade beneficiária autenticada cujo único pedido para um alimento está "Recebido" solicita um novo pedido válido para o mesmo alimento disponível
+- **THEN** o sistema cria o pedido normalmente
+
+#### Scenario: Pedido excluído logicamente não bloqueia
+- **WHEN** uma entidade beneficiária autenticada cujo único pedido para um alimento está marcado como excluído logicamente solicita um novo pedido válido para o mesmo alimento
+- **THEN** o sistema cria o pedido normalmente
+
+#### Scenario: Outra entidade com pedido em andamento para o mesmo alimento
+- **WHEN** uma entidade beneficiária autenticada sem pedido para um alimento solicita um pedido válido para ele, enquanto outra entidade possui um pedido "Pendente" para o mesmo alimento
+- **THEN** o sistema cria o pedido da entidade autenticada, sem considerar os pedidos de outras entidades
+
+#### Scenario: Pedido em andamento da mesma entidade para outro alimento
+- **WHEN** uma entidade beneficiária autenticada com um pedido "Pendente" para um alimento solicita um pedido válido para um alimento diferente
+- **THEN** o sistema cria o pedido normalmente
+
+#### Scenario: Quantidade diferente não evita o bloqueio
+- **WHEN** uma entidade beneficiária autenticada com um pedido em andamento para um alimento solicita outro pedido para o mesmo alimento com uma quantidade diferente da do primeiro
+- **THEN** o sistema recusa a requisição por já existir um pedido em andamento para o alimento e não cria nenhum pedido
+
+#### Scenario: Alimento que deixou de estar disponível
+- **WHEN** uma entidade beneficiária autenticada com um pedido em andamento para um alimento solicita um novo pedido para esse alimento depois de ele ficar vencido, excluído logicamente ou com status diferente de "Ativo"
+- **THEN** o sistema responde que o alimento não foi encontrado, sem avaliar a duplicidade, e não cria pedido
+
+#### Scenario: Limite de pedidos em andamento prevalece
+- **WHEN** uma entidade beneficiária autenticada com 10 pedidos em andamento, um deles para o alimento solicitado, solicita um novo pedido para esse alimento
+- **THEN** o sistema recusa a requisição pelo limite de pedidos em andamento, e não pela duplicidade, e não cria nenhum pedido
+
+#### Scenario: Duplicidade é verificada antes da quantidade
+- **WHEN** uma entidade beneficiária autenticada com um pedido em andamento para um alimento solicita outro pedido para o mesmo alimento com quantidade acima da disponível
+- **THEN** o sistema recusa a requisição por já existir um pedido em andamento para o alimento, sem chegar a avaliar a quantidade, e não cria nenhum pedido
+
+### Requirement: Recusas por conflito identificam o motivo
+O sistema SHALL identificar, no corpo da resposta de conflito (`409`) da criação de pedido, o motivo da recusa por um código estável e legível por máquina, além da mensagem descritiva. O código SHALL ser `ORDERS_IN_PROGRESS_LIMIT_REACHED` quando a recusa se deve ao limite de pedidos em andamento e `DUPLICATE_ORDER_IN_PROGRESS` quando se deve a já existir um pedido em andamento da entidade para o mesmo alimento. Cada motivo SHALL ter sempre o seu código, independentemente do texto da mensagem.
+
+#### Scenario: Recusa pelo limite traz o código do limite
+- **WHEN** uma entidade beneficiária autenticada com 10 pedidos em andamento solicita um novo pedido
+- **THEN** o corpo da resposta de conflito traz o código `ORDERS_IN_PROGRESS_LIMIT_REACHED`
+
+#### Scenario: Recusa por duplicidade traz o código de duplicidade
+- **WHEN** uma entidade beneficiária autenticada com um pedido em andamento para um alimento solicita outro pedido para o mesmo alimento
+- **THEN** o corpo da resposta de conflito traz o código `DUPLICATE_ORDER_IN_PROGRESS`
+

@@ -1,0 +1,20 @@
+node_modules/
+.husky/_/
+
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.DS_Store
+
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+.eslintcache
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

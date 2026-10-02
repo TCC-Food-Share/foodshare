@@ -1,0 +1,3 @@
+{
+  "*.{json,jsonc,md,yml,yaml,css,html}": "npx --no-install prettier --write"
+}

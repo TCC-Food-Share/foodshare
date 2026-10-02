@@ -1,0 +1,53 @@
+schema: spec-driven
+
+context: |
+  Projeto: Food Share — plataforma web que conecta estabelecimentos com
+  excedente de alimentos a entidades beneficiárias. TCC de Sistemas para
+  Internet (IFSP Birigui). O MVP está concluído; o trabalho atual é a
+  VERSÃO FINAL, com o escopo completo.
+
+  Fontes da verdade (ler antes de criar qualquer artefato):
+  - docs/REQUISITOS.md — RF/RNF (numeração da versão final), máquinas de
+    estado, regras de negócio (RN) e decisões (DT). Vale sobre qualquer spec.
+  - docs/MODELO-DE-DADOS.md — mudanças no schema.
+  - docs/INFRAESTRUTURA.md — ambientes, MinIO, Resend, n8n, tarefas agendadas.
+  - docs/CONVENCOES.md — padrões de código, concorrência, erros, fluxo.
+  - docs/PLANO-IMPLEMENTACAO.md — ordem das changes e o escopo de cada uma.
+
+  Histórico (não usar como fonte de requisito): docs/mvp/ e
+  openspec/changes/archive/. As changes arquivadas citam a numeração RF do
+  MVP (RF01–RF20); a tradução está na coluna "Código no MVP" de
+  docs/REQUISITOS.md.
+
+  Stack: NestJS + Prisma + PostgreSQL + better-auth (backend); React 19 +
+  Vite 7 + Tailwind v4 + shadcn/ui (frontend); TypeScript em tudo.
+  Infra self-hosted: VPS Oracle ARM64 + Coolify.
+
+  Idioma: código, rotas, JSON e mensagens de erro da API em inglês;
+  artefatos do OpenSpec (proposal, design, specs, tasks) e texto de tela
+  em pt-BR.
+
+  Terminologia de pedidos: "Em andamento" é SÓ o status do pedido aceito.
+  O conjunto Pendente + Em andamento se chama "pedidos em aberto" (é o que
+  conta para o limite de 10 e para o bloqueio de pedido duplicado). As
+  specs do MVP usavam "em andamento" para esse conjunto; corrija ao
+  modificá-las.
+
+rules:
+  proposal:
+    - Corresponder a exatamente um item de docs/PLANO-IMPLEMENTACAO.md e usar o nome de change que está lá.
+    - Listar os RF, RNF, RN e DT cobertos, sempre na numeração de docs/REQUISITOS.md.
+    - Listar o que fica de fora explicitamente (itens de outras changes do plano).
+    - Se algum caso não estiver coberto por RF, RN ou DT, registrar como pergunta em aberto e não decidir sozinho.
+  design:
+    - Toda operação que muda status de pedido ou estoque de alimento roda em uma única transação, com proteção contra concorrência conforme docs/CONVENCOES.md.
+    - Mudanças de schema seguem docs/MODELO-DE-DADOS.md; qualquer divergência precisa ser justificada.
+    - Não criar wrapper sobre rota nativa do better-auth sem motivo funcional real (docs/CONVENCOES.md).
+  specs:
+    - Comportamento que já existe em openspec/specs/ é alterado com MODIFIED ou REMOVED, nunca duplicado em spec nova.
+    - Toda transição automática de status (rejeição, cancelamento, reserva) tem um cenário próprio.
+    - Status de pedido e de alimento com os nomes exatos de docs/REQUISITOS.md.
+  tasks:
+    - Separar tarefas de backend e de frontend.
+    - Incluir as variáveis de ambiente novas no .env.example, quando houver.
+    - Terminar com a verificação ponta a ponta no navegador e a marcação ✅ do item em docs/PLANO-IMPLEMENTACAO.md.
