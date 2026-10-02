@@ -13,7 +13,7 @@ services:
       - foodshare_pgdata:/var/lib/postgresql/data
 
   minio:
-    image: quay.io/minio/minio:latest
+    image: coollabsio/minio:RELEASE.2025-10-15T17-29-55Z
     container_name: foodshare-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
