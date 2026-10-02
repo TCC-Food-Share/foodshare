@@ -78,7 +78,7 @@ export function OrderDetailPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <Link
-          to={`/pedidos?status=${order.status.name}`}
+          to={`/pedidos?status=${encodeURIComponent(order.status.name)}`}
           className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1.5 text-sm transition-colors"
         >
           <ArrowLeftIcon className="size-4" />

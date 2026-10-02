@@ -29,12 +29,12 @@ export class OrdersController {
     summary: 'Solicitação de pedido de doação',
     description:
       'Cria um pedido de doação da entidade beneficiária autenticada para um alimento ' +
-      'disponível, informando o alimento e a quantidade desejada (RF14). O pedido inicia ' +
+      'disponível, informando o alimento e a quantidade desejada (RF22). O pedido inicia ' +
       'com status "Pendente"; os vínculos com a entidade e com o estabelecimento são ' +
       'resolvidos pela sessão e pelo alimento. Exclusivo de entidade beneficiária. ' +
       'A entidade é impedida de criar um novo pedido enquanto tiver 10 ou mais pedidos ' +
-      'em andamento (RF15) e enquanto já tiver um pedido em andamento ("Pendente" ou ' +
-      '"Aceito") para o mesmo alimento.',
+      'em aberto ("Pendente" ou "Em andamento") e enquanto já tiver um pedido em aberto ' +
+      'para o mesmo alimento.',
   })
   @ApiCreatedResponse({ description: 'Pedido criado com sucesso.', type: OrderResponseDto })
   @ApiBadRequestResponse({
@@ -47,10 +47,10 @@ export class OrdersController {
     description:
       'Pedido recusado por conflito com o estado da entidade beneficiária. O corpo traz o ' +
       'campo `code` com o motivo: `ORDERS_IN_PROGRESS_LIMIT_REACHED` quando a entidade já ' +
-      'possui 10 ou mais pedidos em andamento e não pode criar um novo até encerrar algum ' +
-      'deles (RF15); `DUPLICATE_ORDER_IN_PROGRESS` quando a entidade já possui um pedido em ' +
-      'andamento ("Pendente" ou "Aceito") para o mesmo alimento — depois de "Rejeitado" ou ' +
-      '"Recebido" ela pode pedir o alimento de novo.',
+      'possui 10 ou mais pedidos em aberto ("Pendente" ou "Em andamento") e não pode criar ' +
+      'um novo até encerrar algum deles (RF22); `DUPLICATE_ORDER_IN_PROGRESS` quando a ' +
+      'entidade já possui um pedido em aberto para o mesmo alimento — depois de ' +
+      '"Rejeitado", "Doado" ou "Cancelado" ela pode pedir o alimento de novo.',
   })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   create(@Session() session: UserSession, @Body() dto: CreateOrderDto): Promise<OrderResponseDto> {
@@ -63,8 +63,9 @@ export class OrdersController {
     description:
       'Lista, de forma paginada, os pedidos do solicitante — resolvido pela sessão: um ' +
       'estabelecimento vê os pedidos feitos aos alimentos dele, uma entidade beneficiária vê ' +
-      'os pedidos que criou (RF19). Filtro opcional `status` (`Pendente` | `Aceito` | ' +
-      '`Rejeitado` | `Recebido`) para separar por status; ausente traz todos. Paginação por ' +
+      'os pedidos que criou (RF27). Filtro opcional `status` (`Pendente` | `Em andamento` | ' +
+      '`Rejeitado` | `Doado` | `Cancelado`) para separar por status; ausente traz todos. ' +
+      'Paginação por ' +
       '`page` (default 1) e `pageSize` (default 20, máximo 50). Ordenado do pedido mais ' +
       'recente para o mais antigo.',
   })
@@ -90,7 +91,7 @@ export class OrdersController {
     description:
       'Retorna os detalhes completos de um pedido do qual o solicitante é parte — o ' +
       'estabelecimento de origem do alimento ou a entidade beneficiária que criou o pedido ' +
-      '(RF20). Inclui o alimento por completo (mantido como registro histórico mesmo se ' +
+      '(RF28). Inclui o alimento por completo (mantido como registro histórico mesmo se ' +
       'depois ficou indisponível) e a identificação e cidade/UF das duas instituições. ' +
       'Pedido inexistente, excluído, ou em que o solicitante não é parte responde 404.',
   })
@@ -113,7 +114,8 @@ export class OrdersController {
     description:
       'O estabelecimento autenticado aceita um pedido "Pendente" que recebeu, reservando a ' +
       'quantidade do alimento vinculado — a quantidade aceita é subtraída do estoque do ' +
-      'alimento e o pedido passa para "Aceito" (RF16). O pedido é resolvido pela sessão; ' +
+      'alimento e o pedido passa para "Em andamento" (RF23). O pedido é resolvido pela ' +
+      'sessão; ' +
       'exclusivo do estabelecimento dono do pedido.',
   })
   @ApiOkResponse({ description: 'Pedido aceito com sucesso.', type: OrderResponseDto })
@@ -140,7 +142,7 @@ export class OrdersController {
     description:
       'O estabelecimento autenticado rejeita um pedido "Pendente" que recebeu — o pedido ' +
       'passa para o status terminal "Rejeitado" e o estoque do alimento não é alterado ' +
-      '(pedido "Pendente" nunca reservou quantidade) (RF17). O pedido é resolvido pela ' +
+      '(pedido "Pendente" nunca reservou quantidade) (RF24). O pedido é resolvido pela ' +
       'sessão; exclusivo do estabelecimento dono do pedido. Não há motivo de rejeição.',
   })
   @ApiOkResponse({ description: 'Pedido rejeitado com sucesso.', type: OrderResponseDto })
@@ -148,7 +150,10 @@ export class OrdersController {
     description:
       'Nenhum estabelecimento vinculado ao usuário, ou pedido inexistente / de outro estabelecimento.',
   })
-  @ApiConflictResponse({ description: 'Pedido não está "Pendente" (já "Aceito" ou "Rejeitado").' })
+  @ApiConflictResponse({
+    description:
+      'Pedido não está "Pendente" (já "Em andamento", "Rejeitado", "Doado" ou "Cancelado").',
+  })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   reject(
     @Session() session: UserSession,
@@ -162,8 +167,8 @@ export class OrdersController {
     summary: 'Confirmação de recebimento de pedido',
     description:
       'A entidade beneficiária autenticada confirma que recebeu o alimento de um pedido ' +
-      '"Aceito" que é dela — o pedido passa para o status terminal "Recebido", encerrando-o ' +
-      '(RF18). O estoque do alimento não muda: a quantidade já foi reservada no aceite. O ' +
+      '"Em andamento" que é dela — o pedido passa para o status terminal "Doado", ' +
+      'encerrando-o (RF25). O estoque do alimento não muda: a quantidade já foi reservada no aceite. O ' +
       'pedido é resolvido pela sessão; exclusivo da entidade beneficiária dona do pedido.',
   })
   @ApiOkResponse({
@@ -175,7 +180,9 @@ export class OrdersController {
       'Nenhuma entidade beneficiária vinculada ao usuário, ou pedido inexistente / de outra entidade.',
   })
   @ApiConflictResponse({
-    description: 'Pedido não está "Aceito" (ainda "Pendente", ou já "Rejeitado" / "Recebido").',
+    description:
+      'Pedido não está "Em andamento" (ainda "Pendente", ou já "Rejeitado", "Doado" ou ' +
+      '"Cancelado").',
   })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   receive(

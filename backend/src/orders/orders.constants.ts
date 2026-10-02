@@ -1,16 +1,14 @@
-export const INITIAL_STATUS = 'Pendente';
-export const ACCEPTED_STATUS = 'Aceito';
-export const REJECTED_STATUS = 'Rejeitado';
-export const RECEIVED_STATUS = 'Recebido';
+export const ORDER_STATUS = {
+  PENDING: 'Pendente',
+  IN_PROGRESS: 'Em andamento',
+  REJECTED: 'Rejeitado',
+  DONATED: 'Doado',
+  CANCELLED: 'Cancelado',
+} as const;
 
-export const ORDER_STATUS_NAMES = [
-  INITIAL_STATUS,
-  ACCEPTED_STATUS,
-  REJECTED_STATUS,
-  RECEIVED_STATUS,
-] as const;
+export const ORDER_STATUS_NAMES = Object.values(ORDER_STATUS);
 
-export const IN_PROGRESS_STATUSES = [INITIAL_STATUS, ACCEPTED_STATUS];
+export const OPEN_ORDER_STATUSES = [ORDER_STATUS.PENDING, ORDER_STATUS.IN_PROGRESS];
 
 export const ORDER_CONFLICT_CODES = {
   limitReached: 'ORDERS_IN_PROGRESS_LIMIT_REACHED',

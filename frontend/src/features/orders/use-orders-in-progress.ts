@@ -1,15 +1,14 @@
 import { useQueries } from '@tanstack/react-query';
 
-import { listOrdersByStatus, type OrderStatusName } from '@/features/orders/orders-api';
+import { OPEN_ORDER_STATUSES } from '@/features/orders/order-status';
+import { listOrdersByStatus } from '@/features/orders/orders-api';
 
-// Mirrors MAX_ORDERS_IN_PROGRESS in backend/src/orders/orders.service.ts — keep in sync.
+// Mirrors MAX_OPEN_ORDERS in backend/src/orders/orders.service.ts — keep in sync.
 export const ORDERS_IN_PROGRESS_LIMIT = 10;
-
-const IN_PROGRESS_STATUSES: OrderStatusName[] = ['Pendente', 'Aceito'];
 
 export function useOrdersInProgress(enabled: boolean) {
   const results = useQueries({
-    queries: IN_PROGRESS_STATUSES.map((status) => ({
+    queries: OPEN_ORDER_STATUSES.map((status) => ({
       queryKey: ['orders', 'in-progress', status],
       queryFn: () => listOrdersByStatus(status),
       enabled,

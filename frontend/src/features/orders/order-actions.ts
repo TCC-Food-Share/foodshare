@@ -1,9 +1,9 @@
 import type { Role } from '@/features/auth/auth-context';
+import { ORDER_STATUS, type OrderStatusName } from '@/features/orders/order-status';
 import {
   acceptOrder,
   type Order,
   type OrderDetail,
-  type OrderStatusName,
   receiveOrder,
   rejectOrder,
 } from '@/features/orders/orders-api';
@@ -23,7 +23,7 @@ interface OrderActionConfig {
 export const ORDER_ACTIONS: Record<OrderAction, OrderActionConfig> = {
   accept: {
     label: 'Aceitar pedido',
-    expectedStatus: 'Pendente',
+    expectedStatus: ORDER_STATUS.PENDING,
     call: acceptOrder,
     success: 'Pedido aceito. Quantidade reservada.',
     failure: 'aceitar o pedido',
@@ -31,7 +31,7 @@ export const ORDER_ACTIONS: Record<OrderAction, OrderActionConfig> = {
   },
   reject: {
     label: 'Rejeitar pedido',
-    expectedStatus: 'Pendente',
+    expectedStatus: ORDER_STATUS.PENDING,
     call: rejectOrder,
     success: 'Pedido rejeitado.',
     failure: 'rejeitar o pedido',
@@ -39,7 +39,7 @@ export const ORDER_ACTIONS: Record<OrderAction, OrderActionConfig> = {
   },
   receive: {
     label: 'Confirmar recebimento',
-    expectedStatus: 'Aceito',
+    expectedStatus: ORDER_STATUS.IN_PROGRESS,
     call: receiveOrder,
     success: 'Recebimento confirmado. Pedido encerrado.',
     failure: 'confirmar o recebimento do pedido',
@@ -51,25 +51,28 @@ const ALREADY_UPDATED = 'Este pedido já foi atualizado. Confira a situação at
 const NOT_CONCLUDED = 'Não foi possível concluir a ação. O pedido pode ter sido atualizado.';
 
 export function availableActions(role: Role | null, status: OrderStatusName): OrderAction[] {
-  if (role === 'establishment' && status === 'Pendente') return ['accept', 'reject'];
-  if (role === 'beneficiary' && status === 'Aceito') return ['receive'];
+  if (role === 'establishment' && status === ORDER_STATUS.PENDING) return ['accept', 'reject'];
+  if (role === 'beneficiary' && status === ORDER_STATUS.IN_PROGRESS) return ['receive'];
   return [];
 }
 
 const SITUATION: Record<Role, Record<OrderStatusName, string>> = {
   establishment: {
-    Pendente:
+    [ORDER_STATUS.PENDING]:
       'Este pedido aguarda a sua decisão. Ao aceitar, a quantidade solicitada fica reservada para a entidade.',
-    Aceito: 'Você aceitou este pedido. Aguardando a entidade confirmar o recebimento.',
-    Rejeitado: 'Você rejeitou este pedido.',
-    Recebido: 'A entidade confirmou o recebimento. Pedido encerrado.',
+    [ORDER_STATUS.IN_PROGRESS]:
+      'Você aceitou este pedido. Aguardando a entidade confirmar o recebimento.',
+    [ORDER_STATUS.REJECTED]: 'Você rejeitou este pedido.',
+    [ORDER_STATUS.DONATED]: 'A entidade confirmou o recebimento. Pedido encerrado.',
+    [ORDER_STATUS.CANCELLED]: 'Este pedido foi cancelado.',
   },
   beneficiary: {
-    Pendente: 'Aguardando a resposta do estabelecimento.',
-    Aceito:
-      'Pedido aceito: a quantidade está reservada para a sua entidade. Quando receber o alimento, confirme o recebimento.',
-    Rejeitado: 'O estabelecimento rejeitou este pedido.',
-    Recebido: 'Você confirmou o recebimento. Pedido encerrado.',
+    [ORDER_STATUS.PENDING]: 'Aguardando a resposta do estabelecimento.',
+    [ORDER_STATUS.IN_PROGRESS]:
+      'Pedido em andamento: a quantidade está reservada para a sua entidade. Quando receber o alimento, confirme o recebimento.',
+    [ORDER_STATUS.REJECTED]: 'O estabelecimento rejeitou este pedido.',
+    [ORDER_STATUS.DONATED]: 'Você confirmou o recebimento. Pedido encerrado.',
+    [ORDER_STATUS.CANCELLED]: 'Este pedido foi cancelado.',
   },
 };
 
@@ -110,7 +113,7 @@ export function dialogCopy(
 
   return {
     title: 'Confirmar o recebimento?',
-    description: `Você confirma que recebeu ${requested} de ${order.food.name}. O pedido será encerrado como Recebido. Esta ação não pode ser desfeita.`,
+    description: `Você confirma que recebeu ${requested} de ${order.food.name}. O pedido será encerrado como Doado. Esta ação não pode ser desfeita.`,
   };
 }
 
