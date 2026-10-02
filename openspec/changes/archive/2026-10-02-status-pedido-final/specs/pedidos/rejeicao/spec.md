@@ -1,10 +1,4 @@
-# pedidos/rejeicao Specification
-
-## Purpose
-
-Permitir que um estabelecimento autenticado rejeite um pedido de doação "Pendente" que recebeu, movendo o pedido para o status terminal "Rejeitado" sem alterar o estoque do alimento vinculado, encerrando o pedido do lado do estabelecimento.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Rejeição de pedido pendente pelo estabelecimento
 O sistema SHALL permitir que um estabelecimento autenticado rejeite um pedido de doação identificado por id, desde que o pedido pertença ao próprio estabelecimento da sessão, não esteja excluído logicamente e esteja com status "Pendente". O vínculo com o estabelecimento SHALL ser resolvido pela sessão, nunca informado pelo cliente. Ao rejeitar, o sistema SHALL mover o pedido para o status "Rejeitado" e retornar os dados atualizados do pedido. O sistema NÃO exige nem aceita um motivo de rejeição.
@@ -32,13 +26,6 @@ O sistema SHALL permitir que um estabelecimento autenticado rejeite um pedido de
 #### Scenario: Pedido não está pendente
 - **WHEN** um estabelecimento autenticado tenta rejeitar um pedido dele que está "Em andamento", "Rejeitado", "Doado" ou "Cancelado"
 - **THEN** o sistema recusa a operação por conflito de estado e não altera o pedido
-
-### Requirement: Rejeição não altera o estoque do alimento
-O sistema SHALL rejeitar um pedido sem alterar a quantidade do alimento vinculado. Como um pedido "Pendente" nunca teve quantidade reservada (a reserva ocorre apenas no aceite), não há nada a devolver ou descontar na rejeição.
-
-#### Scenario: Quantidade do alimento inalterada após rejeição
-- **WHEN** um estabelecimento rejeita um pedido "Pendente" de quantidade Q para um alimento com quantidade atual X
-- **THEN** o pedido passa a "Rejeitado" e a quantidade atual do alimento continua X
 
 ### Requirement: "Rejeitado" é status terminal
 O sistema SHALL tratar "Rejeitado" como um status final: um pedido "Rejeitado" não pode ser aceito, rejeitado novamente, confirmado, nem retornar a "Pendente". Uma rejeição concorrente com um aceite do mesmo pedido "Pendente" SHALL resultar em apenas uma transição efetivada; a outra requisição SHALL ser recusada por conflito de estado.
