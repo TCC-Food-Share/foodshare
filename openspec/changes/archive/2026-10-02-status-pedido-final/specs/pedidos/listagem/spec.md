@@ -1,33 +1,4 @@
-# pedidos/listagem Specification
-
-## Purpose
-
-Permitir que um estabelecimento ou uma entidade beneficiária autenticada liste os próprios pedidos — recorte pela sessão —, de forma paginada e ordenada da criação mais recente para a mais antiga, com filtro opcional por status, viabilizando o acompanhamento dos pedidos separados por status (RF27).
-
-## Requirements
-
-### Requirement: Listagem dos próprios pedidos pelo solicitante
-O sistema SHALL permitir que um usuário autenticado obtenha a listagem dos pedidos vinculados a ele: para um estabelecimento, os pedidos cujo estabelecimento de origem é o dele; para uma entidade beneficiária, os pedidos criados por ela. O recorte SHALL ser resolvido pela sessão, nunca informado pelo cliente. Pedidos de outras instituições NÃO aparecem. Pedidos excluídos logicamente NÃO aparecem. Cada item da listagem traz `id`, `quantity`, `orderDate`, `status`, o alimento vinculado, o estabelecimento de origem e a entidade beneficiária.
-
-#### Scenario: Estabelecimento lista seus pedidos
-- **WHEN** um estabelecimento autenticado solicita a listagem de pedidos
-- **THEN** o sistema retorna os pedidos cujo estabelecimento de origem é o da sessão, e nenhum pedido de outro estabelecimento
-
-#### Scenario: Entidade beneficiária lista seus pedidos
-- **WHEN** uma entidade beneficiária autenticada solicita a listagem de pedidos
-- **THEN** o sistema retorna os pedidos criados por ela, e nenhum pedido de outra entidade
-
-#### Scenario: Requisição sem autenticação
-- **WHEN** a listagem de pedidos é solicitada sem sessão autenticada válida
-- **THEN** o sistema nega o acesso e não retorna nenhum pedido
-
-#### Scenario: Conta autenticada não é estabelecimento nem entidade beneficiária
-- **WHEN** uma conta que não tem estabelecimento nem entidade beneficiária vinculada solicita a listagem
-- **THEN** o sistema responde que não há instituição vinculada e não retorna listagem
-
-#### Scenario: Pedido excluído logicamente não aparece
-- **WHEN** o solicitante tem um pedido marcado como excluído logicamente
-- **THEN** esse pedido não aparece na listagem
+## MODIFIED Requirements
 
 ### Requirement: Filtro opcional por status
 O sistema SHALL aceitar um parâmetro opcional `status` que restringe a listagem aos pedidos com aquele status. O valor SHALL ser um dos status de pedido válidos: "Pendente", "Em andamento", "Rejeitado", "Doado" ou "Cancelado". Parâmetro ausente SHALL retornar pedidos de todos os status. Valor fora da lista de status válidos — inclusive os nomes antigos "Aceito" e "Recebido" — SHALL ser rejeitado como parâmetro inválido, sem retornar a listagem.

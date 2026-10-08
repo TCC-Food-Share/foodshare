@@ -1,10 +1,4 @@
-# pedidos/aceite Specification
-
-## Purpose
-
-Permitir que um estabelecimento autenticado aceite um pedido de doação "Pendente" que recebeu, reservando a quantidade do alimento vinculado (a quantidade aceita sai do estoque disponível do alimento) e movendo o pedido para o status "Em andamento", habilitando a confirmação de recebimento.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Aceite de pedido pendente pelo estabelecimento
 O sistema SHALL permitir que um estabelecimento autenticado aceite um pedido de doação identificado por id, desde que o pedido pertença ao próprio estabelecimento da sessão, não esteja excluído logicamente e esteja com status "Pendente". O vínculo com o estabelecimento SHALL ser resolvido pela sessão, nunca informado pelo cliente. Ao aceitar, o sistema SHALL mover o pedido para o status "Em andamento" e retornar os dados atualizados do pedido.
@@ -51,14 +45,3 @@ O sistema SHALL, ao aceitar um pedido, reservar a quantidade do pedido subtraind
 #### Scenario: Quantidade do alimento passa a refletir o restante
 - **WHEN** um pedido é aceito e sua quantidade é reservada
 - **THEN** as consultas de listagem e de detalhe do alimento passam a exibir a quantidade restante, e uma nova solicitação de pedido (RF22) é validada contra essa quantidade restante
-
-### Requirement: Aceite exige alimento ainda disponível
-O sistema SHALL recusar o aceite quando o alimento vinculado ao pedido não estiver mais disponível — mesmo recorte da listagem (RF20): status "Ativo", não vencido, não excluído logicamente e com quantidade atual maior que zero. Nesse caso o sistema SHALL responder com conflito de estado, sem mover o pedido nem alterar o estoque.
-
-#### Scenario: Alimento vinculado vencido, inativo ou excluído
-- **WHEN** um estabelecimento tenta aceitar um pedido "Pendente" cujo alimento vinculado está vencido, com status diferente de "Ativo" ou excluído logicamente
-- **THEN** o sistema recusa o aceite por conflito de estado, sem mover o pedido nem alterar o estoque
-
-#### Scenario: Alimento vinculado esgotado por outros aceites
-- **WHEN** um estabelecimento tenta aceitar um pedido "Pendente" cujo alimento vinculado teve toda a quantidade reservada por outros pedidos aceitos, ficando com quantidade atual zero
-- **THEN** o sistema recusa o aceite por conflito de estado, o pedido continua "Pendente" e a quantidade do alimento não muda

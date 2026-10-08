@@ -14,18 +14,15 @@ import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto';
 import {
-  ACCEPTED_STATUS,
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
-  IN_PROGRESS_STATUSES,
-  INITIAL_STATUS,
   MAX_PAGE_SIZE,
+  OPEN_ORDER_STATUSES,
   ORDER_CONFLICT_CODES,
-  RECEIVED_STATUS,
-  REJECTED_STATUS,
+  ORDER_STATUS,
 } from './orders.constants';
 
-const MAX_ORDERS_IN_PROGRESS = 10;
+const MAX_OPEN_ORDERS = 10;
 
 @Injectable()
 export class OrdersService {
@@ -40,14 +37,14 @@ export class OrdersService {
       throw new NotFoundException('Beneficiary entity not found.');
     }
 
-    const ordersInProgress = await this.prisma.order.count({
-      where: this.inProgressWhere(beneficiaryEntity.id),
+    const openOrders = await this.prisma.order.count({
+      where: this.openOrdersWhere(beneficiaryEntity.id),
     });
-    if (ordersInProgress >= MAX_ORDERS_IN_PROGRESS) {
+    if (openOrders >= MAX_OPEN_ORDERS) {
       throw new ConflictException({
         statusCode: 409,
         error: 'Conflict',
-        message: 'Beneficiary entity has reached the limit of orders in progress.',
+        message: 'Beneficiary entity has reached the limit of open orders.',
         code: ORDER_CONFLICT_CODES.limitReached,
       });
     }
@@ -58,14 +55,14 @@ export class OrdersService {
     }
 
     const duplicate = await this.prisma.order.findFirst({
-      where: { ...this.inProgressWhere(beneficiaryEntity.id), foodId: food.id },
+      where: { ...this.openOrdersWhere(beneficiaryEntity.id), foodId: food.id },
       select: { id: true },
     });
     if (duplicate) {
       throw new ConflictException({
         statusCode: 409,
         error: 'Conflict',
-        message: 'Beneficiary entity already has an order in progress for this food.',
+        message: 'Beneficiary entity already has an open order for this food.',
         code: ORDER_CONFLICT_CODES.duplicateInProgress,
       });
     }
@@ -75,7 +72,7 @@ export class OrdersService {
     }
 
     const status = await this.prisma.orderStatus.findUniqueOrThrow({
-      where: { name: INITIAL_STATUS },
+      where: { name: ORDER_STATUS.PENDING },
     });
 
     const order = await this.prisma.order.create({
@@ -105,9 +102,9 @@ export class OrdersService {
       throw new NotFoundException('Order not found.');
     }
 
-    const [pending, accepted] = await Promise.all([
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: INITIAL_STATUS } }),
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ACCEPTED_STATUS } }),
+    const [pending, inProgress] = await Promise.all([
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.PENDING } }),
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.IN_PROGRESS } }),
     ]);
     if (order.statusId !== pending.id) {
       throw new ConflictException('Order is not pending.');
@@ -122,7 +119,7 @@ export class OrdersService {
       // Conditional update as a compare-and-swap: a concurrent accept sees count 0 here.
       const moved = await tx.order.updateMany({
         where: { id: order.id, statusId: pending.id },
-        data: { statusId: accepted.id },
+        data: { statusId: inProgress.id },
       });
       if (moved.count === 0) {
         throw new ConflictException('Order is not pending.');
@@ -159,8 +156,8 @@ export class OrdersService {
     }
 
     const [pending, rejected] = await Promise.all([
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: INITIAL_STATUS } }),
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: REJECTED_STATUS } }),
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.PENDING } }),
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.REJECTED } }),
     ]);
     if (order.statusId !== pending.id) {
       throw new ConflictException('Order is not pending.');
@@ -196,21 +193,21 @@ export class OrdersService {
       throw new NotFoundException('Order not found.');
     }
 
-    const [accepted, received] = await Promise.all([
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ACCEPTED_STATUS } }),
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: RECEIVED_STATUS } }),
+    const [inProgress, donated] = await Promise.all([
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.IN_PROGRESS } }),
+      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.DONATED } }),
     ]);
-    if (order.statusId !== accepted.id) {
-      throw new ConflictException('Order is not accepted.');
+    if (order.statusId !== inProgress.id) {
+      throw new ConflictException('Order is not in progress.');
     }
 
     // Conditional update as a compare-and-swap: a concurrent confirmation sees count 0 here.
     const moved = await this.prisma.order.updateMany({
-      where: { id: order.id, statusId: accepted.id },
-      data: { statusId: received.id },
+      where: { id: order.id, statusId: inProgress.id },
+      data: { statusId: donated.id },
     });
     if (moved.count === 0) {
-      throw new ConflictException('Order is not accepted.');
+      throw new ConflictException('Order is not in progress.');
     }
 
     const updated = await this.prisma.order.findUniqueOrThrow({
@@ -288,11 +285,11 @@ export class OrdersService {
     return this.toDetailResponse(order);
   }
 
-  private inProgressWhere(beneficiaryEntityId: number): Prisma.OrderWhereInput {
+  private openOrdersWhere(beneficiaryEntityId: number): Prisma.OrderWhereInput {
     return {
       beneficiaryEntityId,
       deleted: false,
-      status: { name: { in: IN_PROGRESS_STATUSES } },
+      status: { name: { in: OPEN_ORDER_STATUSES } },
     };
   }
 

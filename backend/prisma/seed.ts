@@ -3,6 +3,8 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 import { PrismaClient } from '../generated/prisma/client';
+import { FOOD_STATUS_NAMES } from '../src/foods/foods.constants';
+import { ORDER_STATUS_NAMES } from '../src/orders/orders.constants';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -17,10 +19,6 @@ const CATEGORIES = [
   'Bebidas',
   'Outros',
 ];
-
-const FOOD_STATUSES = ['Ativo'];
-
-const ORDER_STATUSES = ['Pendente', 'Aceito', 'Rejeitado', 'Recebido'];
 
 async function main() {
   await prisma.role.upsert({
@@ -39,11 +37,11 @@ async function main() {
     await prisma.category.upsert({ where: { name }, update: {}, create: { name } });
   }
 
-  for (const name of FOOD_STATUSES) {
+  for (const name of FOOD_STATUS_NAMES) {
     await prisma.foodStatus.upsert({ where: { name }, update: {}, create: { name } });
   }
 
-  for (const name of ORDER_STATUSES) {
+  for (const name of ORDER_STATUS_NAMES) {
     await prisma.orderStatus.upsert({ where: { name }, update: {}, create: { name } });
   }
 }

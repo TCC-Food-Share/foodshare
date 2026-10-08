@@ -6,8 +6,8 @@ import { CreateFoodDto } from './dto/create-food.dto';
 import { FoodResponseDto } from './dto/food-response.dto';
 import { ListFoodsQueryDto } from './dto/list-foods-query.dto';
 import { PaginatedFoodsResponseDto } from './dto/paginated-foods-response.dto';
+import { FOOD_STATUS } from './foods.constants';
 
-const ACTIVE_STATUS = 'Ativo';
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
@@ -33,7 +33,7 @@ export class FoodsService {
     }
 
     const status = await this.prisma.foodStatus.findUniqueOrThrow({
-      where: { name: ACTIVE_STATUS },
+      where: { name: FOOD_STATUS.ACTIVE },
     });
 
     const food = await this.prisma.food.create({
@@ -113,7 +113,7 @@ export class FoodsService {
   private availableFoodWhereInput(id?: number): Prisma.FoodWhereInput {
     return {
       deleted: false,
-      status: { name: ACTIVE_STATUS },
+      status: { name: FOOD_STATUS.ACTIVE },
       expirationDate: { gte: startOfTodayUtc() },
       quantity: { gt: 0 },
       ...(id !== undefined ? { id } : {}),
@@ -123,7 +123,7 @@ export class FoodsService {
   private buildAvailableAndFilteredWhere(query: ListFoodsQueryDto): Prisma.Sql {
     const conditions: Prisma.Sql[] = [
       Prisma.sql`f.deleted = false`,
-      Prisma.sql`s.name = ${ACTIVE_STATUS}`,
+      Prisma.sql`s.name = ${FOOD_STATUS.ACTIVE}`,
       Prisma.sql`f."expirationDate" >= ${startOfTodayUtc()}`,
       Prisma.sql`f.quantity > 0`,
     ];

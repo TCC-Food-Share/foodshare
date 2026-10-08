@@ -10,18 +10,18 @@ import { useAuth } from '@/features/auth/use-auth';
 import { OrderCards } from '@/features/orders/order-cards';
 import {
   isOrderStatus,
-  listOrders,
-  type Order,
+  ORDER_STATUS,
   ORDER_STATUSES,
   type OrderStatusName,
-} from '@/features/orders/orders-api';
+} from '@/features/orders/order-status';
+import { listOrders, type Order } from '@/features/orders/orders-api';
 import { OrdersEmptyState } from '@/features/orders/orders-empty-state';
 import { OrdersTable } from '@/features/orders/orders-table';
 import { useOrderCounts } from '@/features/orders/use-order-counts';
 import { cn } from '@/lib/cn';
 
 const ORDERS_PAGE_SIZE = 10;
-const DEFAULT_STATUS: OrderStatusName = 'Pendente';
+const DEFAULT_STATUS: OrderStatusName = ORDER_STATUS.PENDING;
 
 const PAGE_COPY = {
   establishment: {
@@ -35,7 +35,8 @@ const PAGE_COPY = {
 };
 
 function ordersUrl(status: OrderStatusName, page: number): string {
-  return page > 1 ? `/pedidos?status=${status}&page=${page}` : `/pedidos?status=${status}`;
+  const query = `status=${encodeURIComponent(status)}`;
+  return page > 1 ? `/pedidos?${query}&page=${page}` : `/pedidos?${query}`;
 }
 
 export function OrdersPage() {
