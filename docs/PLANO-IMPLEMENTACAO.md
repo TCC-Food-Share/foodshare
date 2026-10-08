@@ -37,7 +37,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | # | Change | Cobre | Depende de | Meta | Status |
 | - | ------ | ----- | ---------- | ---- | ------ |
 | 0.1 | `status-pedido-final` | DT01, DT02, RF24, RF27 (abas) | — | 05/10 | ✅ |
-| 0.2 | `papel-administrador` | RF06 (admin), RNF13, RNF14, RN34, RN46 | 0.1 | 05/10 | ⬜ |
+| 0.2 | `papel-administrador` | RF06 (admin), RNF13, RNF14, RN34, RN46 | 0.1 | 05/10 | ✅ |
 | 0.3 | `upload-imagens` | RNF09, RN41, RF01–RF03 (imagem) | 0.1 | 07/10 | ⬜ |
 | 1.1 | `listas-padronizadas-modelo` | Modelo + seeds das listas, RN31, RN37, RN40 | 0.2 | 09/10 | ⬜ |
 | 1.2 | `catalogo-taco` | DT12 | 1.1 | 12/10 | ⬜ |
