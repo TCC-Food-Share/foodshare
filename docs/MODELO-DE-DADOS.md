@@ -32,6 +32,7 @@ que muda em relação ao schema do MVP.
 | `Suggestion` | `suggestion` | 🆕 | Sugestões de novas opções (RF49, RF71) |
 | `OrderReminder` | `order_reminder` | 🆕 | Lembretes já enviados (RF73, RF74) |
 | `AuditLog` | `audit_log` | 🆕 | Auditoria das ações do administrador (RNF14) |
+| `AccessLog` | `access_log` | 🆕 | Registro de toda requisição à API, com usuário e IP (RNF13, DT19) |
 | `Session`, `Account`, `Verification` | `session`, `account`, `verification` | ✅ igual | Tabelas do better-auth. Os códigos do `emailOTP` ficam em `verification` (DT03) |
 
 `CodigoVerificacao`, do modelo do TCC, **não existe** (DT03).
@@ -65,7 +66,7 @@ fica no frontend, não no banco.
 | Campo | Mudança | Motivo |
 | ----- | ------- | ------ |
 | `personalPhone` | `String` → `String?` (continua `@unique`) | O administrador (RF29) não informa celular. O Postgres aceita vários `NULL` numa coluna única. A obrigatoriedade para instituições fica no DTO. |
-| relações | `+ categories`, `+ catalogItems`, `+ measurementUnits`, `+ prohibitedTerms` (como `administrator`); `+ suggestions` (como `requester`) e `+ reviewedSuggestions` (como `reviewer`); `+ auditLogs` | Relações nomeadas de cada tabela nova |
+| relações | `+ categories`, `+ catalogItems`, `+ measurementUnits`, `+ prohibitedTerms` (como `administrator`); `+ suggestions` (como `requester`) e `+ reviewedSuggestions` (como `reviewer`); `+ auditLogs`; `+ accessLogs` | Relações nomeadas de cada tabela nova |
 
 A imagem continua opcional no banco. A obrigatoriedade (RF01, RF02, RF29)
 fica no DTO.
@@ -231,6 +232,29 @@ auditoria dele. Por isso `administratorId` é `Int?` com
 `onDelete: SetNull`, e o nome e o e-mail do administrador vão também em
 `details` no momento da ação.
 
+### `AccessLog` → `access_log`
+
+Decisão DT19. Uma linha por requisição atendida pela API (RNF13).
+
+| Campo | Tipo | Observação |
+| ----- | ---- | ---------- |
+| `id` | `Int @id @default(autoincrement())` | |
+| `userId` | `Int?`, FK `User`, `onDelete: SetNull` | Usuário autenticado, quando houver (inclusive no login e no logout) |
+| `method` | `String @db.VarChar(10)` | |
+| `path` | `String @db.VarChar(500)` | Sem a query string |
+| `statusCode` | `Int` | |
+| `durationMs` | `Int` | |
+| `ipAddress` | `String? @db.VarChar(45)` | IP do cliente (o Express confia em um salto de proxy, o Traefik) |
+| `userAgent` | `String? @db.VarChar(500)` | |
+| `createdAt` | `DateTime @default(now())` | |
+
+Índices: `@@index([createdAt])` e `@@index([userId])`.
+
+- Ficam de fora: `OPTIONS`, `/health`, `/docs`, `/openapi` e o favicon.
+- Nunca guarda corpo, cookie, cabeçalho de autenticação nem query string.
+- A gravação é feita depois da resposta, sem atrasá-la; falha só gera log de erro.
+- Retenção: ainda não definida (`docs/PENDENCIAS.md`).
+
 ## Imagens (MinIO)
 
 - O banco guarda a **chave do objeto** (ex.: `foods/3f2a…c1.webp`,
@@ -345,4 +369,5 @@ reset`; staging: limpar o banco no Coolify e deixar o deploy rodar
 | Sugestao | `Suggestion` |
 | LembretePedido | `OrderReminder` |
 | RegistroAuditoria | `AuditLog` |
+| RegistroAcesso | `AccessLog` |
 | CodigoVerificacao | não existe; `verification` do better-auth |

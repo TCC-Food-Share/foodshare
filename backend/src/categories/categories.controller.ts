@@ -1,10 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 
+import { RequireRoles } from '../auth/require-roles.decorator';
+import { INSTITUTION_ROLES } from '../auth/roles.constants';
 import { CategoriesService } from './categories.service';
 import { CategoryResponseDto } from './dto/category-response.dto';
 
 @ApiTags('Alimentos')
+@RequireRoles(...INSTITUTION_ROLES)
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}

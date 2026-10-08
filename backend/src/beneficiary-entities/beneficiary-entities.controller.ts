@@ -11,6 +11,8 @@ import {
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 
+import { RequireRoles } from '../auth/require-roles.decorator';
+import { INSTITUTION_ROLES } from '../auth/roles.constants';
 import { BeneficiaryEntitiesService } from './beneficiary-entities.service';
 import { BeneficiaryEntityResponseDto } from './dto/beneficiary-entity-response.dto';
 import { CreateBeneficiaryEntityDto } from './dto/create-beneficiary-entity.dto';
@@ -42,6 +44,7 @@ export class BeneficiaryEntitiesController {
   }
 
   @Get('me')
+  @RequireRoles(...INSTITUTION_ROLES)
   @ApiOperation({
     summary: 'Consulta do próprio cadastro',
     description: 'Retorna o cadastro completo da entidade beneficiária autenticada, sem a senha.',
@@ -58,6 +61,7 @@ export class BeneficiaryEntitiesController {
   }
 
   @Patch('me')
+  @RequireRoles(...INSTITUTION_ROLES)
   @ApiOperation({
     summary: 'Edição do próprio cadastro',
     description:

@@ -3,12 +3,11 @@ import { ConflictException, Inject, Injectable, NotFoundException } from '@nestj
 import { Prisma } from '../../generated/prisma/client';
 import type { BetterAuthInstance } from '../auth/better-auth.token';
 import { BETTER_AUTH } from '../auth/better-auth.token';
+import { ROLE } from '../auth/roles.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { BeneficiaryEntityResponseDto } from './dto/beneficiary-entity-response.dto';
 import { CreateBeneficiaryEntityDto } from './dto/create-beneficiary-entity.dto';
 import { UpdateBeneficiaryEntityDto } from './dto/update-beneficiary-entity.dto';
-
-const ROLE_BENEFICIARY_ENTITY = 'BeneficiaryEntity';
 
 const FIELD_LABELS: Record<string, string> = {
   cnpj: 'CNPJ',
@@ -39,7 +38,7 @@ export class BeneficiaryEntitiesService {
     await this.checkUniqueness(dto);
 
     const role = await this.prisma.role.findUniqueOrThrow({
-      where: { name: ROLE_BENEFICIARY_ENTITY },
+      where: { name: ROLE.BENEFICIARY_ENTITY },
     });
 
     let userId: number;
@@ -250,7 +249,7 @@ export class BeneficiaryEntitiesService {
         id: beneficiaryEntity.user.id,
         name: beneficiaryEntity.user.name,
         email: beneficiaryEntity.user.email,
-        personalPhone: beneficiaryEntity.user.personalPhone,
+        personalPhone: beneficiaryEntity.user.personalPhone ?? '',
         image: beneficiaryEntity.user.image,
       },
       address: {

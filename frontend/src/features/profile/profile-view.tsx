@@ -9,11 +9,11 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Role } from '@/features/auth/auth-context';
+import type { InstitutionRole } from '@/features/auth/auth-context';
 import type { ProfileResponse } from '@/features/profile/profile-api';
 import { cn } from '@/lib/cn';
 
-const ROLE_LABEL: Record<Role, string> = {
+const ROLE_LABEL: Record<InstitutionRole, string> = {
   establishment: 'Estabelecimento',
   beneficiary: 'Entidade beneficiária',
 };
@@ -50,7 +50,7 @@ export function ProfileView({
   onEdit,
 }: {
   data: ProfileResponse;
-  role: Role;
+  role: InstitutionRole;
   onEdit: () => void;
 }) {
   return (

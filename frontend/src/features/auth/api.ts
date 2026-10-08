@@ -6,11 +6,11 @@ export interface SessionUser {
   email: string;
   image: string | null;
   roleId: number;
-  personalPhone: string;
+  personalPhone: string | null;
 }
 
 // Raw role from the backend, distinct from the normalized `Role` in auth-context.ts.
-export type BackendRole = 'Establishment' | 'BeneficiaryEntity';
+export type BackendRole = 'Establishment' | 'BeneficiaryEntity' | 'Administrator';
 
 export interface MeResponse {
   user: SessionUser;

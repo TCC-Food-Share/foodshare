@@ -26,7 +26,8 @@ export class AppController {
     summary: 'Sessão atual',
     description:
       'Retorna os dados do usuário autenticado na sessão atual, junto do nome do papel ' +
-      '(`role`) — o frontend usa isso para saber se é estabelecimento ou entidade beneficiária.',
+      '(`role`: `Establishment`, `BeneficiaryEntity` ou `Administrator`) — o frontend usa ' +
+      'isso para decidir a área (instituição ou painel administrativo).',
   })
   @ApiOkResponse({ description: 'Usuário autenticado.' })
   async getMe(@Session() session: UserSession) {

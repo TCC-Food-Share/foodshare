@@ -37,7 +37,7 @@ export const auth = betterAuth({
       },
       personalPhone: {
         type: 'string',
-        required: true,
+        required: false,
         input: true,
       },
     },

@@ -11,6 +11,8 @@ import {
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 
+import { RequireRoles } from '../auth/require-roles.decorator';
+import { INSTITUTION_ROLES } from '../auth/roles.constants';
 import { CreateEstablishmentDto } from './dto/create-establishment.dto';
 import { EstablishmentResponseDto } from './dto/establishment-response.dto';
 import { UpdateEstablishmentDto } from './dto/update-establishment.dto';
@@ -42,6 +44,7 @@ export class EstablishmentsController {
   }
 
   @Get('me')
+  @RequireRoles(...INSTITUTION_ROLES)
   @ApiOperation({
     summary: 'Consulta do próprio cadastro',
     description: 'Retorna o cadastro completo do estabelecimento autenticado, sem a senha.',
@@ -56,6 +59,7 @@ export class EstablishmentsController {
   }
 
   @Patch('me')
+  @RequireRoles(...INSTITUTION_ROLES)
   @ApiOperation({
     summary: 'Edição do próprio cadastro',
     description:

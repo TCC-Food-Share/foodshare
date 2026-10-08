@@ -296,6 +296,7 @@ Onde a regra vem do MVP, está marcado **(MVP)**.
 | DT17 | O RNF11 usa o limite de requisições nativo do better-auth (por IP), sem código próprio em volta da rota. |
 | DT18 | Tipos fixos novos (tipo de solicitação, tipo de pedido, tipo e status de sugestão, tipo de lembrete) são enums do Prisma. Os status de alimento e de pedido continuam em tabela, como no MVP. Ver `docs/MODELO-DE-DADOS.md`. |
 | DT15 | RNF16 (multilíngue) e a avaliação mútua ficam fora do escopo, como o documento do TCC já definia. |
+| DT19 | O RNF13 (logs de acesso) é atendido gravando **toda requisição** à API na tabela `access_log`: método, caminho, status, duração, IP, user agent e usuário autenticado (inclusive login e logout). Sem tela de consulta. A retenção ainda será definida (`docs/PENDENCIAS.md`). |
 
 ## Pendências
 
