@@ -25,14 +25,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Role } from '@/features/auth/auth-context';
+import type { InstitutionRole } from '@/features/auth/auth-context';
 import type { ProfileResponse } from '@/features/profile/profile-api';
 import type { ProfileFormInput } from '@/features/profile/profile-schema';
 import { CEP_MASK, phoneMaskFor, phoneModify } from '@/lib/masks';
 import { UFS } from '@/lib/validation';
 import { lookupCep } from '@/lib/viacep';
 
-const ROLE_LABEL: Record<Role, string> = {
+const ROLE_LABEL: Record<InstitutionRole, string> = {
   establishment: 'Estabelecimento',
   beneficiary: 'Entidade beneficiária',
 };
@@ -75,7 +75,7 @@ export function ProfileForm({
 }: {
   control: Control<ProfileFormInput>;
   data: ProfileResponse;
-  role: Role;
+  role: InstitutionRole;
   submitting: boolean;
   onCancel: () => void;
   onSubmit: () => void;

@@ -147,7 +147,7 @@ export function ProfilePage() {
     }
   }
 
-  if (role === null) {
+  if (role === null || role === 'administrator') {
     return (
       <Alert variant="destructive">
         <CircleAlertIcon />

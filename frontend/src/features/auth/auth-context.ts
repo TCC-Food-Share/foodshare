@@ -3,7 +3,9 @@ import { createContext } from 'react';
 import type { SessionUser } from '@/features/auth/api';
 
 // Normalized role, distinct from the raw `BackendRole` values in api.ts.
-export type Role = 'establishment' | 'beneficiary';
+export type Role = 'establishment' | 'beneficiary' | 'administrator';
+
+export type InstitutionRole = Exclude<Role, 'administrator'>;
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 

@@ -20,6 +20,7 @@ import { setUnauthorizedHandler } from '@/lib/query-client';
 const ROLE_MAP: Record<BackendRole, Role> = {
   Establishment: 'establishment',
   BeneficiaryEntity: 'beneficiary',
+  Administrator: 'administrator',
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {

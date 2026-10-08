@@ -1,4 +1,4 @@
-import type { Role } from '@/features/auth/auth-context';
+import type { InstitutionRole, Role } from '@/features/auth/auth-context';
 import { ORDER_STATUS, type OrderStatusName } from '@/features/orders/order-status';
 import {
   acceptOrder,
@@ -56,7 +56,7 @@ export function availableActions(role: Role | null, status: OrderStatusName): Or
   return [];
 }
 
-const SITUATION: Record<Role, Record<OrderStatusName, string>> = {
+const SITUATION: Record<InstitutionRole, Record<OrderStatusName, string>> = {
   establishment: {
     [ORDER_STATUS.PENDING]:
       'Este pedido aguarda a sua decisão. Ao aceitar, a quantidade solicitada fica reservada para a entidade.',
