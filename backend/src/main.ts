@@ -9,11 +9,24 @@ import { apiReference } from '@scalar/nestjs-api-reference';
 import express from 'express';
 import { join } from 'path';
 
+import { createAccessLogMiddleware } from './access-log/access-log.middleware';
+import { AccessLogService } from './access-log/access-log.service';
 import { AppModule } from './app.module';
 import { auth, trustedOrigins } from './auth/auth.instance';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+  app.set('trust proxy', 1);
+  const accessLog = app.get(AccessLogService);
+  app.use(
+    createAccessLogMiddleware({
+      record: (entry) => accessLog.record(entry),
+      resolveUserIdFromCookie: async (cookie) => {
+        const session = await auth.api.getSession({ headers: new Headers({ cookie }) });
+        return session ? Number(session.user.id) : null;
+      },
+    }),
+  );
   app.enableCors({
     origin: trustedOrigins,
     credentials: true,

@@ -3,12 +3,11 @@ import { ConflictException, Inject, Injectable, NotFoundException } from '@nestj
 import { Prisma } from '../../generated/prisma/client';
 import type { BetterAuthInstance } from '../auth/better-auth.token';
 import { BETTER_AUTH } from '../auth/better-auth.token';
+import { ROLE } from '../auth/roles.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEstablishmentDto } from './dto/create-establishment.dto';
 import { EstablishmentResponseDto } from './dto/establishment-response.dto';
 import { UpdateEstablishmentDto } from './dto/update-establishment.dto';
-
-const ROLE_ESTABLISHMENT = 'Establishment';
 
 const FIELD_LABELS: Record<string, string> = {
   cnpj: 'CNPJ',
@@ -39,7 +38,7 @@ export class EstablishmentsService {
     await this.checkUniqueness(dto);
 
     const role = await this.prisma.role.findUniqueOrThrow({
-      where: { name: ROLE_ESTABLISHMENT },
+      where: { name: ROLE.ESTABLISHMENT },
     });
 
     let userId: number;
@@ -252,7 +251,7 @@ export class EstablishmentsService {
         id: establishment.user.id,
         name: establishment.user.name,
         email: establishment.user.email,
-        personalPhone: establishment.user.personalPhone,
+        personalPhone: establishment.user.personalPhone ?? '',
         image: establishment.user.image,
       },
       address: {
