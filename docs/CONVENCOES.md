@@ -93,6 +93,13 @@ Nesses casos, um comentário curto na linha relevante.
 - Rotas de administrador ficam sob `/admin/*`, protegidas por guard de papel
   (`Administrator`). Instituição nunca acessa `/admin`; administrador não usa
   as rotas de instituição.
+  - Todo controller de administrador usa `@AdminController('<recurso>')`
+    (`auth/admin-controller.decorator.ts`), que já monta o prefixo `admin/`,
+    exige o papel e põe a tag "Administração" no Scalar. Nunca
+    `@Controller('admin/...')` direto.
+  - Controllers de instituição usam `@RequireRoles(...INSTITUTION_ROLES)`.
+  - Papel errado responde `403` com `code: ROLE_NOT_ALLOWED`. Os nomes dos
+    papéis vêm só da constante `ROLE` (`auth/roles.constants.ts`).
 - `/auth/*` é reservado ao better-auth (ver abaixo).
 - Listagens paginadas seguem o padrão do MVP: `page`, `pageSize` (padrão 20,
   teto 50), resposta `{ data, total, page, pageSize }`. Busca e ordenação

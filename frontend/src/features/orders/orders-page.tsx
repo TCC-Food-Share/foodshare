@@ -54,7 +54,7 @@ export function OrdersPage() {
     queryFn: () => listOrders({ status, page, pageSize: ORDERS_PAGE_SIZE }),
   });
 
-  const copy = PAGE_COPY[role ?? 'beneficiary'];
+  const copy = PAGE_COPY[role === 'establishment' ? 'establishment' : 'beneficiary'];
 
   function changeStatus(next: string) {
     if (isOrderStatus(next)) setSearchParams({ status: next });

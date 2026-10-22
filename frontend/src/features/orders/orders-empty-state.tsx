@@ -2,7 +2,7 @@ import { InboxIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import type { Role } from '@/features/auth/auth-context';
+import type { InstitutionRole, Role } from '@/features/auth/auth-context';
 import { ORDER_STATUS, type OrderStatusName } from '@/features/orders/order-status';
 
 interface EmptyCopy {
@@ -10,7 +10,7 @@ interface EmptyCopy {
   description: string;
 }
 
-const EMPTY_COPY: Record<Role, Record<OrderStatusName, EmptyCopy>> = {
+const EMPTY_COPY: Record<InstitutionRole, Record<OrderStatusName, EmptyCopy>> = {
   establishment: {
     [ORDER_STATUS.PENDING]: {
       title: 'Nenhum pedido pendente',
@@ -63,7 +63,7 @@ interface OrdersEmptyStateProps {
 }
 
 export function OrdersEmptyState({ status, role }: OrdersEmptyStateProps) {
-  const copy = EMPTY_COPY[role ?? 'beneficiary'][status];
+  const copy = EMPTY_COPY[role === 'establishment' ? 'establishment' : 'beneficiary'][status];
   const showFeedShortcut = role === 'beneficiary' && status === ORDER_STATUS.PENDING;
 
   return (

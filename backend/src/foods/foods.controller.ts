@@ -11,6 +11,8 @@ import {
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { Session } from '@thallesp/nestjs-better-auth';
 
+import { RequireRoles } from '../auth/require-roles.decorator';
+import { INSTITUTION_ROLES } from '../auth/roles.constants';
 import { CreateFoodDto } from './dto/create-food.dto';
 import { FoodResponseDto } from './dto/food-response.dto';
 import { ListFoodsQueryDto } from './dto/list-foods-query.dto';
@@ -18,6 +20,7 @@ import { PaginatedFoodsResponseDto } from './dto/paginated-foods-response.dto';
 import { FoodsService } from './foods.service';
 
 @ApiTags('Alimentos')
+@RequireRoles(...INSTITUTION_ROLES)
 @Controller('foods')
 export class FoodsController {
   constructor(private readonly foodsService: FoodsService) {}

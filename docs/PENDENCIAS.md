@@ -59,6 +59,18 @@ tabela administrativa da fase 1.3. Funciona bem na apresentação.
 pedidos por status, doações concluídas no mês, sugestões pendentes), sem
 biblioteca de gráficos nova se der para evitar.
 
+## Retenção do registro de acesso (`access_log`)
+
+**Situação:** desde a change `papel-administrador`, toda requisição à API é
+gravada em `access_log` (DT19), com usuário e IP. A tabela não é limpa.
+
+**Por que importa:** IP é dado pessoal (LGPD), e a tabela cresce a cada
+requisição.
+
+**O que decidir:** por quanto tempo guardar (ex.: 90 dias) e como limpar
+(tarefa diária no módulo `jobs/`, a partir da 6.1, apagando por
+`createdAt`, que já tem índice). Registrar a decisão em `docs/REQUISITOS.md`.
+
 ## Antes de tornar o repositório público
 
 **Situação:** há a intenção de tornar o repositório público no GitHub.

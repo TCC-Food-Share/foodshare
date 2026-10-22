@@ -23,7 +23,7 @@ model User {
   name          String   @db.VarChar(200)
   email         String   @unique @db.VarChar(200)
   emailVerified Boolean  @default(true)
-  personalPhone String   @unique @db.VarChar(20)
+  personalPhone String?  @unique @db.VarChar(20)
   image         String?  @db.VarChar(500)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -35,6 +35,8 @@ model User {
   establishment       Establishment?
   beneficiaryEntity   BeneficiaryEntity?
   cancellationReasons CancellationReason[] @relation("AdministratorReason")
+  auditLogs           AuditLog[]
+  accessLogs          AccessLog[]
 
   sessions Session[]
   accounts Account[]
@@ -201,6 +203,40 @@ model Order {
   cancellationReason   CancellationReason? @relation(fields: [cancellationReasonId], references: [id])
 
   @@map("order")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  action     String   @db.VarChar(50)
+  entityType String   @db.VarChar(50)
+  entityId   String   @db.VarChar(50)
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  administratorId Int?
+  administrator   User? @relation(fields: [administratorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model AccessLog {
+  id         Int      @id @default(autoincrement())
+  method     String   @db.VarChar(10)
+  path       String   @db.VarChar(500)
+  statusCode Int
+  durationMs Int
+  ipAddress  String?  @db.VarChar(45)
+  userAgent  String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("access_log")
 }
 
 model Session {

@@ -143,6 +143,11 @@ O front e a API ficam em subdomínios distintos do mesmo site
 Toda variável nova entra no `backend/.env.example`, com comentário curto
 dizendo para que serve. Nenhum segredo vai para o repositório.
 
+O seed carrega a instância do better-auth para criar o primeiro
+administrador, então precisa de `DATABASE_URL`, `JWT_SECRET` e
+`BETTER_AUTH_URL` no ambiente onde roda, além das `SEED_ADMIN_*`. Sem as
+`SEED_ADMIN_*`, ele só pula esse passo com um aviso.
+
 ### Frontend
 
 | Variável | Dev | Staging / Produção |

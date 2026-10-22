@@ -12,6 +12,8 @@ import {
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { Session } from '@thallesp/nestjs-better-auth';
 
+import { RequireRoles } from '../auth/require-roles.decorator';
+import { INSTITUTION_ROLES } from '../auth/roles.constants';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
@@ -20,6 +22,7 @@ import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto'
 import { OrdersService } from './orders.service';
 
 @ApiTags('Pedidos')
+@RequireRoles(...INSTITUTION_ROLES)
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/features/auth/auth-layout';
+import { homePathFor, isPathOfRoleArea } from '@/features/auth/home-path';
 import { type LoginInput, loginSchema } from '@/features/auth/login-schema';
 import { FullPageSpinner } from '@/features/auth/protected-route';
 import { useAuth } from '@/features/auth/use-auth';
@@ -26,7 +27,7 @@ interface LoginLocationState {
 }
 
 export function LoginPage() {
-  const { status, signIn } = useAuth();
+  const { status, role, signIn } = useAuth();
   const location = useLocation();
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -36,10 +37,13 @@ export function LoginPage() {
     defaultValues: { email: '', password: '' },
   });
 
-  const from = (location.state as LoginLocationState | null)?.from?.pathname ?? '/feed';
+  const from = (location.state as LoginLocationState | null)?.from?.pathname;
 
   if (status === 'loading') return <FullPageSpinner />;
-  if (status === 'authenticated') return <Navigate to={from} replace />;
+  if (status === 'authenticated') {
+    const target = from && isPathOfRoleArea(role, from) ? from : homePathFor(role);
+    return <Navigate to={target} replace />;
+  }
 
   async function onSubmit(values: LoginInput) {
     setFormError(null);
