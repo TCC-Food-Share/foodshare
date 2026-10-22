@@ -347,6 +347,11 @@ reset`; staging: limpar o banco no Coolify e deixar o deploy rodar
 - Como `OrderStatus` e `FoodStatus` são tabelas de domínio, a troca dos
   nomes de status é só de seed e de código. O seed passa a criar os nomes
   novos, e a limpeza do banco remove os antigos (`Aceito`, `Recebido`).
+- Exceção: a produção não foi recriada e os dados de teste de lá devem ser
+  mantidos. A migration `20261021120000_order_status_final_names` renomeia
+  `Aceito` → `Em andamento` e `Recebido` → `Doado` (os pedidos acompanham) e
+  cria os status que faltam. É idempotente: nos bancos já recriados não muda
+  nada.
 
 ## Mapeamento para o documento do TCC
 
