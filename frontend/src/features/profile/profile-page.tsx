@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Form } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/use-auth';
+import { imageErrorMessage } from '@/features/files/image-errors';
 import {
   getMyProfile,
   updateMyProfile,
@@ -59,7 +60,7 @@ function extractFields(body: unknown): string[] {
 }
 
 export function ProfilePage() {
-  const { role } = useAuth();
+  const { role, refreshSession } = useAuth();
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [serverError, setServerError] = useState<ServerError | null>(null);
@@ -78,7 +79,7 @@ export function ProfilePage() {
       personalPhone: '',
       institutionalPhone: '',
       institutionalEmail: '',
-      image: '',
+      image: null,
       description: '',
       postalCode: '',
       street: '',
@@ -90,7 +91,8 @@ export function ProfilePage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (payload: UpdateProfilePayload) => updateMyProfile(role!, payload),
+    mutationFn: ({ payload, image }: { payload: UpdateProfilePayload; image: File | null }) =>
+      updateMyProfile(role!, payload, image),
   });
 
   function startEdit() {
@@ -112,7 +114,6 @@ export function ProfilePage() {
       personalPhone: values.personalPhone,
       institutionalPhone: values.institutionalPhone,
       institutionalEmail: values.institutionalEmail,
-      image: values.image || undefined,
       description: values.description,
       address: {
         postalCode: values.postalCode,
@@ -125,11 +126,17 @@ export function ProfilePage() {
     };
 
     try {
-      const updated = await mutation.mutateAsync(payload);
+      const updated = await mutation.mutateAsync({ payload, image: values.image });
       queryClient.setQueryData(queryKey, updated);
+      if (values.image) void refreshSession();
       toast.success('Perfil atualizado.');
       setMode('view');
     } catch (error) {
+      const imageMessage = imageErrorMessage(error);
+      if (imageMessage) {
+        form.setError('image', { message: imageMessage });
+        return;
+      }
       if (error instanceof ApiError && error.status === 409) {
         const fields = extractFields(error.body);
         for (const fieldName of fields) {

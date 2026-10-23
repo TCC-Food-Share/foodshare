@@ -9,8 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { UserAvatar } from '@/components/user-avatar';
 import { useAuth } from '@/features/auth/use-auth';
-import { initials } from '@/lib/format';
 
 export function UserMenu() {
   const { user, signOut } = useAuth();
@@ -27,7 +27,11 @@ export function UserMenu() {
         className="bg-primary text-primary-foreground focus-visible:ring-ring flex size-9 items-center justify-center rounded-full text-sm font-medium shadow-sm outline-none focus-visible:ring-2"
         aria-label="Menu do usuário"
       >
-        {user ? initials(user.name) : <UserIcon className="size-4" />}
+        {user ? (
+          <UserAvatar image={user.image} name={user.name} className="size-9 text-sm" />
+        ) : (
+          <UserIcon className="size-4" />
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         {user && (
