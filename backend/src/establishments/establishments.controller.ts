@@ -15,6 +15,7 @@ import { RequireRoles } from '../auth/require-roles.decorator';
 import { INSTITUTION_ROLES } from '../auth/roles.constants';
 import { ImageFilePipe, type ValidatedImage } from '../files/image-file.pipe';
 import { ImageUpload } from '../files/image-upload.decorator';
+import { SignupThrottle } from '../rate-limit/signup-throttle.decorator';
 import { CreateEstablishmentDto } from './dto/create-establishment.dto';
 import { EstablishmentResponseDto } from './dto/establishment-response.dto';
 import { UpdateEstablishmentDto } from './dto/update-establishment.dto';
@@ -27,6 +28,7 @@ export class EstablishmentsController {
 
   @Post()
   @AllowAnonymous()
+  @SignupThrottle()
   @ApiOperation({
     summary: 'Cadastro de estabelecimento',
     description:

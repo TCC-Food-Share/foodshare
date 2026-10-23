@@ -15,6 +15,7 @@ import { RequireRoles } from '../auth/require-roles.decorator';
 import { INSTITUTION_ROLES } from '../auth/roles.constants';
 import { ImageFilePipe, type ValidatedImage } from '../files/image-file.pipe';
 import { ImageUpload } from '../files/image-upload.decorator';
+import { SignupThrottle } from '../rate-limit/signup-throttle.decorator';
 import { BeneficiaryEntitiesService } from './beneficiary-entities.service';
 import { BeneficiaryEntityResponseDto } from './dto/beneficiary-entity-response.dto';
 import { CreateBeneficiaryEntityDto } from './dto/create-beneficiary-entity.dto';
@@ -27,6 +28,7 @@ export class BeneficiaryEntitiesController {
 
   @Post()
   @AllowAnonymous()
+  @SignupThrottle()
   @ApiOperation({
     summary: 'Cadastro de entidade beneficiária',
     description:
