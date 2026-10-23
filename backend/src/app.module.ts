@@ -10,6 +10,7 @@ import { RolesModule } from './auth/roles.module';
 import { BeneficiaryEntitiesModule } from './beneficiary-entities/beneficiary-entities.module';
 import { CategoriesModule } from './categories/categories.module';
 import { EstablishmentsModule } from './establishments/establishments.module';
+import { FilesModule } from './files/files.module';
 import { FoodsModule } from './foods/foods.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -21,6 +22,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PrismaModule,
     RolesModule,
     AuditModule,
+    FilesModule,
     EstablishmentsModule,
     BeneficiaryEntitiesModule,
     FoodsModule,
