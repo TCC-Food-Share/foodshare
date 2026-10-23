@@ -1,6 +1,7 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
-import { ApiError } from '@/lib/api';
+import { ApiError, isTooManyRequests } from '@/lib/api';
 
 // Set by AuthProvider; invoked whenever a query/mutation gets a 401.
 let onUnauthorized: (() => void) | null = null;
@@ -12,6 +13,12 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
 function handleError(error: unknown): void {
   if (error instanceof ApiError && error.status === 401) {
     onUnauthorized?.();
+    return;
+  }
+  if (isTooManyRequests(error)) {
+    toast.error('Muitas requisições em pouco tempo. Aguarde um minuto e tente de novo.', {
+      id: 'too-many-requests',
+    });
   }
 }
 
