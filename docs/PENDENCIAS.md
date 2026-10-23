@@ -11,6 +11,7 @@ ficam desligados (`N8N_WEBHOOK_URL` vazio) até existir um número próprio do
 Food Share conectado ao n8n.
 
 **O que fazer:**
+
 - Comprar um chip pré-pago.
 - Conectar o número no n8n.
 - Criar o fluxo que recebe o webhook (validando o `X-Webhook-Secret`) e envia a mensagem.
@@ -73,6 +74,7 @@ contagens agregadas: estabelecimentos e entidades não excluídos e pedidos
 variam).
 
 **O que decidir antes:**
+
 - Números pequenos: mostrar o valor real, esconder abaixo de um mínimo ou
   manter os fixos até haver volume.
 - Como a landing busca os números: no navegador (exige incluir
@@ -109,7 +111,7 @@ tela (cada mutation invalida as queries certas), mas o que **a outra
 instituição** faz (pedido novo, aceite, recebimento) só aparece com F5, ou
 navegando depois de 30 s.
 
-**Comparação:** os dois seguem o padrão *stale-while-revalidate* por
+**Comparação:** os dois seguem o padrão _stale-while-revalidate_ por
 padrão (cache, revalidação ao focar a janela e ao montar, deduplicação). O
 SWR é menor e mais simples para leitura. O TanStack Query tem mais para
 escrita (`useMutation`, `invalidateQueries`, `setQueryData`, que o perfil já
@@ -118,6 +120,7 @@ configuração manteria o problema; trocar exigiria ainda reescrever as 12
 telas e mudar a convenção.
 
 **Correção proposta (independe da escolha):**
+
 - `refetchOnWindowFocus: true` e `staleTime` baixo (ex.: 5 s) no
   `query-client.ts`.
 - `refetchInterval` (ex.: 30 s) nas telas em que a outra parte age: lista e
@@ -178,6 +181,7 @@ cliente chega atrás do Traefik. Armazenamento em memória basta enquanto houver
 uma única instância por ambiente (mesma premissa das tarefas agendadas).
 
 **O que decidir:**
+
 - Os limites: global (ex.: 100 por minuto por IP) e cadastro (ex.: 5 por
   hora por IP).
 - Resposta: `429` com `code` próprio (ex.: `TOO_MANY_REQUESTS`) e mensagem
@@ -189,10 +193,25 @@ uma única instância por ambiente (mesma premissa das tarefas agendadas).
 **Quando:** antes do deploy de produção (7.3), de preferência logo, porque o
 cadastro anônimo com upload já está no ar.
 
+## Versão do Node no build (Nixpacks)
+
+**Situação:** o Nixpacks está fixado em Node 22.13.1
+(`nixpkgsArchive` em `backend/nixpacks.toml`), mas o
+`@thallesp/nestjs-better-auth@2.7.0` exige `>=22.22.1`. Hoje o build só
+mostra o aviso `EBADENGINE` e a API funciona.
+
+**O que fazer:** subir o `nixpkgsArchive` para um que traga Node 22.22.1
+ou mais novo, validar o build ARM64 no Coolify e atualizar a linha do Node
+em `docs/INFRAESTRUTURA.md`.
+
+**Quando:** numa branch própria, antes do deploy de produção (7.3), ou
+antes se o aviso virar erro.
+
 ## Antes de tornar o repositório público
 
 **Situação:** há a intenção de tornar o repositório público no GitHub.
 
 **O que fazer antes:**
+
 - Conferir se nenhum segredo (chaves, senhas, `.env`) entrou no histórico do git. Se entrou, trocar o segredo no serviço; apagar do histórico não basta.
 - Revisar os `.env.example`.
