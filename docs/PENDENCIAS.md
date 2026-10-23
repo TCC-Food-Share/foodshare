@@ -59,6 +59,87 @@ tabela administrativa da fase 1.3. Funciona bem na apresentação.
 pedidos por status, doações concluídas no mês, sugestões pendentes), sem
 biblioteca de gráficos nova se der para evitar.
 
+## Métricas reais no login e na landing page (opcional)
+
+**Situação:** o painel de marca da tela de login
+(`frontend/src/features/auth/brand-panel.tsx`) e a landing page (repositório
+`landing-page`) mostram números fixos ("500+ estabelecimentos", "120+
+entidades parceiras", "10k+ doações feitas"). Nenhum RF pede métricas
+públicas.
+
+**Ideia:** uma rota pública (`@AllowAnonymous`), ex.: `GET /stats`, com
+contagens agregadas: estabelecimentos e entidades não excluídos e pedidos
+`Doado` (em número de pedidos, não em quantidade, porque as unidades
+variam).
+
+**O que decidir antes:**
+- Números pequenos: mostrar o valor real, esconder abaixo de um mínimo ou
+  manter os fixos até haver volume.
+- Como a landing busca os números: no navegador (exige incluir
+  `https://foodshare.com.br` no `TRUSTED_ORIGINS`, que também alimenta o
+  originCheck do better-auth) ou no build do Astro (sem CORS, mas o número
+  só muda a cada publicação).
+- Cache da rota anônima (em memória por alguns minutos e
+  `Cache-Control: public`), para cada visita não virar uma consulta no
+  banco.
+- Incluir a rota no Gatus.
+- Registrar a decisão como RF ou DT em `docs/REQUISITOS.md` e como item no
+  `docs/PLANO-IMPLEMENTACAO.md`.
+
+**Quando:** só se sobrar tempo, perto da 4.3 (perfis públicos) ou junto do
+dashboard do administrador, que usa contagens parecidas.
+
+## Busca de dados no frontend: SWR ou TanStack Query
+
+**Situação:** a ideia de usar o SWR surgiu durante a change `upload-imagens`.
+O frontend já usa o **TanStack Query** (`@tanstack/react-query` v5) em 12
+arquivos (`useQuery`, `useMutation`, `useQueries`), e o
+`docs/CONVENCOES.md` o lista como stack fixa. Ficaram fora dele:
+
+- a sessão (`GET /me`), carregada à mão no `AuthProvider`, com estado
+  próprio e um `refreshSession` chamado depois de trocar a foto;
+- as cidades do IBGE (`lib/ibge.ts`), com cache manual num `Map` e
+  `useEffect` no `CityAutocomplete`.
+
+**Problema real (precisar de F5):** a revalidação está desligada na
+configuração global (`frontend/src/lib/query-client.ts`, desde a fundação
+do frontend): `refetchOnWindowFocus: false` e `staleTime: 30_000`, sem
+`refetchInterval` em nenhuma query. As ações da própria pessoa atualizam a
+tela (cada mutation invalida as queries certas), mas o que **a outra
+instituição** faz (pedido novo, aceite, recebimento) só aparece com F5, ou
+navegando depois de 30 s.
+
+**Comparação:** os dois seguem o padrão *stale-while-revalidate* por
+padrão (cache, revalidação ao focar a janela e ao montar, deduplicação). O
+SWR é menor e mais simples para leitura. O TanStack Query tem mais para
+escrita (`useMutation`, `invalidateQueries`, `setQueryData`, que o perfil já
+usa) e o `queryClient.clear()` do logout. Trocar de biblioteca com a mesma
+configuração manteria o problema; trocar exigiria ainda reescrever as 12
+telas e mudar a convenção.
+
+**Correção proposta (independe da escolha):**
+- `refetchOnWindowFocus: true` e `staleTime` baixo (ex.: 5 s) no
+  `query-client.ts`.
+- `refetchInterval` (ex.: 30 s) nas telas em que a outra parte age: lista e
+  detalhe de pedidos e contadores do menu.
+- Testar com duas sessões (entidade e estabelecimento) em navegadores
+  diferentes.
+
+**Recomendação:** manter o TanStack Query, aplicar a correção acima e levar
+para ele o que ficou de fora. A sessão vira uma query (`['me']`), e a troca de foto passa a ser um
+`invalidateQueries(['me'])` em vez do `refreshSession`. As cidades viram uma
+query por UF com `staleTime: Infinity`, no lugar do `Map`. O `401` do `/me`
+continua sendo o estado "sem sessão": o Gatus depende dele, então a rota
+não muda.
+
+**O que decidir:** SWR ou TanStack Query. Se for SWR, atualizar o
+`docs/CONVENCOES.md` antes e migrar tudo de uma vez, para não conviverem
+dois caches.
+
+**Quando:** a correção da revalidação pode entrar já, como `fix` separado
+(afeta o uso diário). A migração da sessão e das cidades, junto da revisão
+da fase 7.1, ou antes, se outra change mexer na sessão.
+
 ## Retenção do registro de acesso (`access_log`)
 
 **Situação:** desde a change `papel-administrador`, toda requisição à API é
@@ -70,6 +151,43 @@ requisição.
 **O que decidir:** por quanto tempo guardar (ex.: 90 dias) e como limpar
 (tarefa diária no módulo `jobs/`, a partir da 6.1, apagando por
 `createdAt`, que já tem índice). Registrar a decisão em `docs/REQUISITOS.md`.
+
+## Limite de requisições (rate limit) na API
+
+**Situação:** nenhum RF, RNF, RN ou DT cobre limite de requisições na API em
+geral. O único caso previsto é o RNF11 (código de recuperação de senha, uma
+vez a cada 10 minutos por origem, com o limite nativo do better-auth, DT17),
+que entra na 4.1. Hoje existe só o limite nativo do better-auth, com alcance
+pequeno:
+
+- vale apenas para as rotas `/auth/*` chamadas pelo cliente, e só com
+  `NODE_ENV=production`;
+- padrão: 100 requisições a cada 10 s por IP; login e cadastro do próprio
+  better-auth, 3 a cada 10 s;
+- **não** vale para chamadas internas `auth.api.*`. O nosso cadastro
+  (`POST /establishments` e `POST /beneficiary-entities`) chama
+  `auth.api.signUpEmail()`, então não tem limite nenhum. Desde a 0.3, essa
+  rota anônima aceita até 5 MB por requisição gravados no MinIO.
+
+As demais rotas exigem sessão, mas também não têm limite.
+
+**Ideia:** `@nestjs/throttler` (JavaScript puro, sem binário nativo) com um
+limite global por IP e um limite bem mais baixo nas rotas anônimas de
+cadastro. O `trust proxy` já está ligado no `main.ts`, então o IP real do
+cliente chega atrás do Traefik. Armazenamento em memória basta enquanto houver
+uma única instância por ambiente (mesma premissa das tarefas agendadas).
+
+**O que decidir:**
+- Os limites: global (ex.: 100 por minuto por IP) e cadastro (ex.: 5 por
+  hora por IP).
+- Resposta: `429` com `code` próprio (ex.: `TOO_MANY_REQUESTS`) e mensagem
+  no frontend.
+- Se o `/health` e o `GET /me` usados pelo Gatus ficam fora do limite.
+- Registrar como RNF ou DT em `docs/REQUISITOS.md` e como item no
+  `docs/PLANO-IMPLEMENTACAO.md`.
+
+**Quando:** antes do deploy de produção (7.3), de preferência logo, porque o
+cadastro anônimo com upload já está no ar.
 
 ## Antes de tornar o repositório público
 
