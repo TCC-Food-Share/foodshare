@@ -34,35 +34,35 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 
 ## Visão geral
 
-| # | Change | Cobre | Depende de | Meta | Status |
-| - | ------ | ----- | ---------- | ---- | ------ |
-| 0.1 | `status-pedido-final` | DT01, DT02, RF24, RF27 (abas) | — | 05/10 | ✅ |
-| 0.2 | `papel-administrador` | RF06 (admin), RNF13, RNF14, RN34, RN46 | 0.1 | 05/10 | ✅ |
-| 0.3 | `upload-imagens` | RNF09, RN41, RF01–RF03 (imagem) | 0.1 | 07/10 | ✅ |
-| 1.1 | `listas-padronizadas-modelo` | Modelo + seeds das listas, RN31, RN37, RN40 | 0.2 | 09/10 | ⬜ |
-| 1.2 | `catalogo-taco` | DT12 | 1.1 | 12/10 | ⬜ |
-| 1.3 | `admin-listas` | RF33–RF40, RF59–RF70 | 1.1, 0.2 | 14/10 | ⬜ |
-| 1.4 | `termos-proibidos-validacao` | RNF07 | 1.1 | 14/10 | ⬜ |
-| 1.5 | `sugestoes` | RF49, RF71, RN39 | 1.3 | 16/10 | ⬜ |
-| 2.1 | `cadastro-alimento-padronizado` | RF14, RF20, RF21, RN15–RN17, RN25 | 0.3, 1.2 | 19/10 | ⬜ |
-| 2.2 | `meus-alimentos` | RF15–RF19, RN20–RN24 | 2.1 | 22/10 | ⬜ |
-| 3.1 | `pedido-tipo-e-reserva` | RF22, RF23, RF25, RN03, RN07, RN08 | 2.1 | 24/10 | ⬜ |
-| 3.2 | `cancelar-pedido` | RF26, RN09 | 3.1 | 26/10 | ⬜ |
-| 3.3 | `pedidos-busca-e-contato` | RF27 (busca), RF28, RF09, RN12 | 3.1 | 28/10 | ⬜ |
-| 4.1 | `recuperar-senha` | RF08, RNF11, RNF12, RN33 | 0.1 | 29/10 | ⬜ |
-| 4.2 | `perfil-completo` | RF03, RF11 (ajustes) | 0.3 | 30/10 | ⬜ |
-| 4.3 | `instituicoes-e-perfil-publico` | RF10, RF12, RF13, RN35, RN36 | 4.2 | 01/11 | ⬜ |
-| 4.4 | `exclusao-propria-conta` | RF04, RF05, RN28–RN30 | 3.2 | 03/11 | ⬜ |
-| 5.1 | `admin-administradores` | RF29–RF32 | 0.2 | 04/11 | ⬜ |
-| 5.2 | `admin-instituicoes` | RF41, RF44, RF47, RF48, RF57, RF58 | 5.1, 4.4 | 06/11 | ⬜ |
-| 5.3 | `admin-exclusoes-instituicoes` | RF42, RF43, RF45, RF46 | 5.2 | 08/11 | ⬜ |
-| 5.4 | `admin-alimentos` | RF50–RF53 | 2.2, 5.1 | 09/11 | ⬜ |
-| 5.5 | `admin-pedidos` | RF54–RF56, RN13 | 3.3, 5.1 | 10/11 | ⬜ |
-| 6.1 | `expiracao-pedidos` | RF72, RN11 | 3.2 | 11/11 | ⬜ |
-| 6.2 | `lembretes-whatsapp` | RF73, RF74, RNF17, RN42–RN44 | 6.1 | 13/11 | ⬜ |
-| 7.1 | `revisao-visual` | RNF01–RNF03, `docs/PENDENCIAS.md` | todas as telas | 16/11 | ⬜ |
-| 7.2 | `testes-casos-tcc` | CTs do documento do TCC | 7.1 | 18/11 | ⬜ |
-| 7.3 | `deploy-producao` | Ambiente de produção | 7.2 | 20/11 | ⬜ |
+| #   | Change                          | Cobre                                       | Depende de     | Meta  | Status |
+| --- | ------------------------------- | ------------------------------------------- | -------------- | ----- | ------ |
+| 0.1 | `status-pedido-final`           | DT01, DT02, RF24, RF27 (abas)               | —              | 05/10 | ✅     |
+| 0.2 | `papel-administrador`           | RF06 (admin), RNF13, RNF14, RN34, RN46      | 0.1            | 05/10 | ✅     |
+| 0.3 | `upload-imagens`                | RNF09, RN41, RF01–RF03 (imagem)             | 0.1            | 07/10 | ✅     |
+| 1.1 | `listas-padronizadas-modelo`    | Modelo + seeds das listas, RN31, RN37, RN40 | 0.2            | 09/10 | ✅     |
+| 1.2 | `catalogo-taco`                 | DT12                                        | 1.1            | 12/10 | ⬜     |
+| 1.3 | `admin-listas`                  | RF33–RF40, RF59–RF70                        | 1.1, 0.2       | 14/10 | ⬜     |
+| 1.4 | `termos-proibidos-validacao`    | RNF07                                       | 1.1            | 14/10 | ⬜     |
+| 1.5 | `sugestoes`                     | RF49, RF71, RN39                            | 1.3            | 16/10 | ⬜     |
+| 2.1 | `cadastro-alimento-padronizado` | RF14, RF20, RF21, RN15–RN17, RN25           | 0.3, 1.2       | 19/10 | ⬜     |
+| 2.2 | `meus-alimentos`                | RF15–RF19, RN20–RN24                        | 2.1            | 22/10 | ⬜     |
+| 3.1 | `pedido-tipo-e-reserva`         | RF22, RF23, RF25, RN03, RN07, RN08          | 2.1            | 24/10 | ⬜     |
+| 3.2 | `cancelar-pedido`               | RF26, RN09                                  | 3.1            | 26/10 | ⬜     |
+| 3.3 | `pedidos-busca-e-contato`       | RF27 (busca), RF28, RF09, RN12              | 3.1            | 28/10 | ⬜     |
+| 4.1 | `recuperar-senha`               | RF08, RNF11, RNF12, RN33                    | 0.1            | 29/10 | ⬜     |
+| 4.2 | `perfil-completo`               | RF03, RF11 (ajustes)                        | 0.3            | 30/10 | ⬜     |
+| 4.3 | `instituicoes-e-perfil-publico` | RF10, RF12, RF13, RN35, RN36                | 4.2            | 01/11 | ⬜     |
+| 4.4 | `exclusao-propria-conta`        | RF04, RF05, RN28–RN30                       | 3.2            | 03/11 | ⬜     |
+| 5.1 | `admin-administradores`         | RF29–RF32                                   | 0.2            | 04/11 | ⬜     |
+| 5.2 | `admin-instituicoes`            | RF41, RF44, RF47, RF48, RF57, RF58          | 5.1, 4.4       | 06/11 | ⬜     |
+| 5.3 | `admin-exclusoes-instituicoes`  | RF42, RF43, RF45, RF46                      | 5.2            | 08/11 | ⬜     |
+| 5.4 | `admin-alimentos`               | RF50–RF53                                   | 2.2, 5.1       | 09/11 | ⬜     |
+| 5.5 | `admin-pedidos`                 | RF54–RF56, RN13                             | 3.3, 5.1       | 10/11 | ⬜     |
+| 6.1 | `expiracao-pedidos`             | RF72, RN11                                  | 3.2            | 11/11 | ⬜     |
+| 6.2 | `lembretes-whatsapp`            | RF73, RF74, RNF17, RN42–RN44                | 6.1            | 13/11 | ⬜     |
+| 7.1 | `revisao-visual`                | RNF01–RNF03, `docs/PENDENCIAS.md`           | todas as telas | 16/11 | ⬜     |
+| 7.2 | `testes-casos-tcc`              | CTs do documento do TCC                     | 7.1            | 18/11 | ⬜     |
+| 7.3 | `deploy-producao`               | Ambiente de produção                        | 7.2            | 20/11 | ⬜     |
 
 As metas são sugestões para chegar à Entrega 9 (Produto Final, 20/11) com a
 Entrega 7 (Qualidade, 06/11) já com os fluxos principais prontos. Ajuste se
@@ -149,6 +149,7 @@ o cronograma da disciplina pedir.
   - nome fantasia.
 
   Ela bloqueia os termos da tabela, comparando sem acento e sem diferenciar maiúsculas, e bloqueia links/URLs por regex. Erro `400` com `code: PROHIBITED_CONTENT` e o nome do campo.
+
 - **Frontend:** mostra o erro no campo certo.
 - **Pronto quando:** um termo cadastrado no painel passa a ser recusado nos formulários sem novo deploy.
 
@@ -270,6 +271,7 @@ auditoria.
 
 - Exclusão lógica pelo admin, com escolha de motivo (RF42, RF43; reaproveita a lógica da 4.4).
 - Exclusão permanente (RF45, RF46), na ordem de `docs/MODELO-DE-DADOS.md`, incluindo a remoção das imagens no MinIO depois do commit.
+- A ordem de exclusão precisa incluir as sugestões feitas pela instituição (`Suggestion.requesterId` não tem cascade, desde a 1.1).
 
 ### 5.4 `admin-alimentos`
 
@@ -333,14 +335,14 @@ Arquivo: `pencil-design-apresentacao.pen` (acesso pelo MCP `pencil`).
 
 ### Continuam fora
 
-| Elemento do protótipo | Motivo |
-| --------------------- | ------ |
-| "Revisar Alimento (Admin)" | Não há aprovação manual (DT16) |
-| Botão/contato de WhatsApp no perfil público | O contato só aparece no pedido em andamento (RN12, RN36) |
-| "Histórico do pedido" / linha do tempo | Nenhum RF |
-| Seção "Solicitações para este alimento" no detalhe público | Nenhum RF |
-| Passo "Categorias de alimentos" no cadastro da entidade | Nenhum RF |
-| Dashboard do admin com gráficos | Nenhum RF. Opcional, só se sobrar tempo (`docs/PENDENCIAS.md`) |
+| Elemento do protótipo                                      | Motivo                                                         |
+| ---------------------------------------------------------- | -------------------------------------------------------------- |
+| "Revisar Alimento (Admin)"                                 | Não há aprovação manual (DT16)                                 |
+| Botão/contato de WhatsApp no perfil público                | O contato só aparece no pedido em andamento (RN12, RN36)       |
+| "Histórico do pedido" / linha do tempo                     | Nenhum RF                                                      |
+| Seção "Solicitações para este alimento" no detalhe público | Nenhum RF                                                      |
+| Passo "Categorias de alimentos" no cadastro da entidade    | Nenhum RF                                                      |
+| Dashboard do admin com gráficos                            | Nenhum RF. Opcional, só se sobrar tempo (`docs/PENDENCIAS.md`) |
 
 ### Regras que continuam valendo
 
