@@ -38,7 +38,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | - | ------ | ----- | ---------- | ---- | ------ |
 | 0.1 | `status-pedido-final` | DT01, DT02, RF24, RF27 (abas) | — | 05/10 | ✅ |
 | 0.2 | `papel-administrador` | RF06 (admin), RNF13, RNF14, RN34, RN46 | 0.1 | 05/10 | ✅ |
-| 0.3 | `upload-imagens` | RNF09, RN41, RF01–RF03 (imagem) | 0.1 | 07/10 | ⬜ |
+| 0.3 | `upload-imagens` | RNF09, RN41, RF01–RF03 (imagem) | 0.1 | 07/10 | ✅ |
 | 1.1 | `listas-padronizadas-modelo` | Modelo + seeds das listas, RN31, RN37, RN40 | 0.2 | 09/10 | ⬜ |
 | 1.2 | `catalogo-taco` | DT12 | 1.1 | 12/10 | ⬜ |
 | 1.3 | `admin-listas` | RF33–RF40, RF59–RF70 | 1.1, 0.2 | 14/10 | ⬜ |
@@ -103,7 +103,7 @@ o cronograma da disciplina pedir.
 
 ### 0.3 `upload-imagens`
 
-- **Backend:** módulo `files`. Upload (`POST /files`, multipart) e leitura (`GET /files/*key`) conforme `docs/INFRAESTRUTURA.md`, com validação de tamanho e tipo real (RN41).
+- **Backend:** módulo `files`. Upload junto do cadastro e da edição da instituição (multipart, sem `POST /files` separado) e leitura (`GET /files/:folder/:name`), conforme `docs/INFRAESTRUTURA.md`, com validação de tamanho e tipo real (RN41).
 - **Frontend**
   - Componente de upload reutilizável, com prévia, erro de tamanho/tipo e troca.
   - Aplicado na etapa de foto do cadastro (RF01/RF02 exigem imagem, então a etapa "Foto de perfil" do protótipo volta) e na edição de perfil.
@@ -170,6 +170,7 @@ o cronograma da disciplina pedir.
   - Validação de fração pela unidade.
   - A busca do feed (RF20) passa a fazer join com o catálogo, mantendo o `unaccent`.
   - O detalhe (RF21) devolve tipo de solicitação, observações, unidade e data de publicação.
+  - Imagem pelo padrão da 0.3: `@ImageUpload()` no cadastro, pasta `foods` em `IMAGE_FOLDER`, e `toUrl` nas respostas de alimento e de pedido. Sai o campo de URL.
 - **Frontend**
   - Modal "Cadastrar Alimento" fiel ao protótipo: select de alimento (que preenche a categoria, somente leitura), select de unidade, cartões de tipo de solicitação, observações e upload de imagem.
   - O feed e o detalhe exibem os campos novos.
@@ -235,6 +236,7 @@ o cronograma da disciplina pedir.
 
 - **Backend:** listagem das instituições do tipo oposto, com busca (RF10), e perfil público só com os dados da RN36. O perfil da entidade traz os pedidos entre as duas (RF12); o do estabelecimento traz os alimentos ativos (RF13).
 - **Frontend:** telas "Listar Instituições" e "Perfil Público" do protótipo, **sem** contato e sem endereço, e item novo no menu.
+- **Imagem:** as respostas devolvem a imagem da instituição pelo `toUrl` da 0.3 (URL de `/files/...`), e as telas usam o `UserAvatar` com fallback.
 - **Pronto quando:** nenhuma resposta dessas rotas contém contato, endereço ou dado pessoal (conferir o JSON, não só a tela).
 
 ### 4.4 `exclusao-propria-conta`
@@ -254,11 +256,13 @@ auditoria.
 ### 5.1 `admin-administradores`
 
 - Cadastrar, editar, excluir e listar administradores (RF29–RF32). A exclusão do último administrador é recusada (RN34).
+- A imagem do administrador segue o padrão da 0.3 (`@ImageUpload()`, pasta `users`).
 
 ### 5.2 `admin-instituicoes`
 
 - Cadastrar uma instituição de qualquer tipo pelo painel (RF41, reaproveitando o service do cadastro).
 - Editar, incluindo o campo deletado (RF44).
+- Imagem no cadastro e na edição pelo padrão da 0.3 (`@ImageUpload()`, pasta `users`), com a troca apagando a anterior depois do commit.
 - Listar com a busca ampla, incluindo dados do responsável (RF47, RF57, RF58).
 - Perfil completo somente leitura, com indicadores de atividade (RF48).
 
@@ -271,7 +275,7 @@ auditoria.
 
 - Listar com todos os filtros (RF52).
 - Detalhe com destaque para estabelecimento excluído (RF53).
-- Editar (RF50, respeitando a RN20).
+- Editar (RF50, respeitando a RN20). A imagem segue o padrão da 0.3 (`@ImageUpload()`, pasta `foods` criada na 2.1).
 - Excluir permanentemente (RF51).
 
 ### 5.5 `admin-pedidos`
