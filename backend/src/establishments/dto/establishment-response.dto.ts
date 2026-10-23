@@ -13,7 +13,11 @@ class UserResponseDto {
   @ApiProperty({ example: '(11) 91234-5678' })
   personalPhone!: string;
 
-  @ApiProperty({ example: 'https://cdn.example.com/logo.png', nullable: true })
+  @ApiProperty({
+    example: 'https://api.foodshare.com.br/files/users/3f2a9c1e-7b4d-4e8a-9c2f-1a2b3c4d5e6f.png',
+    description: 'URL da imagem do responsável, servida pela rota de arquivos',
+    nullable: true,
+  })
   image!: string | null;
 }
 

@@ -31,16 +31,6 @@ export class UpdateBeneficiaryEntityDto {
   institutionalEmail?: string;
 
   @ApiPropertyOptional({
-    example: 'https://cdn.example.com/logo.png',
-    description: 'URL da imagem/logo (upload em si não faz parte deste endpoint)',
-    maxLength: 500,
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  image?: string;
-
-  @ApiPropertyOptional({
     example: 'Entity that supports families in social vulnerability.',
     description: 'Descrição da entidade beneficiária',
     maxLength: 2000,

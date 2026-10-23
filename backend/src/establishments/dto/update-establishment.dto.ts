@@ -31,16 +31,6 @@ export class UpdateEstablishmentDto {
   institutionalEmail?: string;
 
   @ApiPropertyOptional({
-    example: 'https://cdn.example.com/logo.png',
-    description: 'URL da imagem/logo (upload em si não faz parte deste endpoint)',
-    maxLength: 500,
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  image?: string;
-
-  @ApiPropertyOptional({
     example: 'Restaurant specialized in home-style meals.',
     description: 'Descrição do estabelecimento',
     maxLength: 2000,

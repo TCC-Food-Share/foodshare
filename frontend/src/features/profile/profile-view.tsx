@@ -9,6 +9,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { UserAvatar } from '@/components/user-avatar';
 import type { InstitutionRole } from '@/features/auth/auth-context';
 import type { ProfileResponse } from '@/features/profile/profile-api';
 import { cn } from '@/lib/cn';
@@ -17,15 +18,6 @@ const ROLE_LABEL: Record<InstitutionRole, string> = {
   establishment: 'Estabelecimento',
   beneficiary: 'Entidade beneficiária',
 };
-
-function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
 
 function Field({ label, value, locked }: { label: string; value: string; locked?: boolean }) {
   return (
@@ -57,17 +49,7 @@ export function ProfileView({
     <div className="flex flex-col gap-6">
       <Card>
         <CardContent className="flex items-center gap-4">
-          {data.user.image ? (
-            <img
-              src={data.user.image}
-              alt=""
-              className="size-14 rounded-full object-cover shadow-sm"
-            />
-          ) : (
-            <div className="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-full text-lg font-medium shadow-sm">
-              {initials(data.companyName)}
-            </div>
-          )}
+          <UserAvatar image={data.user.image} name={data.companyName} className="size-14 text-lg" />
           <div className="flex flex-1 flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="text-lg font-semibold">{data.companyName}</span>

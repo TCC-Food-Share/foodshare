@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { imageFileSchema } from '@/features/files/image-rules';
 import type { ProfileResponse } from '@/features/profile/profile-api';
 import { PHONE_REGEX, POSTAL_CODE_REGEX, UF_REGEX } from '@/lib/validation';
 
@@ -16,7 +17,7 @@ export const profileSchema = z.object({
   personalPhone: phoneField('Informe o celular pessoal.'),
   institutionalPhone: phoneField('Informe o celular institucional.'),
   institutionalEmail: emailField('Informe o e-mail institucional.'),
-  image: z.string().max(500).optional().or(z.literal('')),
+  image: imageFileSchema.nullable(),
   description: z.string().min(1, 'Escreva uma descrição.').max(2000),
 
   postalCode: z.string().min(1, 'Informe o CEP.').regex(POSTAL_CODE_REGEX, 'CEP inválido.'),
@@ -34,7 +35,7 @@ export function mapResponseToFormValues(data: ProfileResponse): ProfileFormInput
     personalPhone: data.user.personalPhone,
     institutionalPhone: data.institutionalPhone,
     institutionalEmail: data.institutionalEmail,
-    image: data.user.image ?? '',
+    image: null,
     description: data.description,
     postalCode: data.address.postalCode,
     street: data.address.street,

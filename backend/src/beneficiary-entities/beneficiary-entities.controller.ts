@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UploadedFile } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -13,6 +13,8 @@ import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 
 import { RequireRoles } from '../auth/require-roles.decorator';
 import { INSTITUTION_ROLES } from '../auth/roles.constants';
+import { ImageFilePipe, type ValidatedImage } from '../files/image-file.pipe';
+import { ImageUpload } from '../files/image-upload.decorator';
 import { BeneficiaryEntitiesService } from './beneficiary-entities.service';
 import { BeneficiaryEntityResponseDto } from './dto/beneficiary-entity-response.dto';
 import { CreateBeneficiaryEntityDto } from './dto/create-beneficiary-entity.dto';
@@ -29,18 +31,26 @@ export class BeneficiaryEntitiesController {
     summary: 'Cadastro de entidade beneficiária',
     description:
       'Cadastra uma entidade beneficiária com dados do responsável, dados institucionais ' +
-      'e endereço (RF03).',
+      'e endereço, e impede CNPJ, e-mail ou celular duplicados (RF02). A imagem do responsável é obrigatória e vai no mesmo formulário.',
   })
+  @ImageUpload({ body: CreateBeneficiaryEntityDto, required: true })
   @ApiCreatedResponse({
     description: 'Entidade beneficiária cadastrada com sucesso.',
     type: BeneficiaryEntityResponseDto,
   })
-  @ApiBadRequestResponse({ description: 'Dados de cadastro inválidos.' })
+  @ApiBadRequestResponse({
+    description:
+      'Dados de cadastro inválidos, ou imagem ausente ou recusada ' +
+      '(`code: IMAGE_REQUIRED`, `IMAGE_TOO_LARGE` ou `IMAGE_INVALID_TYPE`).',
+  })
   @ApiConflictResponse({
     description: 'CNPJ, e-mail ou celular já cadastrados por outra entidade ou usuário.',
   })
-  create(@Body() dto: CreateBeneficiaryEntityDto): Promise<BeneficiaryEntityResponseDto> {
-    return this.beneficiaryEntitiesService.create(dto);
+  create(
+    @Body() dto: CreateBeneficiaryEntityDto,
+    @UploadedFile(new ImageFilePipe({ required: true })) image: ValidatedImage,
+  ): Promise<BeneficiaryEntityResponseDto> {
+    return this.beneficiaryEntitiesService.create(dto, image);
   }
 
   @Get('me')
@@ -65,14 +75,19 @@ export class BeneficiaryEntitiesController {
   @ApiOperation({
     summary: 'Edição do próprio cadastro',
     description:
-      'Edita contato, imagem, descrição e endereço da entidade beneficiária autenticada (RF05). ' +
-      'CNPJ, razão social e e-mail pessoal não são editáveis por este endpoint.',
+      'Edita contato, imagem, descrição e endereço da entidade beneficiária autenticada (RF03). ' +
+      'CNPJ, razão social e e-mail pessoal não são editáveis por este endpoint. ' +
+      'A imagem nova, opcional, vai como arquivo no mesmo formulário; sem ela, o corpo pode ser JSON.',
   })
+  @ImageUpload({ body: UpdateBeneficiaryEntityDto, required: false })
   @ApiOkResponse({
     description: 'Cadastro atualizado com sucesso.',
     type: BeneficiaryEntityResponseDto,
   })
-  @ApiBadRequestResponse({ description: 'Dados de edição inválidos.' })
+  @ApiBadRequestResponse({
+    description:
+      'Dados de edição inválidos, ou imagem recusada (`code: IMAGE_TOO_LARGE` ou `IMAGE_INVALID_TYPE`).',
+  })
   @ApiConflictResponse({
     description: 'Celular institucional ou e-mail institucional já usados por outro cadastro.',
   })
@@ -82,7 +97,8 @@ export class BeneficiaryEntitiesController {
   update(
     @Session() session: UserSession,
     @Body() dto: UpdateBeneficiaryEntityDto,
+    @UploadedFile(new ImageFilePipe({ required: false })) image: ValidatedImage | undefined,
   ): Promise<BeneficiaryEntityResponseDto> {
-    return this.beneficiaryEntitiesService.update(Number(session.user.id), dto);
+    return this.beneficiaryEntitiesService.update(Number(session.user.id), dto, image);
   }
 }

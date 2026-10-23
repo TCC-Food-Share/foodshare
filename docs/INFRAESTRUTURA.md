@@ -46,17 +46,33 @@ O front e a API ficam em subdomínios distintos do mesmo site
   rede interna do Docker**.
 - Cliente: `@aws-sdk/client-s3` com `forcePathStyle: true` (API compatível
   com S3). Assim, trocar de storage S3 no futuro é só configuração.
-- **Upload:** `multipart/form-data` direto para o backend (`FileInterceptor`
-  do NestJS), com limite de 5 MB e conferência do tipo real do arquivo
-  (JPEG, PNG ou WebP), não só da extensão (RN41). O backend gera a chave
-  (`foods/<uuid>.<ext>`, `users/<uuid>.<ext>`), grava no MinIO e devolve a
-  chave.
-- **Leitura:** `GET /files/*key` no backend, que busca o objeto e devolve o
-  arquivo com `Content-Type` e `Cache-Control` longos (a chave nunca é
+- **Upload junto do recurso:** não existe rota de upload separada. O
+  cadastro ou a edição que tem imagem recebe `multipart/form-data`, com o
+  arquivo no campo `image` e os demais dados como campos de texto (objetos
+  aninhados com colchetes: `address[street]`). O decorator `@ImageUpload()`
+  (`files/`) aplica o limite de 5 MB e o `ImageFilePipe` confere o tipo real
+  do arquivo pelos primeiros bytes (JPEG, PNG ou WebP), não pela extensão
+  (RN41). Erros: `400` com `code` `IMAGE_REQUIRED`, `IMAGE_TOO_LARGE` ou
+  `IMAGE_INVALID_TYPE`.
+- O backend só grava no MinIO depois de validar os dados, gera a chave
+  (`users/<uuid>.<ext>`; a pasta `foods` entra com o cadastro de alimento) e
+  apaga o arquivo se a operação falhar depois. Na troca, a imagem anterior é
+  apagada depois do commit.
+- **Leitura:** `GET /files/:folder/:name` no backend, que busca o objeto e
+  devolve o arquivo com `Content-Type` e
+  `Cache-Control: private, max-age=31536000, immutable` (a chave nunca é
   reaproveitada, então o arquivo de uma chave nunca muda). A rota exige
-  sessão, como todo o sistema.
+  sessão, como todo o sistema. As respostas da API montam a URL a partir do
+  `BETTER_AUTH_URL`.
 - O banco guarda só a chave (`docs/MODELO-DE-DADOS.md`, "Imagens").
-- Um único bucket por ambiente, privado.
+- Um único bucket por ambiente, privado. O backend cria o bucket na subida
+  se ele não existir; com o MinIO fora do ar, só registra erro e a API sobe
+  mesmo assim.
+- **Limpar o bucket:** `npm run storage:clear` (em `backend/`) apaga todos os
+  objetos do `MINIO_BUCKET` configurado. Pede para digitar o nome do bucket
+  como confirmação; `-- --force` pula a pergunta. Usar junto do
+  `prisma migrate reset`, senão sobram arquivos sem dono no bucket e chaves
+  quebradas no banco.
 
 ## E-mail (Resend)
 

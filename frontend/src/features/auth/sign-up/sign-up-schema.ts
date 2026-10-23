@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { imageFileSchema } from '@/features/files/image-rules';
 import { PHONE_REGEX, POSTAL_CODE_REGEX, UF_REGEX, UFS } from '@/lib/validation';
 
 export { UFS };
@@ -42,6 +43,8 @@ export const signUpSchema = z
     complement: z.string().max(200),
     city: z.string().min(1, 'Informe a cidade.').max(200),
     state: z.string().min(1, 'Selecione a UF.').regex(UF_RE, 'UF inválida.'),
+
+    image: imageFileSchema,
   })
   .refine((v) => v.password === v.passwordConfirmation, {
     path: ['passwordConfirmation'],
@@ -55,4 +58,5 @@ export const STEP_FIELDS = [
   ['companyName', 'tradeName', 'cnpj', 'institutionalEmail', 'institutionalPhone', 'description'],
   ['name', 'email', 'personalPhone', 'password', 'passwordConfirmation'],
   ['postalCode', 'street', 'number', 'complement', 'city', 'state'],
+  ['image'],
 ] as const satisfies ReadonlyArray<ReadonlyArray<keyof SignUpInput>>;

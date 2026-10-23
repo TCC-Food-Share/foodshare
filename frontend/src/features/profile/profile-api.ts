@@ -1,5 +1,6 @@
 import type { Role } from '@/features/auth/auth-context';
 import { api } from '@/lib/api';
+import { toFormData } from '@/lib/form-data';
 
 export interface ProfileResponse {
   id: number;
@@ -31,7 +32,6 @@ export interface UpdateProfilePayload {
   personalPhone: string;
   institutionalPhone: string;
   institutionalEmail: string;
-  image?: string;
   description: string;
   address: {
     postalCode: string;
@@ -54,6 +54,10 @@ export function getMyProfile(role: Role): Promise<ProfileResponse> {
 export function updateMyProfile(
   role: Role,
   payload: UpdateProfilePayload,
+  image: File | null,
 ): Promise<ProfileResponse> {
-  return api.patch<ProfileResponse>(profilePath(role), payload);
+  return api.patch<ProfileResponse>(
+    profilePath(role),
+    image ? toFormData(payload, { image }) : payload,
+  );
 }

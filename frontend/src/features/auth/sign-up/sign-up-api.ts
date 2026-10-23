@@ -1,5 +1,6 @@
 import type { SignUpInput } from '@/features/auth/sign-up/sign-up-schema';
 import { api } from '@/lib/api';
+import { toFormData } from '@/lib/form-data';
 
 export interface SignUpPayload {
   name: string;
@@ -52,8 +53,8 @@ export function toSignUpPayload(v: SignUpInput): SignUpPayload {
   };
 }
 
-export const createEstablishment = (body: SignUpPayload) =>
-  api.post<CreatedResource>('/establishments', body);
+export const createEstablishment = (body: SignUpPayload, image: File) =>
+  api.post<CreatedResource>('/establishments', toFormData(body, { image }));
 
-export const createBeneficiaryEntity = (body: SignUpPayload) =>
-  api.post<CreatedResource>('/beneficiary-entities', body);
+export const createBeneficiaryEntity = (body: SignUpPayload, image: File) =>
+  api.post<CreatedResource>('/beneficiary-entities', toFormData(body, { image }));

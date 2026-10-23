@@ -4,6 +4,9 @@ import { Prisma } from '../../generated/prisma/client';
 import type { BetterAuthInstance } from '../auth/better-auth.token';
 import { BETTER_AUTH } from '../auth/better-auth.token';
 import { ROLE } from '../auth/roles.constants';
+import { IMAGE_FOLDER } from '../files/files.constants';
+import type { ValidatedImage } from '../files/image-file.pipe';
+import { ImageStorageService } from '../files/image-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BeneficiaryEntityResponseDto } from './dto/beneficiary-entity-response.dto';
 import { CreateBeneficiaryEntityDto } from './dto/create-beneficiary-entity.dto';
@@ -32,14 +35,20 @@ export class BeneficiaryEntitiesService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(BETTER_AUTH) private readonly auth: BetterAuthInstance,
+    private readonly storage: ImageStorageService,
   ) {}
 
-  async create(dto: CreateBeneficiaryEntityDto): Promise<BeneficiaryEntityResponseDto> {
+  async create(
+    dto: CreateBeneficiaryEntityDto,
+    image: ValidatedImage,
+  ): Promise<BeneficiaryEntityResponseDto> {
     await this.checkUniqueness(dto);
 
     const role = await this.prisma.role.findUniqueOrThrow({
       where: { name: ROLE.BENEFICIARY_ENTITY },
     });
+
+    const imageKey = await this.storage.store(IMAGE_FOLDER.USERS, image);
 
     let userId: number;
     try {
@@ -49,11 +58,13 @@ export class BeneficiaryEntitiesService {
           email: dto.email,
           password: dto.password,
           personalPhone: dto.personalPhone,
+          image: imageKey,
           roleId: role.id,
         },
       });
       userId = Number(user.id);
     } catch {
+      await this.storage.removeQuietly(imageKey);
       throw new ConflictException('CNPJ, email or phone already registered.');
     }
 
@@ -88,6 +99,7 @@ export class BeneficiaryEntitiesService {
       return this.toResponse(beneficiaryEntity);
     } catch (error) {
       await this.prisma.user.delete({ where: { id: userId } }).catch(() => {});
+      await this.storage.removeQuietly(imageKey);
 
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('CNPJ, email or phone already registered.');
@@ -110,22 +122,28 @@ export class BeneficiaryEntitiesService {
   async update(
     userId: number,
     dto: UpdateBeneficiaryEntityDto,
+    image?: ValidatedImage,
   ): Promise<BeneficiaryEntityResponseDto> {
-    const existing = await this.prisma.beneficiaryEntity.findUnique({ where: { userId } });
+    const existing = await this.prisma.beneficiaryEntity.findUnique({
+      where: { userId },
+      include: { user: true },
+    });
     if (!existing) {
       throw new NotFoundException('Beneficiary entity not found.');
     }
 
     await this.checkUpdateUniqueness(dto, existing.id, userId);
 
+    const newImageKey = image ? await this.storage.store(IMAGE_FOLDER.USERS, image) : undefined;
+
     try {
       const updated = await this.prisma.$transaction(async (tx) => {
-        if (dto.personalPhone !== undefined || dto.image !== undefined) {
+        if (dto.personalPhone !== undefined || newImageKey !== undefined) {
           await tx.user.update({
             where: { id: userId },
             data: {
               ...(dto.personalPhone !== undefined && { personalPhone: dto.personalPhone }),
-              ...(dto.image !== undefined && { image: dto.image }),
+              ...(newImageKey !== undefined && { image: newImageKey }),
             },
           });
         }
@@ -159,8 +177,15 @@ export class BeneficiaryEntitiesService {
         });
       });
 
+      if (newImageKey !== undefined && existing.user.image) {
+        await this.storage.removeQuietly(existing.user.image);
+      }
+
       return this.toResponse(updated);
     } catch (error) {
+      if (newImageKey !== undefined) {
+        await this.storage.removeQuietly(newImageKey);
+      }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('CNPJ, email or phone already registered.');
       }
@@ -250,7 +275,7 @@ export class BeneficiaryEntitiesService {
         name: beneficiaryEntity.user.name,
         email: beneficiaryEntity.user.email,
         personalPhone: beneficiaryEntity.user.personalPhone ?? '',
-        image: beneficiaryEntity.user.image,
+        image: this.storage.toUrl(beneficiaryEntity.user.image),
       },
       address: {
         id: beneficiaryEntity.address.id,

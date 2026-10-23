@@ -9,6 +9,7 @@ jest.mock('@thallesp/nestjs-better-auth', () => ({
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ImageStorageService } from './files/image-storage.service';
 import { PrismaService } from './prisma/prisma.service';
 
 describe('AppController', () => {
@@ -16,13 +17,20 @@ describe('AppController', () => {
   const queryRaw = jest.fn<() => Promise<unknown>>();
   const roleFindUnique = jest.fn<(args: { where: { id: number } }) => Promise<unknown>>();
   const prismaMock = { $queryRaw: queryRaw, role: { findUnique: roleFindUnique } };
+  const storageMock = {
+    toUrl: (key: string | null | undefined) => (key ? `https://api.test/files/${key}` : null),
+  };
 
   beforeEach(async () => {
     queryRaw.mockReset();
     roleFindUnique.mockReset();
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService, { provide: PrismaService, useValue: prismaMock }],
+      providers: [
+        AppService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: ImageStorageService, useValue: storageMock },
+      ],
     }).compile();
 
     appController = app.get<AppController>(AppController);
@@ -41,17 +49,26 @@ describe('AppController', () => {
       roleFindUnique.mockResolvedValue({ id: 2, name: 'BeneficiaryEntity' });
 
       await expect(appController.getMe(session)).resolves.toEqual({
-        user: { id: 1, email: 'a@b.com', roleId: 2 },
+        user: { id: 1, email: 'a@b.com', roleId: 2, image: null },
         role: 'BeneficiaryEntity',
       });
       expect(roleFindUnique).toHaveBeenCalledWith({ where: { id: 2 } });
+    });
+
+    it('returns the session user image as the read route URL', async () => {
+      roleFindUnique.mockResolvedValue({ id: 2, name: 'BeneficiaryEntity' });
+      const withImage = { user: { id: 1, roleId: 2, image: 'users/abc.png' } } as never;
+
+      await expect(appController.getMe(withImage)).resolves.toMatchObject({
+        user: { image: 'https://api.test/files/users/abc.png' },
+      });
     });
 
     it('returns role null when the role id has no match', async () => {
       roleFindUnique.mockResolvedValue(null);
 
       await expect(appController.getMe(session)).resolves.toEqual({
-        user: { id: 1, email: 'a@b.com', roleId: 2 },
+        user: { id: 1, email: 'a@b.com', roleId: 2, image: null },
         role: null,
       });
     });

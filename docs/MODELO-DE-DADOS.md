@@ -263,8 +263,11 @@ Decisão DT19. Uma linha por requisição atendida pela API (RNF13).
 - O MinIO do staging não tem domínio público (`docs/INFRAESTRUTURA.md`),
   então o navegador não consegue buscar a imagem direto nele. O backend
   expõe uma rota que lê o objeto pela rede interna e devolve o arquivo:
-  `GET /files/*key`, com cache HTTP. As respostas da API montam a URL a
-  partir da chave.
+  `GET /files/:folder/:name`, com cache HTTP. As respostas da API montam a
+  URL a partir da chave.
+- Trocar a imagem grava a nova antes da transação e apaga a anterior
+  **depois** do commit. Se a transação falhar, a nova é apagada e a anterior
+  continua valendo.
 - Limites de upload: RN41.
 - Excluir permanentemente um alimento, usuário ou instituição (RF31, RF45,
   RF46, RF51) apaga também o objeto no MinIO, **depois** do commit da

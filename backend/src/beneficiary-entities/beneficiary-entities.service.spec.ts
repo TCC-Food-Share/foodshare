@@ -4,6 +4,8 @@ import { Test } from '@nestjs/testing';
 
 import { Prisma } from '../../generated/prisma/client';
 import { BETTER_AUTH } from '../auth/better-auth.token';
+import type { ValidatedImage } from '../files/image-file.pipe';
+import { ImageStorageService } from '../files/image-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BeneficiaryEntitiesService } from './beneficiary-entities.service';
 import { CreateBeneficiaryEntityDto } from './dto/create-beneficiary-entity.dto';
@@ -29,6 +31,14 @@ describe('BeneficiaryEntitiesService', () => {
       city: 'Birigui',
       state: 'SP',
     },
+  };
+
+  const image: ValidatedImage = { buffer: Buffer.from([0xff, 0xd8, 0xff]), type: 'jpeg' };
+
+  const storageMock = {
+    store: jest.fn<(folder: string, image: ValidatedImage) => Promise<string>>(),
+    removeQuietly: jest.fn<(key: string) => Promise<void>>(),
+    toUrl: (key: string | null | undefined) => (key ? `https://api.test/files/${key}` : null),
   };
 
   const authMock = {
@@ -81,6 +91,8 @@ describe('BeneficiaryEntitiesService', () => {
     prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(null);
     prismaMock.beneficiaryEntity.findFirst.mockResolvedValue(null);
     prismaMock.role.findUniqueOrThrow.mockResolvedValue({ id: 2, name: 'BeneficiaryEntity' });
+    storageMock.store.mockResolvedValue('users/new.jpg');
+    storageMock.removeQuietly.mockResolvedValue(undefined);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -90,6 +102,7 @@ describe('BeneficiaryEntitiesService', () => {
           useValue: { $transaction: transaction, ...prismaMock },
         },
         { provide: BETTER_AUTH, useValue: authMock },
+        { provide: ImageStorageService, useValue: storageMock },
       ],
     }).compile();
 
@@ -112,6 +125,7 @@ describe('BeneficiaryEntitiesService', () => {
         name: dto.name,
         email: dto.email,
         personalPhone: dto.personalPhone,
+        image: 'users/new.jpg',
       },
       address: { id: 10, ...dto.address, complement: null },
     });
@@ -120,7 +134,7 @@ describe('BeneficiaryEntitiesService', () => {
   it('creates the user via better-auth and the address/beneficiary entity in a transaction', async () => {
     mockSuccessfulCreation();
 
-    const result = await service.create(dto);
+    const result = await service.create(dto, image);
 
     expect(authMock.api.signUpEmail).toHaveBeenCalledWith({
       body: {
@@ -128,6 +142,7 @@ describe('BeneficiaryEntitiesService', () => {
         email: dto.email,
         password: dto.password,
         personalPhone: dto.personalPhone,
+        image: 'users/new.jpg',
         roleId: 2,
       },
     });
@@ -141,7 +156,7 @@ describe('BeneficiaryEntitiesService', () => {
   it('converts the user id (string, from better-auth) to a number before using it', async () => {
     mockSuccessfulCreation('42');
 
-    await service.create(dto);
+    await service.create(dto, image);
 
     expect(tx.beneficiaryEntity.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ userId: 42 }) }),
@@ -151,7 +166,7 @@ describe('BeneficiaryEntitiesService', () => {
   it('never returns the password (hash or plain text) in the response', async () => {
     mockSuccessfulCreation();
 
-    const result = await service.create(dto);
+    const result = await service.create(dto, image);
     const serialized = JSON.stringify(result);
 
     expect(result).not.toHaveProperty('password');
@@ -164,7 +179,7 @@ describe('BeneficiaryEntitiesService', () => {
       Promise.resolve('cnpj' in where ? { id: 99 } : null),
     );
 
-    await expect(service.create(dto)).rejects.toMatchObject({
+    await expect(service.create(dto, image)).rejects.toMatchObject({
       response: { fields: ['cnpj'] },
     });
     expect(authMock.api.signUpEmail).not.toHaveBeenCalled();
@@ -178,7 +193,7 @@ describe('BeneficiaryEntitiesService', () => {
       Promise.resolve('institutionalEmail' in where ? { id: 99 } : null),
     );
 
-    await expect(service.create(dto)).rejects.toMatchObject({
+    await expect(service.create(dto, image)).rejects.toMatchObject({
       response: { fields: ['institutionalEmail', 'personal'] },
     });
     expect(authMock.api.signUpEmail).not.toHaveBeenCalled();
@@ -189,7 +204,7 @@ describe('BeneficiaryEntitiesService', () => {
       Promise.resolve('email' in where ? { id: 77 } : null),
     );
 
-    await expect(service.create(dto)).rejects.toMatchObject({
+    await expect(service.create(dto, image)).rejects.toMatchObject({
       response: { fields: ['personal'], message: 'Personal email or phone is already registered.' },
     });
   });
@@ -197,7 +212,7 @@ describe('BeneficiaryEntitiesService', () => {
   it('collapses duplicate personal email and personal phone into a single "personal" entry', async () => {
     prismaMock.user.findUnique.mockResolvedValue({ id: 77 });
 
-    await expect(service.create(dto)).rejects.toMatchObject({
+    await expect(service.create(dto, image)).rejects.toMatchObject({
       response: { fields: ['personal'] },
     });
   });
@@ -205,7 +220,7 @@ describe('BeneficiaryEntitiesService', () => {
   it('proceeds with creation when no field is duplicated', async () => {
     mockSuccessfulCreation();
 
-    await service.create(dto);
+    await service.create(dto, image);
 
     expect(transaction).toHaveBeenCalledTimes(1);
   });
@@ -213,7 +228,7 @@ describe('BeneficiaryEntitiesService', () => {
   it('throws ConflictException when better-auth rejects signUpEmail', async () => {
     authMock.api.signUpEmail.mockRejectedValue(new Error('email already in use'));
 
-    await expect(service.create(dto)).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.create(dto, image)).rejects.toBeInstanceOf(ConflictException);
     expect(transaction).not.toHaveBeenCalled();
   });
 
@@ -224,7 +239,7 @@ describe('BeneficiaryEntitiesService', () => {
       throw unexpectedError;
     });
 
-    await expect(service.create(dto)).rejects.toBe(unexpectedError);
+    await expect(service.create(dto, image)).rejects.toBe(unexpectedError);
     expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 20 } });
   });
 
@@ -237,7 +252,7 @@ describe('BeneficiaryEntitiesService', () => {
       });
     });
 
-    await expect(service.create(dto)).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.create(dto, image)).rejects.toBeInstanceOf(ConflictException);
     expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 21 } });
   });
 
@@ -248,7 +263,41 @@ describe('BeneficiaryEntitiesService', () => {
       throw unexpectedError;
     });
 
-    await expect(service.create(dto)).rejects.toBe(unexpectedError);
+    await expect(service.create(dto, image)).rejects.toBe(unexpectedError);
+  });
+
+  it('stores the image under the users folder and answers with its URL', async () => {
+    mockSuccessfulCreation();
+
+    const result = await service.create(dto, image);
+
+    expect(storageMock.store).toHaveBeenCalledWith('users', image);
+    expect(result.user.image).toBe('https://api.test/files/users/new.jpg');
+  });
+
+  it('stores no image when the uniqueness check rejects the registration', async () => {
+    prismaMock.beneficiaryEntity.findUnique.mockResolvedValue({ id: 99 });
+
+    await expect(service.create(dto, image)).rejects.toBeInstanceOf(ConflictException);
+    expect(storageMock.store).not.toHaveBeenCalled();
+  });
+
+  it('removes the stored image when better-auth rejects signUpEmail', async () => {
+    authMock.api.signUpEmail.mockRejectedValue(new Error('email already in use'));
+
+    await expect(service.create(dto, image)).rejects.toBeInstanceOf(ConflictException);
+    expect(storageMock.removeQuietly).toHaveBeenCalledWith('users/new.jpg');
+  });
+
+  it('removes the user and the stored image when the transaction fails', async () => {
+    authMock.api.signUpEmail.mockResolvedValue({ token: null, user: { id: '23' } });
+    transaction.mockImplementation(() => {
+      throw new Error('connection failure');
+    });
+
+    await expect(service.create(dto, image)).rejects.toThrow('connection failure');
+    expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 23 } });
+    expect(storageMock.removeQuietly).toHaveBeenCalledWith('users/new.jpg');
   });
 
   describe('update', () => {
@@ -262,13 +311,23 @@ describe('BeneficiaryEntitiesService', () => {
       institutionalEmail: dto.institutionalEmail,
       institutionalPhone: dto.institutionalPhone,
       description: dto.description,
+      user: { id: 20, image: 'users/old.jpg' as string | null },
     };
 
-    function mockUpdatedResult(overrides: Partial<typeof existingEntity> = {}) {
+    function mockUpdatedResult(
+      overrides: Partial<typeof existingEntity> = {},
+      userImage: string | null = 'users/old.jpg',
+    ) {
       const merged = { ...existingEntity, ...overrides };
       tx.beneficiaryEntity.update.mockResolvedValue({
         ...merged,
-        user: { id: 20, name: dto.name, email: dto.email, personalPhone: dto.personalPhone },
+        user: {
+          id: 20,
+          name: dto.name,
+          email: dto.email,
+          personalPhone: dto.personalPhone,
+          image: userImage,
+        },
         address: { id: 10, ...dto.address, complement: null },
       });
     }
@@ -282,6 +341,8 @@ describe('BeneficiaryEntitiesService', () => {
 
       expect(tx.user.update).not.toHaveBeenCalled();
       expect(tx.address.update).not.toHaveBeenCalled();
+      expect(storageMock.store).not.toHaveBeenCalled();
+      expect(storageMock.removeQuietly).not.toHaveBeenCalled();
       expect(tx.beneficiaryEntity.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 30 },
@@ -365,6 +426,59 @@ describe('BeneficiaryEntitiesService', () => {
       await expect(
         service.update(20, { institutionalEmail: 'new@test.com' }),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('swaps the image and removes the previous one after the commit', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(existingEntity);
+      mockUpdatedResult({}, 'users/new.jpg');
+
+      const result = await service.update(20, {}, image);
+
+      expect(tx.user.update).toHaveBeenCalledWith({
+        where: { id: 20 },
+        data: { image: 'users/new.jpg' },
+      });
+      expect(storageMock.removeQuietly).toHaveBeenCalledWith('users/old.jpg');
+      expect(storageMock.removeQuietly).not.toHaveBeenCalledWith('users/new.jpg');
+      expect(result.user.image).toBe('https://api.test/files/users/new.jpg');
+    });
+
+    it('removes nothing when a registration without image gets its first one', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue({
+        ...existingEntity,
+        user: { id: 20, image: null },
+      });
+      mockUpdatedResult({}, 'users/new.jpg');
+
+      await service.update(20, {}, image);
+
+      expect(storageMock.removeQuietly).not.toHaveBeenCalled();
+    });
+
+    it('keeps the previous image and removes the new one when the update fails', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(existingEntity);
+      tx.beneficiaryEntity.update.mockImplementation(() => {
+        throw new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        });
+      });
+
+      await expect(
+        service.update(20, { institutionalEmail: 'taken@test.com' }, image),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(storageMock.removeQuietly).toHaveBeenCalledWith('users/new.jpg');
+      expect(storageMock.removeQuietly).not.toHaveBeenCalledWith('users/old.jpg');
+    });
+
+    it('stores no image when the uniqueness check rejects the update', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(existingEntity);
+      prismaMock.beneficiaryEntity.findFirst.mockResolvedValue({ id: 99 });
+
+      await expect(
+        service.update(20, { institutionalEmail: 'taken@test.com' }, image),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(storageMock.store).not.toHaveBeenCalled();
     });
   });
 });

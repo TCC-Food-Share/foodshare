@@ -25,9 +25,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { UserAvatar } from '@/components/user-avatar';
 import type { InstitutionRole } from '@/features/auth/auth-context';
+import { ImagePicker } from '@/features/files/image-picker';
 import type { ProfileResponse } from '@/features/profile/profile-api';
 import type { ProfileFormInput } from '@/features/profile/profile-schema';
+import { initials } from '@/lib/format';
 import { CEP_MASK, phoneMaskFor, phoneModify } from '@/lib/masks';
 import { UFS } from '@/lib/validation';
 import { lookupCep } from '@/lib/viacep';
@@ -36,15 +39,6 @@ const ROLE_LABEL: Record<InstitutionRole, string> = {
   establishment: 'Estabelecimento',
   beneficiary: 'Entidade beneficiária',
 };
-
-function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
 
 function LockedField({ label, value }: { label: string; value: string }) {
   return (
@@ -111,17 +105,7 @@ export function ProfileForm({
     <div className="flex flex-col gap-6">
       <Card>
         <CardContent className="flex items-center gap-4">
-          {data.user.image ? (
-            <img
-              src={data.user.image}
-              alt=""
-              className="size-14 rounded-full object-cover shadow-sm"
-            />
-          ) : (
-            <div className="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-full text-lg font-medium shadow-sm">
-              {initials(data.companyName)}
-            </div>
-          )}
+          <UserAvatar image={data.user.image} name={data.companyName} className="size-14 text-lg" />
           <div className="flex flex-1 flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="text-lg font-semibold">{data.companyName}</span>
@@ -155,13 +139,21 @@ export function ProfileForm({
             name="image"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>URL da imagem/logotipo</FormLabel>
+                <FormLabel>Foto de perfil</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="https://…"
-                    autoComplete="off"
-                    {...field}
-                    value={field.value ?? ''}
+                  <ImagePicker
+                    name={field.name}
+                    value={field.value}
+                    onChange={(file) => {
+                      form.clearErrors('image');
+                      field.onChange(file);
+                    }}
+                    onReject={(message) => form.setError('image', { message })}
+                    onBlur={field.onBlur}
+                    currentUrl={data.user.image}
+                    fallback={
+                      <span className="text-lg font-medium">{initials(data.companyName)}</span>
+                    }
                   />
                 </FormControl>
                 <FormMessage />
