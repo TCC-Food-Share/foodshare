@@ -13,6 +13,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "storage:clear": "tsx scripts/clear-storage.ts",
     "lint": "eslint . --fix",
     "lint:check": "eslint . --max-warnings 0",
     "test": "jest",
