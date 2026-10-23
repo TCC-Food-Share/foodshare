@@ -41,9 +41,15 @@ O front e a API ficam em subdomínios distintos do mesmo site
 
 ## Armazenamento de imagens (MinIO)
 
-- O MinIO não tem domínio público. No staging, o Service Stack do Coolify
-  4.1.2 não gera as labels do Traefik. O backend acessa o MinIO **só pela
-  rede interna do Docker**.
+- A API S3 do MinIO (porta 9000) não tem domínio público. No staging, o
+  Service Stack do Coolify 4.1.2 não gera as labels do Traefik para ela. O
+  backend acessa o MinIO **só pela rede interna do Docker**
+  (`MINIO_ENDPOINT=http://minio:9000`, com protocolo e porta).
+- Só o **Console** do MinIO (interface web, porta 9001) tem domínio público
+  no staging: `minio.staging.foodshare.com.br`. Ele serve para criar bucket e
+  chaves de acesso, não como `MINIO_ENDPOINT`: qualquer caminho nele devolve
+  a página do console. O login fica exposto na internet, então o usuário
+  raiz precisa de senha forte.
 - Cliente: `@aws-sdk/client-s3` com `forcePathStyle: true` (API compatível
   com S3). Assim, trocar de storage S3 no futuro é só configuração.
 - **Upload junto do recurso:** não existe rota de upload separada. O
@@ -147,7 +153,7 @@ O front e a API ficam em subdomínios distintos do mesmo site
 | `TRUSTED_ORIGINS` | `http://localhost:5173` | `https://app.staging.foodshare.com.br` / `https://app.foodshare.com.br` | originCheck + CORS |
 | `COOKIE_DOMAIN` | *(vazio)* | `.staging.foodshare.com.br` / `.foodshare.com.br` | cookie entre subdomínios |
 | `FRONTEND_URL` | `http://localhost:5173` | URL do app no ambiente | links nas mensagens de WhatsApp |
-| `MINIO_ENDPOINT` | `http://localhost:9000` | URL interna do MinIO na rede Docker | upload/leitura |
+| `MINIO_ENDPOINT` | `http://localhost:9000` | URL interna da API S3 na rede Docker, com protocolo e porta (staging: `http://minio:9000`) | upload/leitura |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | do container local | do recurso no Coolify | upload/leitura |
 | `MINIO_BUCKET` | `foodshare-dev` | `foodshare-staging` / `foodshare` | upload/leitura |
 | `RESEND_API_KEY` | chave de teste | chave do Resend | e-mail |
