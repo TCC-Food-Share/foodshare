@@ -8,7 +8,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { RolesModule } from './auth/roles.module';
 import { BeneficiaryEntitiesModule } from './beneficiary-entities/beneficiary-entities.module';
-import { CategoriesModule } from './categories/categories.module';
+import { CatalogModule } from './catalog/catalog.module';
 import { EstablishmentsModule } from './establishments/establishments.module';
 import { FilesModule } from './files/files.module';
 import { FoodsModule } from './foods/foods.module';
@@ -29,7 +29,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
     BeneficiaryEntitiesModule,
     FoodsModule,
     OrdersModule,
-    CategoriesModule,
+    CatalogModule,
     AdminModule,
   ],
   controllers: [AppController],
