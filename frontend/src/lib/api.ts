@@ -40,12 +40,12 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, query, headers, ...rest } = options;
-  const hasBody = body !== undefined;
+  const isJson = body !== undefined && !(body instanceof FormData);
 
   const res = await fetch(buildUrl(path, query), {
     credentials: 'include',
-    headers: hasBody ? { 'Content-Type': 'application/json', ...headers } : headers,
-    body: hasBody ? JSON.stringify(body) : undefined,
+    headers: isJson ? { 'Content-Type': 'application/json', ...headers } : headers,
+    body: body instanceof FormData ? body : isJson ? JSON.stringify(body) : undefined,
     ...rest,
   });
 
