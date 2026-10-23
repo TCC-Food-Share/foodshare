@@ -141,8 +141,13 @@ dois caches.
 **Quando:** a correção da revalidação já entrou (branch
 `fix/revalidacao-queries`): `staleTime` de 5 s, revalidação ao focar a
 janela e `refetchInterval` de 30 s na lista, no detalhe e nos contadores de
-pedidos. Falta a migração da sessão e das cidades, junto da revisão da fase
-7.1, ou antes, se outra change mexer na sessão.
+pedidos. A migração da sessão e das cidades fica para a 4.4
+(`exclusao-propria-conta`), que já mexe na sessão para revogá-la. Ela não
+corrige nenhum problema visível hoje: traz a revalidação da sessão ao focar
+a janela (cabeçalho desatualizado após editar o perfil em outra aba) e a
+nova tentativa com estado de erro nas cidades (hoje, uma falha do IBGE
+mostra a lista vazia sem aviso). Se a falha do IBGE incomodar antes, corrigir
+só as cidades, sem tocar na sessão.
 
 ## Retenção do registro de acesso (`access_log`)
 
