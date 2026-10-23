@@ -13,27 +13,27 @@ que muda em relação ao schema do MVP.
 
 ## Visão geral
 
-| Model | Tabela | Situação | Resumo |
-| ----- | ------ | -------- | ------ |
-| `Role` | `role` | 🟡 dados | Entra o papel `Administrator` no seed |
-| `User` | `user` | 🟡 muda | `personalPhone` passa a opcional (administrador não tem celular) |
-| `Address` | `address` | ✅ igual | |
-| `Establishment` | `establishment` | ✅ igual | |
-| `BeneficiaryEntity` | `beneficiary_entity` | ✅ igual | |
-| `Category` | `category` | 🟡 muda | Entra `administratorId`; `foods` vira `catalogItems` |
-| `FoodStatus` | `food_status` | 🟡 dados | Seed: `Ativo`, `Reservado`, `Inativo` (sem `Revisar`, DT16) |
-| `OrderStatus` | `order_status` | 🟡 dados | Seed: `Pendente`, `Em andamento`, `Rejeitado`, `Doado`, `Cancelado` |
-| `Food` | `food` | 🟡 muda | Nome/categoria vêm do catálogo; unidade vira FK; tipo de solicitação; observações |
-| `CancellationReason` | `cancellation_reason` | 🟡 muda | Entra `isSystem`; `administratorId` opcional |
-| `Order` | `order` | 🟡 muda | Entram `type`, `acceptedAt`, `quantityUpdatedAt` |
-| `FoodCatalogItem` | `food_catalog_item` | 🆕 | Catálogo de alimentos (DT12) |
-| `MeasurementUnit` | `measurement_unit` | 🆕 | Unidades de medida (RF59–RF62) |
-| `ProhibitedTerm` | `prohibited_term` | 🆕 | Termos proibidos (RNF07, RF67–RF70) |
-| `Suggestion` | `suggestion` | 🆕 | Sugestões de novas opções (RF49, RF71) |
-| `OrderReminder` | `order_reminder` | 🆕 | Lembretes já enviados (RF73, RF74) |
-| `AuditLog` | `audit_log` | 🆕 | Auditoria das ações do administrador (RNF14) |
-| `AccessLog` | `access_log` | 🆕 | Registro de toda requisição à API, com usuário e IP (RNF13, DT19) |
-| `Session`, `Account`, `Verification` | `session`, `account`, `verification` | ✅ igual | Tabelas do better-auth. Os códigos do `emailOTP` ficam em `verification` (DT03) |
+| Model                                | Tabela                               | Situação | Resumo                                                                            |
+| ------------------------------------ | ------------------------------------ | -------- | --------------------------------------------------------------------------------- |
+| `Role`                               | `role`                               | 🟡 dados | Entra o papel `Administrator` no seed                                             |
+| `User`                               | `user`                               | 🟡 muda  | `personalPhone` passa a opcional (administrador não tem celular)                  |
+| `Address`                            | `address`                            | ✅ igual |                                                                                   |
+| `Establishment`                      | `establishment`                      | ✅ igual |                                                                                   |
+| `BeneficiaryEntity`                  | `beneficiary_entity`                 | ✅ igual |                                                                                   |
+| `Category`                           | `category`                           | 🟡 muda  | Entra `administratorId` e `catalogItems`; `foods` sai na 2.1                      |
+| `FoodStatus`                         | `food_status`                        | 🟡 dados | Seed: `Ativo`, `Reservado`, `Inativo` (sem `Revisar`, DT16)                       |
+| `OrderStatus`                        | `order_status`                       | 🟡 dados | Seed: `Pendente`, `Em andamento`, `Rejeitado`, `Doado`, `Cancelado`               |
+| `Food`                               | `food`                               | 🟡 muda  | Nome/categoria vêm do catálogo; unidade vira FK; tipo de solicitação; observações |
+| `CancellationReason`                 | `cancellation_reason`                | 🟡 muda  | Entra `isSystem`; `administratorId` opcional                                      |
+| `Order`                              | `order`                              | 🟡 muda  | Entram `type`, `acceptedAt`, `quantityUpdatedAt`                                  |
+| `FoodCatalogItem`                    | `food_catalog_item`                  | 🆕       | Catálogo de alimentos (DT12)                                                      |
+| `MeasurementUnit`                    | `measurement_unit`                   | 🆕       | Unidades de medida (RF59–RF62)                                                    |
+| `ProhibitedTerm`                     | `prohibited_term`                    | 🆕       | Termos proibidos (RNF07, RF67–RF70)                                               |
+| `Suggestion`                         | `suggestion`                         | 🆕       | Sugestões de novas opções (RF49, RF71)                                            |
+| `OrderReminder`                      | `order_reminder`                     | 🆕       | Lembretes já enviados (RF73, RF74)                                                |
+| `AuditLog`                           | `audit_log`                          | 🆕       | Auditoria das ações do administrador (RNF14)                                      |
+| `AccessLog`                          | `access_log`                         | 🆕       | Registro de toda requisição à API, com usuário e IP (RNF13, DT19)                 |
+| `Session`, `Account`, `Verification` | `session`, `account`, `verification` | ✅ igual | Tabelas do better-auth. Os códigos do `emailOTP` ficam em `verification` (DT03)   |
 
 `CodigoVerificacao`, do modelo do TCC, **não existe** (DT03).
 
@@ -44,13 +44,13 @@ modelo usa enum do Prisma: o TypeScript acusa valor errado antes de rodar, e
 valor novo vira uma migration gerada pelo Prisma. `FoodStatus` e `OrderStatus` continuam como tabelas de domínio,
 como no MVP.
 
-| Enum | Valores | Usado em |
-| ---- | ------- | -------- |
-| `FoodRequestType` | `TOTAL_ONLY`, `PARTIAL_ONLY`, `TOTAL_OR_PARTIAL` | `Food.requestType` |
-| `OrderType` | `TOTAL`, `PARTIAL` | `Order.type` |
-| `SuggestionType` | `CATEGORY`, `FOOD_CATALOG_ITEM`, `MEASUREMENT_UNIT`, `CANCELLATION_REASON` | `Suggestion.type` |
-| `SuggestionStatus` | `PENDING`, `APPROVED`, `REJECTED` | `Suggestion.status` |
-| `OrderReminderKind` | `ENTITY_DAY_3`, `ENTITY_DAY_7`, `ESTABLISHMENT_DAY_5` | `OrderReminder.kind` |
+| Enum                | Valores                                                                    | Usado em             |
+| ------------------- | -------------------------------------------------------------------------- | -------------------- |
+| `FoodRequestType`   | `TOTAL_ONLY`, `PARTIAL_ONLY`, `TOTAL_OR_PARTIAL`                           | `Food.requestType`   |
+| `OrderType`         | `TOTAL`, `PARTIAL`                                                         | `Order.type`         |
+| `SuggestionType`    | `CATEGORY`, `FOOD_CATALOG_ITEM`, `MEASUREMENT_UNIT`, `CANCELLATION_REASON` | `Suggestion.type`    |
+| `SuggestionStatus`  | `PENDING`, `APPROVED`, `REJECTED`                                          | `Suggestion.status`  |
+| `OrderReminderKind` | `ENTITY_DAY_3`, `ENTITY_DAY_7`, `ESTABLISHMENT_DAY_5`                      | `OrderReminder.kind` |
 
 O texto em português que aparece na tela ("Somente total", "Pendente" etc.)
 fica no frontend, não no banco.
@@ -63,20 +63,21 @@ fica no frontend, não no banco.
 
 ### `User`
 
-| Campo | Mudança | Motivo |
-| ----- | ------- | ------ |
-| `personalPhone` | `String` → `String?` (continua `@unique`) | O administrador (RF29) não informa celular. O Postgres aceita vários `NULL` numa coluna única. A obrigatoriedade para instituições fica no DTO. |
-| relações | `+ categories`, `+ catalogItems`, `+ measurementUnits`, `+ prohibitedTerms` (como `administrator`); `+ suggestions` (como `requester`) e `+ reviewedSuggestions` (como `reviewer`); `+ auditLogs`; `+ accessLogs` | Relações nomeadas de cada tabela nova |
+| Campo           | Mudança                                                                                                                                                                                                           | Motivo                                                                                                                                          |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `personalPhone` | `String` → `String?` (continua `@unique`)                                                                                                                                                                         | O administrador (RF29) não informa celular. O Postgres aceita vários `NULL` numa coluna única. A obrigatoriedade para instituições fica no DTO. |
+| relações        | `+ categories`, `+ catalogItems`, `+ measurementUnits`, `+ prohibitedTerms` (como `administrator`); `+ suggestions` (como `requester`) e `+ reviewedSuggestions` (como `reviewer`); `+ auditLogs`; `+ accessLogs` | Relações nomeadas de cada tabela nova                                                                                                           |
 
 A imagem continua opcional no banco. A obrigatoriedade (RF01, RF02, RF29)
 fica no DTO.
 
 ### `Category`
 
-| Campo | Mudança |
-| ----- | ------- |
-| `administratorId` | `+ Int?`, FK `User`, relação `"CategoryAdministrator"`. `NULL` nas categorias do seed. |
-| `foods` | Sai. A categoria agora se liga a `FoodCatalogItem` (`catalogItems`). |
+| Campo             | Mudança                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `administratorId` | `+ Int?`, FK `User`, relação `"CategoryAdministrator"`. `NULL` nas categorias do seed.                             |
+| `catalogItems`    | `+ FoodCatalogItem[]`. A categoria se liga ao catálogo.                                                            |
+| `foods`           | Sai na 2.1, junto com `Food.categoryId`. Até lá, o cadastro de alimento do MVP continua usando a categoria direto. |
 
 ### `FoodStatus` / `OrderStatus` — só dados
 
@@ -88,18 +89,18 @@ fica no DTO.
 
 ### `Food`
 
-| Campo | Mudança | Regra |
-| ----- | ------- | ----- |
-| `name` | **sai** | RN16: o nome vem do item do catálogo |
-| `categoryId` / `category` | **sai** | RN16: a categoria vem do item do catálogo |
-| `quantityUnit` | **sai** | Substituído por `measurementUnitId` |
-| `catalogItemId` | `+ Int`, FK `FoodCatalogItem` | RF14 |
-| `measurementUnitId` | `+ Int`, FK `MeasurementUnit` | RF14 |
-| `requestType` | `+ FoodRequestType` | RF14, RN17 |
-| `notes` | `+ String? @db.VarChar(2000)` | Observações, opcional (DT06). Passa pela validação do RNF07 |
-| `image` | `String?` → `String` | RF14: obrigatória. Guarda a **chave do objeto no MinIO**, não uma URL (ver "Imagens") |
-| `publishedAt` | sem mudança (`DateTime`) | Data do cadastro, preenchida pelo servidor (RN25). O alimento nasce `Ativo` |
-| `quantity` | sem mudança (`Decimal(10,2)`) | É o **estoque disponível**: o aceite desconta dele (RN07) |
+| Campo                     | Mudança                       | Regra                                                                                 |
+| ------------------------- | ----------------------------- | ------------------------------------------------------------------------------------- |
+| `name`                    | **sai**                       | RN16: o nome vem do item do catálogo                                                  |
+| `categoryId` / `category` | **sai**                       | RN16: a categoria vem do item do catálogo                                             |
+| `quantityUnit`            | **sai**                       | Substituído por `measurementUnitId`                                                   |
+| `catalogItemId`           | `+ Int`, FK `FoodCatalogItem` | RF14                                                                                  |
+| `measurementUnitId`       | `+ Int`, FK `MeasurementUnit` | RF14                                                                                  |
+| `requestType`             | `+ FoodRequestType`           | RF14, RN17                                                                            |
+| `notes`                   | `+ String? @db.VarChar(2000)` | Observações, opcional (DT06). Passa pela validação do RNF07                           |
+| `image`                   | `String?` → `String`          | RF14: obrigatória. Guarda a **chave do objeto no MinIO**, não uma URL (ver "Imagens") |
+| `publishedAt`             | sem mudança (`DateTime`)      | Data do cadastro, preenchida pelo servidor (RN25). O alimento nasce `Ativo`           |
+| `quantity`                | sem mudança (`Decimal(10,2)`) | É o **estoque disponível**: o aceite desconta dele (RN07)                             |
 
 Índices: `@@index([statusId, deleted])` para a listagem pública (RF20) e
 `@@index([establishmentId, statusId])` para "Meus Alimentos" (RF19).
@@ -110,12 +111,13 @@ sobre `food.name`. Com a saída de `name`, a consulta passa a fazer `JOIN` com
 
 ### `CancellationReason`
 
-| Campo | Mudança | Regra |
-| ----- | ------- | ----- |
-| `isSystem` | `+ Boolean @default(false)` | RN31: motivos de sistema não aparecem para seleção e não podem ser editados nem excluídos |
-| `administratorId` | `Int` → `Int?` | Motivos do seed (inclusive os de sistema) não têm administrador |
+| Campo             | Mudança                     | Regra                                                                                     |
+| ----------------- | --------------------------- | ----------------------------------------------------------------------------------------- |
+| `isSystem`        | `+ Boolean @default(false)` | RN31: motivos de sistema não aparecem para seleção e não podem ser editados nem excluídos |
+| `administratorId` | `Int` → `Int?`              | Motivos do seed (inclusive os de sistema) não têm administrador                           |
 
 Seed:
+
 - **Motivos de sistema** (`isSystem = true`): "Conta encerrada pela instituição", "Pedido expirado sem resposta", "Alimento vencido".
 - **Motivos comuns:** "Não poderei retirar no prazo", "Alimento não está mais disponível", "Solicitação feita por engano", "Outro". A lista final é validada pela dupla.
 
@@ -123,109 +125,128 @@ Os três motivos de sistema são buscados pelo nome através de uma constante no
 
 ### `Order`
 
-| Campo | Mudança | Regra |
-| ----- | ------- | ----- |
-| `type` | `+ OrderType` | RN03, RN20: o pedido total acompanha o estoque |
-| `acceptedAt` | `+ DateTime?` | Preenchido no aceite. Base dos lembretes da entidade (RF73) |
-| `quantityUpdatedAt` | `+ DateTime?` | Preenchido quando um pedido total muda de quantidade por alteração de estoque (RN20). Mostrado no detalhe |
-| `orderDate` | sem mudança | Base da expiração de 7 dias (RF72) e do lembrete do estabelecimento (RF74) |
-| relações | `+ reminders OrderReminder[]` | |
+| Campo               | Mudança                       | Regra                                                                                                     |
+| ------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `type`              | `+ OrderType`                 | RN03, RN20: o pedido total acompanha o estoque                                                            |
+| `acceptedAt`        | `+ DateTime?`                 | Preenchido no aceite. Base dos lembretes da entidade (RF73)                                               |
+| `quantityUpdatedAt` | `+ DateTime?`                 | Preenchido quando um pedido total muda de quantidade por alteração de estoque (RN20). Mostrado no detalhe |
+| `orderDate`         | sem mudança                   | Base da expiração de 7 dias (RF72) e do lembrete do estabelecimento (RF74)                                |
+| relações            | `+ reminders OrderReminder[]` |                                                                                                           |
 
 Índices: `@@index([beneficiaryEntityId, statusId])` para o limite de 10 e a
 duplicidade (RN04, RN05); `@@index([foodId, statusId])` para as rejeições
 automáticas (RN07, RN08, RN20); `@@index([statusId, orderDate])` para a
 tarefa de expiração (RF72).
 
+## Listas padronizadas: regras comuns
+
+- **Nome único sem maiúsculas e sem acentos (RN37):** além do `@unique`
+  simples, cada lista tem um índice único sobre
+  `lower(immutable_unaccent(<campo>))`, criado à mão na migration
+  `listas_padronizadas`. Vale para `category.name`,
+  `food_catalog_item.name`, `measurement_unit.name` e `abbreviation`,
+  `cancellation_reason.name` e `prohibited_term.term`.
+  - `immutable_unaccent` é uma função SQL `IMMUTABLE` que chama
+    `unaccent` com o dicionário fixo. O `unaccent` puro não pode ir em
+    índice.
+  - O Prisma não representa índice de expressão, mas também não tenta
+    apagá-lo nas migrations seguintes (conferido na 1.1).
+  - A violação chega ao service como erro de unicidade do Prisma
+    (`P2002`), que a 1.3 traduz em `409`.
+- **Administrador criador:** todo `administratorId` das listas (e o
+  `reviewerId` da sugestão) usa `onDelete: SetNull`, como o `AuditLog`. A
+  exclusão permanente de um administrador (RF31) não apaga opções em uso.
+
 ## Models novos
 
 ### `FoodCatalogItem` → `food_catalog_item`
 
-| Campo | Tipo | Observação |
-| ----- | ---- | ---------- |
-| `id` | `Int @id @default(autoincrement())` | |
-| `name` | `String @unique @db.VarChar(200)` | |
-| `categoryId` | `Int`, FK `Category` | P1: o item define a categoria |
-| `administratorId` | `Int?`, FK `User` | `NULL` nos itens do seed |
-| `createdAt` / `updatedAt` | padrão | |
-| `foods` | `Food[]` | |
+| Campo                     | Tipo                                   | Observação                    |
+| ------------------------- | -------------------------------------- | ----------------------------- |
+| `id`                      | `Int @id @default(autoincrement())`    |                               |
+| `name`                    | `String @unique @db.VarChar(200)`      |                               |
+| `categoryId`              | `Int`, FK `Category`                   | P1: o item define a categoria |
+| `administratorId`         | `Int?`, FK `User`, `onDelete: SetNull` | `NULL` nos itens do seed      |
+| `createdAt` / `updatedAt` | padrão                                 |                               |
+| `foods`                   | `Food[]`                               |                               |
 
 ### `MeasurementUnit` → `measurement_unit`
 
-| Campo | Tipo | Observação |
-| ----- | ---- | ---------- |
-| `id` | `Int @id @default(autoincrement())` | |
-| `name` | `String @unique @db.VarChar(50)` | "Quilograma" |
-| `abbreviation` | `String @unique @db.VarChar(10)` | "kg" |
-| `allowsFraction` | `Boolean @default(false)` | RN03: quantidade com até 2 casas só se `true` |
-| `administratorId` | `Int?`, FK `User` | |
-| `createdAt` / `updatedAt` | padrão | |
-| `foods` | `Food[]` | |
+| Campo                     | Tipo                                   | Observação                                    |
+| ------------------------- | -------------------------------------- | --------------------------------------------- |
+| `id`                      | `Int @id @default(autoincrement())`    |                                               |
+| `name`                    | `String @unique @db.VarChar(50)`       | "Quilograma"                                  |
+| `abbreviation`            | `String @unique @db.VarChar(10)`       | "kg"                                          |
+| `allowsFraction`          | `Boolean @default(false)`              | RN03: quantidade com até 2 casas só se `true` |
+| `administratorId`         | `Int?`, FK `User`, `onDelete: SetNull` |                                               |
+| `createdAt` / `updatedAt` | padrão                                 |                                               |
+| `foods`                   | `Food[]`                               |                                               |
 
 Seed:
 
-| Nome | Sigla | Aceita fração |
-| ---- | ----- | ------------- |
-| Unidade | un | não |
-| Quilograma | kg | sim |
-| Grama | g | não |
-| Litro | L | sim |
-| Mililitro | mL | não |
-| Caixa | cx | não |
-| Pacote | pct | não |
-| Dúzia | dz | não |
+| Nome       | Sigla | Aceita fração |
+| ---------- | ----- | ------------- |
+| Unidade    | un    | não           |
+| Quilograma | kg    | sim           |
+| Grama      | g     | não           |
+| Litro      | L     | sim           |
+| Mililitro  | mL    | não           |
+| Caixa      | cx    | não           |
+| Pacote     | pct   | não           |
+| Dúzia      | dz    | não           |
 
 ### `ProhibitedTerm` → `prohibited_term`
 
-| Campo | Tipo | Observação |
-| ----- | ---- | ---------- |
-| `id` | `Int @id @default(autoincrement())` | |
-| `term` | `String @unique @db.VarChar(100)` | Gravado já normalizado: minúsculo e sem acento |
-| `administratorId` | `Int?`, FK `User` | |
-| `createdAt` / `updatedAt` | padrão | |
+| Campo                     | Tipo                                   | Observação                                     |
+| ------------------------- | -------------------------------------- | ---------------------------------------------- |
+| `id`                      | `Int @id @default(autoincrement())`    |                                                |
+| `term`                    | `String @unique @db.VarChar(100)`      | Gravado já normalizado: minúsculo e sem acento |
+| `administratorId`         | `Int?`, FK `User`, `onDelete: SetNull` |                                                |
+| `createdAt` / `updatedAt` | padrão                                 |                                                |
 
 A validação do RNF07 normaliza o texto do usuário da mesma forma antes de
 comparar. Links e URLs são bloqueados por regex, sem depender desta tabela.
 
 ### `Suggestion` → `suggestion`
 
-| Campo | Tipo | Observação |
-| ----- | ---- | ---------- |
-| `id` | `Int @id @default(autoincrement())` | |
-| `type` | `SuggestionType` | |
-| `text` | `String @db.VarChar(200)` | Passa pela validação do RNF07 |
-| `status` | `SuggestionStatus @default(PENDING)` | |
-| `requesterId` | `Int`, FK `User` | Quem sugeriu |
-| `reviewerId` | `Int?`, FK `User` | Administrador que decidiu |
-| `reviewedAt` | `DateTime?` | |
-| `createdAt` / `updatedAt` | padrão | |
+| Campo                     | Tipo                                 | Observação                    |
+| ------------------------- | ------------------------------------ | ----------------------------- |
+| `id`                      | `Int @id @default(autoincrement())`  |                               |
+| `type`                    | `SuggestionType`                     |                               |
+| `text`                    | `String @db.VarChar(200)`            | Passa pela validação do RNF07 |
+| `status`                  | `SuggestionStatus @default(PENDING)` |                               |
+| `requesterId`             | `Int`, FK `User`                     | Quem sugeriu                  |
+| `reviewerId`              | `Int?`, FK `User`                    | Administrador que decidiu     |
+| `reviewedAt`              | `DateTime?`                          |                               |
+| `createdAt` / `updatedAt` | padrão                               |                               |
 
 Aprovar cria a opção na lista correspondente, na mesma transação que muda o
 status. A sugestão não guarda a opção criada.
 
 ### `OrderReminder` → `order_reminder`
 
-| Campo | Tipo | Observação |
-| ----- | ---- | ---------- |
-| `id` | `Int @id @default(autoincrement())` | |
-| `orderId` | `Int`, FK `Order`, `onDelete: Cascade` | |
-| `kind` | `OrderReminderKind` | |
-| `sentAt` | `DateTime @default(now())` | |
-| | `@@unique([orderId, kind])` | RN42: cada lembrete sai no máximo uma vez. A tarefa pode rodar de novo sem duplicar |
+| Campo     | Tipo                                   | Observação                                                                          |
+| --------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `id`      | `Int @id @default(autoincrement())`    |                                                                                     |
+| `orderId` | `Int`, FK `Order`, `onDelete: Cascade` |                                                                                     |
+| `kind`    | `OrderReminderKind`                    |                                                                                     |
+| `sentAt`  | `DateTime @default(now())`             |                                                                                     |
+|           | `@@unique([orderId, kind])`            | RN42: cada lembrete sai no máximo uma vez. A tarefa pode rodar de novo sem duplicar |
 
 A linha só é gravada depois que o webhook do n8n responde com sucesso. Se
 ele falhar, a próxima execução tenta de novo.
 
 ### `AuditLog` → `audit_log`
 
-| Campo | Tipo | Observação |
-| ----- | ---- | ---------- |
-| `id` | `Int @id @default(autoincrement())` | |
-| `administratorId` | `Int?`, FK `User`, `onDelete: SetNull` | Ver nota abaixo |
-| `action` | `String @db.VarChar(50)` | Formato `recurso.ação`, ex.: `food.approve`, `order.delete`, `category.update` |
-| `entityType` | `String @db.VarChar(50)` | ex.: `Food` |
-| `entityId` | `String @db.VarChar(50)` | Texto, para aceitar qualquer id |
-| `details` | `Json?` | Dados relevantes da ação (ex.: campos alterados). Nunca senha |
-| `createdAt` | `DateTime @default(now())` | |
+| Campo             | Tipo                                   | Observação                                                                     |
+| ----------------- | -------------------------------------- | ------------------------------------------------------------------------------ |
+| `id`              | `Int @id @default(autoincrement())`    |                                                                                |
+| `administratorId` | `Int?`, FK `User`, `onDelete: SetNull` | Ver nota abaixo                                                                |
+| `action`          | `String @db.VarChar(50)`               | Formato `recurso.ação`, ex.: `food.approve`, `order.delete`, `category.update` |
+| `entityType`      | `String @db.VarChar(50)`               | ex.: `Food`                                                                    |
+| `entityId`        | `String @db.VarChar(50)`               | Texto, para aceitar qualquer id                                                |
+| `details`         | `Json?`                                | Dados relevantes da ação (ex.: campos alterados). Nunca senha                  |
+| `createdAt`       | `DateTime @default(now())`             |                                                                                |
 
 Nota: a exclusão permanente de um administrador (RF31) não pode apagar a
 auditoria dele. Por isso `administratorId` é `Int?` com
@@ -236,17 +257,17 @@ auditoria dele. Por isso `administratorId` é `Int?` com
 
 Decisão DT19. Uma linha por requisição atendida pela API (RNF13).
 
-| Campo | Tipo | Observação |
-| ----- | ---- | ---------- |
-| `id` | `Int @id @default(autoincrement())` | |
-| `userId` | `Int?`, FK `User`, `onDelete: SetNull` | Usuário autenticado, quando houver (inclusive no login e no logout) |
-| `method` | `String @db.VarChar(10)` | |
-| `path` | `String @db.VarChar(500)` | Sem a query string |
-| `statusCode` | `Int` | |
-| `durationMs` | `Int` | |
-| `ipAddress` | `String? @db.VarChar(45)` | IP do cliente (o Express confia em um salto de proxy, o Traefik) |
-| `userAgent` | `String? @db.VarChar(500)` | |
-| `createdAt` | `DateTime @default(now())` | |
+| Campo        | Tipo                                   | Observação                                                          |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------- |
+| `id`         | `Int @id @default(autoincrement())`    |                                                                     |
+| `userId`     | `Int?`, FK `User`, `onDelete: SetNull` | Usuário autenticado, quando houver (inclusive no login e no logout) |
+| `method`     | `String @db.VarChar(10)`               |                                                                     |
+| `path`       | `String @db.VarChar(500)`              | Sem a query string                                                  |
+| `statusCode` | `Int`                                  |                                                                     |
+| `durationMs` | `Int`                                  |                                                                     |
+| `ipAddress`  | `String? @db.VarChar(45)`              | IP do cliente (o Express confia em um salto de proxy, o Traefik)    |
+| `userAgent`  | `String? @db.VarChar(500)`             |                                                                     |
+| `createdAt`  | `DateTime @default(now())`             |                                                                     |
 
 Índices: `@@index([createdAt])` e `@@index([userId])`.
 
@@ -295,6 +316,7 @@ Decisão DT19. Uma linha por requisição atendida pela API (RNF13).
   - O plugin ainda tem a rota antiga `/forget-password/email-otp`
     (deprecada). Ou ela recebe a mesma regra, ou fica desabilitada. O
     frontend usa só a rota nova.
+
 - O envio usa o Resend (DT04), e o `sendVerificationOTP` não fica esperando o
   envio terminar (recomendação da doc do plugin contra timing attack).
 
@@ -358,24 +380,24 @@ reset`; staging: limpar o banco no Coolify e deixar o deploy rodar
 
 ## Mapeamento para o documento do TCC
 
-| Documento do TCC | Schema |
-| ---------------- | ------ |
-| Papel | `Role` |
-| Usuario | `User` (+ `Account`, onde fica a senha) |
-| Estabelecimento | `Establishment` |
-| EntidadeBeneficiaria | `BeneficiaryEntity` |
-| Endereco | `Address` |
-| Alimento | `Food` |
-| Categoria | `Category` |
-| Pedido | `Order` |
-| MotivoCancelamento | `CancellationReason` |
-| StatusAlimento | `FoodStatus` |
-| StatusPedido | `OrderStatus` |
-| ItemCatalogo | `FoodCatalogItem` |
-| UnidadeMedida | `MeasurementUnit` |
-| TermoProibido | `ProhibitedTerm` |
-| Sugestao | `Suggestion` |
-| LembretePedido | `OrderReminder` |
-| RegistroAuditoria | `AuditLog` |
-| RegistroAcesso | `AccessLog` |
-| CodigoVerificacao | não existe; `verification` do better-auth |
+| Documento do TCC     | Schema                                    |
+| -------------------- | ----------------------------------------- |
+| Papel                | `Role`                                    |
+| Usuario              | `User` (+ `Account`, onde fica a senha)   |
+| Estabelecimento      | `Establishment`                           |
+| EntidadeBeneficiaria | `BeneficiaryEntity`                       |
+| Endereco             | `Address`                                 |
+| Alimento             | `Food`                                    |
+| Categoria            | `Category`                                |
+| Pedido               | `Order`                                   |
+| MotivoCancelamento   | `CancellationReason`                      |
+| StatusAlimento       | `FoodStatus`                              |
+| StatusPedido         | `OrderStatus`                             |
+| ItemCatalogo         | `FoodCatalogItem`                         |
+| UnidadeMedida        | `MeasurementUnit`                         |
+| TermoProibido        | `ProhibitedTerm`                          |
+| Sugestao             | `Suggestion`                              |
+| LembretePedido       | `OrderReminder`                           |
+| RegistroAuditoria    | `AuditLog`                                |
+| RegistroAcesso       | `AccessLog`                               |
+| CodigoVerificacao    | não existe; `verification` do better-auth |

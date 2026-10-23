@@ -5,4 +5,4 @@ export interface Category {
   name: string;
 }
 
-export const listCategories = () => api.get<Category[]>('/categories');
+export const listCategories = () => api.get<Category[]>('/catalog/categories');

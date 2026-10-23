@@ -1,0 +1,16 @@
+export const PROHIBITED_TERMS = [
+  'porra',
+  'caralho',
+  'merda',
+  'foda',
+  'puta',
+  'arrombado',
+  'cuzão',
+  'desgraçado',
+  'vagabundo',
+  'vagabunda',
+  'otário',
+  'imbecil',
+  'retardado',
+  'viado',
+];

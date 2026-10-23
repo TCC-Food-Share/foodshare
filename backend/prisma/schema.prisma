@@ -35,6 +35,12 @@ model User {
   establishment       Establishment?
   beneficiaryEntity   BeneficiaryEntity?
   cancellationReasons CancellationReason[] @relation("AdministratorReason")
+  categories          Category[]           @relation("CategoryAdministrator")
+  catalogItems        FoodCatalogItem[]    @relation("CatalogItemAdministrator")
+  measurementUnits    MeasurementUnit[]    @relation("MeasurementUnitAdministrator")
+  prohibitedTerms     ProhibitedTerm[]     @relation("ProhibitedTermAdministrator")
+  suggestions         Suggestion[]         @relation("SuggestionRequester")
+  reviewedSuggestions Suggestion[]         @relation("SuggestionReviewer")
   auditLogs           AuditLog[]
   accessLogs          AccessLog[]
 
@@ -109,11 +115,15 @@ model BeneficiaryEntity {
 }
 
 model Category {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique @db.VarChar(100)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  foods     Food[]
+  id           Int               @id @default(autoincrement())
+  name         String            @unique @db.VarChar(100)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  foods        Food[]
+  catalogItems FoodCatalogItem[]
+
+  administratorId Int?
+  administrator   User? @relation("CategoryAdministrator", fields: [administratorId], references: [id], onDelete: SetNull)
 
   @@map("category")
 }
@@ -168,11 +178,12 @@ model Food {
 model CancellationReason {
   id        Int      @id @default(autoincrement())
   name      String   @unique @db.VarChar(200)
+  isSystem  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  administratorId Int
-  administrator   User @relation("AdministratorReason", fields: [administratorId], references: [id])
+  administratorId Int?
+  administrator   User? @relation("AdministratorReason", fields: [administratorId], references: [id], onDelete: SetNull)
 
   orders Order[]
 
@@ -203,6 +214,79 @@ model Order {
   cancellationReason   CancellationReason? @relation(fields: [cancellationReasonId], references: [id])
 
   @@map("order")
+}
+
+model FoodCatalogItem {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(200)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  administratorId Int?
+  administrator   User? @relation("CatalogItemAdministrator", fields: [administratorId], references: [id], onDelete: SetNull)
+
+  @@map("food_catalog_item")
+}
+
+model MeasurementUnit {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique @db.VarChar(50)
+  abbreviation   String   @unique @db.VarChar(10)
+  allowsFraction Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  administratorId Int?
+  administrator   User? @relation("MeasurementUnitAdministrator", fields: [administratorId], references: [id], onDelete: SetNull)
+
+  @@map("measurement_unit")
+}
+
+model ProhibitedTerm {
+  id        Int      @id @default(autoincrement())
+  term      String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  administratorId Int?
+  administrator   User? @relation("ProhibitedTermAdministrator", fields: [administratorId], references: [id], onDelete: SetNull)
+
+  @@map("prohibited_term")
+}
+
+enum SuggestionType {
+  CATEGORY
+  FOOD_CATALOG_ITEM
+  MEASUREMENT_UNIT
+  CANCELLATION_REASON
+}
+
+enum SuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Suggestion {
+  id         Int              @id @default(autoincrement())
+  type       SuggestionType
+  text       String           @db.VarChar(200)
+  status     SuggestionStatus @default(PENDING)
+  reviewedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  requesterId Int
+  requester   User @relation("SuggestionRequester", fields: [requesterId], references: [id])
+
+  reviewerId Int?
+  reviewer   User? @relation("SuggestionReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([status, type])
+  @@map("suggestion")
 }
 
 model AuditLog {
