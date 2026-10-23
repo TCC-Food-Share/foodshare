@@ -30,11 +30,12 @@ export class FoodsController {
     summary: 'Cadastro de alimento',
     description:
       'Cadastra um alimento vinculado ao estabelecimento autenticado, informando imagem, ' +
-      'nome, categoria, quantidade, descrição e data de vencimento (RF10). Fica disponível ' +
+      'nome, categoria, quantidade, descrição e data de vencimento (RF14). Fica disponível ' +
       'na plataforma imediatamente, sem etapa de revisão.',
   })
   @ApiCreatedResponse({ description: 'Alimento cadastrado com sucesso.', type: FoodResponseDto })
   @ApiBadRequestResponse({ description: 'Dados de cadastro inválidos.' })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   @ApiNotFoundResponse({ description: 'Nenhum estabelecimento vinculado ao usuário autenticado.' })
   create(@Session() session: UserSession, @Body() dto: CreateFoodDto): Promise<FoodResponseDto> {
     return this.foodsService.create(Number(session.user.id), dto);
@@ -45,8 +46,8 @@ export class FoodsController {
     summary: 'Listagem e busca de alimentos',
     description:
       'Lista, de forma paginada, os alimentos disponíveis na plataforma — status "Ativo", ' +
-      'não excluídos e não vencidos — cadastrados por qualquer estabelecimento (RF11). ' +
-      'Aceita filtros opcionais de busca (RF12): `name` e `city` casam por trecho ignorando ' +
+      'não excluídos e não vencidos — cadastrados por qualquer estabelecimento (RF20). ' +
+      'Aceita filtros opcionais de busca: `name` e `city` casam por trecho ignorando ' +
       'caixa e acento, `categoryId` filtra pela categoria e `state` pela UF do estabelecimento ' +
       'de origem; filtros informados combinam por E. Requer usuário autenticado.',
   })
@@ -65,7 +66,7 @@ export class FoodsController {
     summary: 'Detalhe de um alimento',
     description:
       'Retorna os dados completos de um alimento disponível — status "Ativo", não excluído ' +
-      'e não vencido — identificado por id (RF13). Alimento fora desse conjunto responde 404. ' +
+      'e não vencido — identificado por id (RF21). Alimento fora desse conjunto responde 404. ' +
       'Requer usuário autenticado.',
   })
   @ApiOkResponse({ description: 'Dados completos do alimento.', type: FoodResponseDto })

@@ -17,7 +17,7 @@ export class CategoriesController {
     summary: 'Listagem de categorias',
     description:
       'Lista a lista fixa de categorias de alimento, ordenada por id. Usada pelo filtro de ' +
-      'busca de alimentos (RF12) e pela seleção de categoria no cadastro de alimento (RF10). ' +
+      'busca de alimentos (RF20) e pela seleção de categoria no cadastro de alimento (RF14). ' +
       'Requer usuário autenticado.',
   })
   @ApiOkResponse({
