@@ -132,8 +132,7 @@ telas e mudar a convenção.
 para ele o que ficou de fora. A sessão vira uma query (`['me']`), e a troca de foto passa a ser um
 `invalidateQueries(['me'])` em vez do `refreshSession`. As cidades viram uma
 query por UF com `staleTime: Infinity`, no lugar do `Map`. O `401` do `/me`
-continua sendo o estado "sem sessão": o Gatus depende dele, então a rota
-não muda.
+continua sendo o estado "sem sessão", então a rota não muda.
 
 **O que decidir:** SWR ou TanStack Query. Se for SWR, atualizar o
 `docs/CONVENCOES.md` antes e migrar tudo de uma vez, para não conviverem
