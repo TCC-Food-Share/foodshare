@@ -4,6 +4,9 @@ import { Prisma } from '../../generated/prisma/client';
 import type { BetterAuthInstance } from '../auth/better-auth.token';
 import { BETTER_AUTH } from '../auth/better-auth.token';
 import { ROLE } from '../auth/roles.constants';
+import { IMAGE_FOLDER } from '../files/files.constants';
+import type { ValidatedImage } from '../files/image-file.pipe';
+import { ImageStorageService } from '../files/image-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEstablishmentDto } from './dto/create-establishment.dto';
 import { EstablishmentResponseDto } from './dto/establishment-response.dto';
@@ -32,14 +35,20 @@ export class EstablishmentsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(BETTER_AUTH) private readonly auth: BetterAuthInstance,
+    private readonly storage: ImageStorageService,
   ) {}
 
-  async create(dto: CreateEstablishmentDto): Promise<EstablishmentResponseDto> {
+  async create(
+    dto: CreateEstablishmentDto,
+    image: ValidatedImage,
+  ): Promise<EstablishmentResponseDto> {
     await this.checkUniqueness(dto);
 
     const role = await this.prisma.role.findUniqueOrThrow({
       where: { name: ROLE.ESTABLISHMENT },
     });
+
+    const imageKey = await this.storage.store(IMAGE_FOLDER.USERS, image);
 
     let userId: number;
     try {
@@ -49,11 +58,13 @@ export class EstablishmentsService {
           email: dto.email,
           password: dto.password,
           personalPhone: dto.personalPhone,
+          image: imageKey,
           roleId: role.id,
         },
       });
       userId = Number(user.id);
     } catch {
+      await this.storage.removeQuietly(imageKey);
       throw new ConflictException('CNPJ, email or phone already registered.');
     }
 
@@ -88,6 +99,7 @@ export class EstablishmentsService {
       return this.toResponse(establishment);
     } catch (error) {
       await this.prisma.user.delete({ where: { id: userId } }).catch(() => {});
+      await this.storage.removeQuietly(imageKey);
 
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('CNPJ, email or phone already registered.');
@@ -107,22 +119,31 @@ export class EstablishmentsService {
     return this.toResponse(establishment);
   }
 
-  async update(userId: number, dto: UpdateEstablishmentDto): Promise<EstablishmentResponseDto> {
-    const existing = await this.prisma.establishment.findUnique({ where: { userId } });
+  async update(
+    userId: number,
+    dto: UpdateEstablishmentDto,
+    image?: ValidatedImage,
+  ): Promise<EstablishmentResponseDto> {
+    const existing = await this.prisma.establishment.findUnique({
+      where: { userId },
+      include: { user: true },
+    });
     if (!existing) {
       throw new NotFoundException('Establishment not found.');
     }
 
     await this.checkUpdateUniqueness(dto, existing.id, userId);
 
+    const newImageKey = image ? await this.storage.store(IMAGE_FOLDER.USERS, image) : undefined;
+
     try {
       const updated = await this.prisma.$transaction(async (tx) => {
-        if (dto.personalPhone !== undefined || dto.image !== undefined) {
+        if (dto.personalPhone !== undefined || newImageKey !== undefined) {
           await tx.user.update({
             where: { id: userId },
             data: {
               ...(dto.personalPhone !== undefined && { personalPhone: dto.personalPhone }),
-              ...(dto.image !== undefined && { image: dto.image }),
+              ...(newImageKey !== undefined && { image: newImageKey }),
             },
           });
         }
@@ -156,8 +177,15 @@ export class EstablishmentsService {
         });
       });
 
+      if (newImageKey !== undefined && existing.user.image) {
+        await this.storage.removeQuietly(existing.user.image);
+      }
+
       return this.toResponse(updated);
     } catch (error) {
+      if (newImageKey !== undefined) {
+        await this.storage.removeQuietly(newImageKey);
+      }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('CNPJ, email or phone already registered.');
       }
@@ -252,7 +280,7 @@ export class EstablishmentsService {
         name: establishment.user.name,
         email: establishment.user.email,
         personalPhone: establishment.user.personalPhone ?? '',
-        image: establishment.user.image,
+        image: this.storage.toUrl(establishment.user.image),
       },
       address: {
         id: establishment.address.id,
