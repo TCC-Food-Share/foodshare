@@ -137,7 +137,7 @@
 - [x] 8.6 Fluxo do MVP de ponta a ponta continua funcionando (cadastrar
       alimento com URL → pedir → aceitar → confirmar).
 - [x] 8.7 Marcar ✅ o item 0.3 em `docs/PLANO-IMPLEMENTACAO.md`.
-- [ ] 8.8 Registrar no PR para `develop` os passos manuais: variáveis
+- [x] 8.8 Registrar no PR para `develop` os passos manuais: variáveis
       `MINIO_*` no Coolify do staging antes do merge e, depois do deploy,
       cadastro com foto no staging conferindo que a imagem carrega pelo
       domínio da API.
