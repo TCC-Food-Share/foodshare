@@ -70,6 +70,8 @@ export const getOrder = (id: number) => api.get<OrderDetail>(`/orders/${id}`);
 
 export const orderDetailKey = (id: number) => ['orders', 'detail', id] as const;
 
+export const ORDERS_REFETCH_INTERVAL = 30_000;
+
 export const acceptOrder = (id: number) => api.patch<Order>(`/orders/${id}/accept`);
 
 export const rejectOrder = (id: number) => api.patch<Order>(`/orders/${id}/reject`);

@@ -12,7 +12,7 @@ import {
   OrderSummaryCard,
 } from '@/features/orders/order-detail-cards';
 import { OrderStatusBadge } from '@/features/orders/order-status-badge';
-import { getOrder, orderDetailKey } from '@/features/orders/orders-api';
+import { getOrder, orderDetailKey, ORDERS_REFETCH_INTERVAL } from '@/features/orders/orders-api';
 import { ApiError } from '@/lib/api';
 import { formatLocalDateTime } from '@/lib/format';
 
@@ -38,6 +38,7 @@ export function OrderDetailPage() {
     queryKey: orderDetailKey(orderId),
     queryFn: () => getOrder(orderId),
     enabled: validId,
+    refetchInterval: ORDERS_REFETCH_INTERVAL,
   });
 
   if (!validId) return <NotFoundState />;

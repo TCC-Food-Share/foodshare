@@ -1,13 +1,14 @@
 import { useQueries } from '@tanstack/react-query';
 
 import { ORDER_STATUSES, type OrderStatusName } from '@/features/orders/order-status';
-import { listOrders } from '@/features/orders/orders-api';
+import { listOrders, ORDERS_REFETCH_INTERVAL } from '@/features/orders/orders-api';
 
 export function useOrderCounts(): Record<OrderStatusName, number | undefined> {
   const results = useQueries({
     queries: ORDER_STATUSES.map((status) => ({
       queryKey: ['orders', 'count', status],
       queryFn: () => listOrders({ status, page: 1, pageSize: 1 }),
+      refetchInterval: ORDERS_REFETCH_INTERVAL,
     })),
   });
 
