@@ -24,8 +24,7 @@ export const queryClient = new QueryClient({
         if (error instanceof ApiError && error.status < 500) return false;
         return failureCount < 2;
       },
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
+      staleTime: 5_000,
     },
     mutations: {
       retry: false,

@@ -14,7 +14,7 @@ import {
   ORDER_STATUSES,
   type OrderStatusName,
 } from '@/features/orders/order-status';
-import { listOrders, type Order } from '@/features/orders/orders-api';
+import { listOrders, type Order, ORDERS_REFETCH_INTERVAL } from '@/features/orders/orders-api';
 import { OrdersEmptyState } from '@/features/orders/orders-empty-state';
 import { OrdersTable } from '@/features/orders/orders-table';
 import { useOrderCounts } from '@/features/orders/use-order-counts';
@@ -52,6 +52,7 @@ export function OrdersPage() {
   const query = useQuery({
     queryKey: ['orders', 'list', { status, page }],
     queryFn: () => listOrders({ status, page, pageSize: ORDERS_PAGE_SIZE }),
+    refetchInterval: ORDERS_REFETCH_INTERVAL,
   });
 
   const copy = PAGE_COPY[role === 'establishment' ? 'establishment' : 'beneficiary'];
