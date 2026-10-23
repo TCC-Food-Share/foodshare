@@ -1,9 +1,16 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import { ApiExcludeEndpoint, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiExcludeEndpoint,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 
 import { AppService } from './app.service';
+import { ImageStorageService } from './files/image-storage.service';
 import { PrismaService } from './prisma/prisma.service';
 
 @Controller()
@@ -11,6 +18,7 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly prisma: PrismaService,
+    private readonly storage: ImageStorageService,
   ) {}
 
   @Get()
@@ -29,12 +37,18 @@ export class AppController {
       '(`role`: `Establishment`, `BeneficiaryEntity` ou `Administrator`) — o frontend usa ' +
       'isso para decidir a área (instituição ou painel administrativo).',
   })
-  @ApiOkResponse({ description: 'Usuário autenticado.' })
+  @ApiOkResponse({
+    description: 'Usuário autenticado. `user.image` vem como URL da rota de arquivos, ou `null`.',
+  })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   async getMe(@Session() session: UserSession) {
     const roleId = (session.user as { roleId?: number }).roleId;
     const role =
       roleId === undefined ? null : await this.prisma.role.findUnique({ where: { id: roleId } });
-    return { user: session.user, role: role?.name ?? null };
+    return {
+      user: { ...session.user, image: this.storage.toUrl(session.user.image) },
+      role: role?.name ?? null,
+    };
   }
 
   @Get('health')
