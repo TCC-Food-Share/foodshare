@@ -5,6 +5,7 @@ const STEP_TITLES = [
   'Dados institucionais',
   'Dados do responsável',
   'Endereço',
+  'Foto de perfil',
 ];
 
 const STEP_SUBTITLES = [
@@ -12,13 +13,14 @@ const STEP_SUBTITLES = [
   'Informe os dados jurídicos da sua organização.',
   'Dados de quem vai administrar a conta.',
   'Onde sua organização está localizada.',
+  'Uma imagem que identifique sua organização na plataforma.',
 ];
 
 export function WizardProgress({ step }: { step: number }) {
   return (
     <div className="mb-6 flex flex-col gap-3">
       <div className="flex gap-1.5">
-        {[0, 1, 2, 3].map((i) => (
+        {STEP_TITLES.map((_, i) => (
           <span
             key={i}
             className={cn('h-1 flex-1 rounded-full', i <= step ? 'bg-primary' : 'bg-border')}
@@ -26,7 +28,9 @@ export function WizardProgress({ step }: { step: number }) {
         ))}
       </div>
       <div className="flex flex-col gap-1">
-        <span className="text-primary text-xs font-medium">Etapa {step + 1} de 4</span>
+        <span className="text-primary text-xs font-medium">
+          Etapa {step + 1} de {STEP_TITLES.length}
+        </span>
         <h2 className="text-2xl font-semibold tracking-tight">{STEP_TITLES[step]}</h2>
         <p className="text-muted-foreground text-sm">{STEP_SUBTITLES[step]}</p>
       </div>

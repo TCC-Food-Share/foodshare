@@ -12,6 +12,7 @@ import { AuthLayout } from '@/features/auth/auth-layout';
 import { FullPageSpinner } from '@/features/auth/protected-route';
 import { AddressStep } from '@/features/auth/sign-up/address-step';
 import { InstitutionalStep } from '@/features/auth/sign-up/institutional-step';
+import { ProfilePhotoStep } from '@/features/auth/sign-up/profile-photo-step';
 import { ProfileTypeStep } from '@/features/auth/sign-up/profile-type-step';
 import { ResponsibleStep } from '@/features/auth/sign-up/responsible-step';
 import {
@@ -26,9 +27,11 @@ import {
 } from '@/features/auth/sign-up/sign-up-schema';
 import { WizardProgress } from '@/features/auth/sign-up/wizard-progress';
 import { useAuth } from '@/features/auth/use-auth';
+import { imageErrorMessage } from '@/features/files/image-errors';
 import { ApiError } from '@/lib/api';
 
-const LAST_STEP = 3;
+const LAST_STEP = 4;
+const PHOTO_STEP = 4;
 
 const FIELD_TO_STEP: Record<string, number> = {
   cnpj: 1,
@@ -147,6 +150,12 @@ export function SignUpPage() {
       setServerError({ kind: 'dup-race' });
       return;
     }
+    const imageMessage = imageErrorMessage(error);
+    if (imageMessage) {
+      form.setError('image', { message: imageMessage });
+      setStep(PHOTO_STEP);
+      return;
+    }
     if (error instanceof ApiError && error.status === 400) {
       setServerError({ kind: 'invalid' });
       return;
@@ -159,7 +168,7 @@ export function SignUpPage() {
     const create =
       values.profileType === 'establishment' ? createEstablishment : createBeneficiaryEntity;
     try {
-      await create(toSignUpPayload(values));
+      await create(toSignUpPayload(values), values.image);
       toast.success('Conta criada! Entre com seu e-mail e senha.');
       void navigate('/login', { replace: true });
     } catch (error) {
@@ -187,6 +196,7 @@ export function SignUpPage() {
           {step === 1 && <InstitutionalStep control={form.control} />}
           {step === 2 && <ResponsibleStep control={form.control} dupPersonal={dupPersonal} />}
           {step === 3 && <AddressStep />}
+          {step === PHOTO_STEP && <ProfilePhotoStep control={form.control} />}
 
           <div className="flex gap-3">
             {step > 0 && (

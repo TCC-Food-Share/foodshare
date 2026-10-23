@@ -20,7 +20,7 @@ export function TextField({
   ...inputProps
 }: {
   control: Control<SignUpInput>;
-  name: FieldPath<SignUpInput>;
+  name: Exclude<FieldPath<SignUpInput>, 'image'>;
   label: string;
   optional?: boolean;
 } & ComponentProps<typeof Input> &
