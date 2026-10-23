@@ -10,12 +10,12 @@ decisão já foi tomada. As exceções aprovadas são o **Resend** (e-mail) e o
 
 ## Ambientes
 
-| Ambiente | Onde | Branch | Domínios |
-| -------- | ---- | ------ | -------- |
-| Local (cada dev) | PostgreSQL e MinIO via Docker | qualquer | `localhost:5173` (front), `localhost:3000` (API) |
-| Staging (compartilhado) | VPS Oracle + Coolify | `develop` | `app.staging.foodshare.com.br`, `api.staging.foodshare.com.br` |
-| Produção | VPS Oracle + Coolify (ambiente já criado) | `main` | `app.foodshare.com.br`, `api.foodshare.com.br`. A ativação é a última fase do plano |
-| Landing page | Coolify, deploy separado (Astro) | repo `landing-page` | `foodshare.com.br`. Fora deste repositório |
+| Ambiente                | Onde                                      | Branch              | Domínios                                                                            |
+| ----------------------- | ----------------------------------------- | ------------------- | ----------------------------------------------------------------------------------- |
+| Local (cada dev)        | PostgreSQL e MinIO via Docker             | qualquer            | `localhost:5173` (front), `localhost:3000` (API)                                    |
+| Staging (compartilhado) | VPS Oracle + Coolify                      | `develop`           | `app.staging.foodshare.com.br`, `api.staging.foodshare.com.br`                      |
+| Produção                | VPS Oracle + Coolify (ambiente já criado) | `main`              | `app.foodshare.com.br`, `api.foodshare.com.br`. A ativação é a última fase do plano |
+| Landing page            | Coolify, deploy separado (Astro)          | repo `landing-page` | `foodshare.com.br`. Fora deste repositório                                          |
 
 - Deploy automático por push. O `prisma migrate deploy` roda como comando de
   pré-deploy, e o seed roda depois dele (é idempotente).
@@ -43,8 +43,18 @@ O front e a API ficam em subdomínios distintos do mesmo site
 
 - A API S3 do MinIO (porta 9000) não tem domínio público. No staging, o
   Service Stack do Coolify 4.1.2 não gera as labels do Traefik para ela. O
-  backend acessa o MinIO **só pela rede interna do Docker**
-  (`MINIO_ENDPOINT=http://minio:9000`, com protocolo e porta).
+  backend acessa o MinIO **só pela rede interna do Docker**, pelo nome do
+  container com o uuid da stack (`MINIO_ENDPOINT=http://minio-<uuid>:9000`,
+  com protocolo e porta). O nome aparece no Terminal da stack no Coolify.
+- **Nunca usar `http://minio:9000`.** `minio` é o nome do serviço em toda
+  stack de MinIO, e na rede compartilhada do Coolify o Docker distribui as
+  conexões entre todos eles. Já aconteceu: o staging gravou imagens no MinIO
+  de produção. Para conferir, no terminal da API,
+  `node -e "require('dns').lookup(new URL(process.env.MINIO_ENDPOINT).hostname,{all:true},(e,a)=>console.log(e||a))"`
+  tem que devolver um único IPv4.
+- Cada ambiente tem o seu MinIO e a sua chave de acesso. A chave de um
+  ambiente não existe no MinIO do outro, para que um endereço errado vire
+  erro de acesso, e não gravação no lugar errado.
 - Só o **Console** do MinIO (interface web, porta 9001) tem domínio público
   no staging: `minio.staging.foodshare.com.br`. Ele serve para criar bucket e
   chaves de acesso, não como `MINIO_ENDPOINT`: qualquer caminho nele devolve
@@ -113,6 +123,7 @@ O front e a API ficam em subdomínios distintos do mesmo site
   ```
 
   O texto da mensagem fica no n8n, não no backend.
+
 - O telefone vai em formato internacional, só dígitos (`55` + DDD + número).
   É a mesma conversão do link `wa.me` (RF09); uma função única no backend
   faz as duas.
@@ -135,6 +146,7 @@ O front e a API ficam em subdomínios distintos do mesmo site
   Os dias são contados em dias corridos a partir de `orderDate` (pendentes)
   ou `acceptedAt` (em andamento). Às 08:00 a mensagem chega em horário
   comercial.
+
 - As tarefas são idempotentes e assumem **uma única instância** do backend
   por ambiente (é o caso hoje). Se um dia houver réplicas, a tarefa precisa
   de trava (ex.: advisory lock do Postgres) antes de escalar.
@@ -145,22 +157,22 @@ O front e a API ficam em subdomínios distintos do mesmo site
 
 ### Backend
 
-| Variável | Dev | Staging / Produção | Uso |
-| -------- | --- | ------------------ | --- |
-| `DATABASE_URL` | Postgres local | Postgres do Coolify | Prisma |
-| `BETTER_AUTH_URL` | `http://localhost:3000` | `https://api.staging.foodshare.com.br` / `https://api.foodshare.com.br` | better-auth |
-| `BETTER_AUTH_SECRET` | qualquer | segredo forte, diferente por ambiente | better-auth |
-| `TRUSTED_ORIGINS` | `http://localhost:5173` | `https://app.staging.foodshare.com.br` / `https://app.foodshare.com.br` | originCheck + CORS |
-| `COOKIE_DOMAIN` | *(vazio)* | `.staging.foodshare.com.br` / `.foodshare.com.br` | cookie entre subdomínios |
-| `FRONTEND_URL` | `http://localhost:5173` | URL do app no ambiente | links nas mensagens de WhatsApp |
-| `MINIO_ENDPOINT` | `http://localhost:9000` | URL interna da API S3 na rede Docker, com protocolo e porta (staging: `http://minio:9000`) | upload/leitura |
-| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | do container local | do recurso no Coolify | upload/leitura |
-| `MINIO_BUCKET` | `foodshare-dev` | `foodshare-staging` / `foodshare` | upload/leitura |
-| `RESEND_API_KEY` | chave de teste | chave do Resend | e-mail |
-| `EMAIL_FROM` | `Food Share <nao-responda@foodshare.com.br>` | idem | e-mail |
-| `N8N_WEBHOOK_URL` | *(vazio ou fluxo de teste)* | *(vazio até P01)* | lembretes |
-| `N8N_WEBHOOK_SECRET` | qualquer | segredo forte | lembretes |
-| `SEED_ADMIN_NAME` / `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | dev | definidos no Coolify | primeiro administrador (seed) |
+| Variável                                                       | Dev                                          | Staging / Produção                                                                                               | Uso                             |
+| -------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `DATABASE_URL`                                                 | Postgres local                               | Postgres do Coolify                                                                                              | Prisma                          |
+| `BETTER_AUTH_URL`                                              | `http://localhost:3000`                      | `https://api.staging.foodshare.com.br` / `https://api.foodshare.com.br`                                          | better-auth                     |
+| `BETTER_AUTH_SECRET`                                           | qualquer                                     | segredo forte, diferente por ambiente                                                                            | better-auth                     |
+| `TRUSTED_ORIGINS`                                              | `http://localhost:5173`                      | `https://app.staging.foodshare.com.br` / `https://app.foodshare.com.br`                                          | originCheck + CORS              |
+| `COOKIE_DOMAIN`                                                | _(vazio)_                                    | `.staging.foodshare.com.br` / `.foodshare.com.br`                                                                | cookie entre subdomínios        |
+| `FRONTEND_URL`                                                 | `http://localhost:5173`                      | URL do app no ambiente                                                                                           | links nas mensagens de WhatsApp |
+| `MINIO_ENDPOINT`                                               | `http://localhost:9000`                      | URL interna da API S3 na rede Docker, com protocolo e porta, pelo nome do container (`http://minio-<uuid>:9000`) | upload/leitura                  |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`                        | do container local                           | do recurso no Coolify, diferente por ambiente                                                                    | upload/leitura                  |
+| `MINIO_BUCKET`                                                 | `foodshare-dev`                              | `foodshare-staging` / `foodshare`                                                                                | upload/leitura                  |
+| `RESEND_API_KEY`                                               | chave de teste                               | chave do Resend                                                                                                  | e-mail                          |
+| `EMAIL_FROM`                                                   | `Food Share <nao-responda@foodshare.com.br>` | idem                                                                                                             | e-mail                          |
+| `N8N_WEBHOOK_URL`                                              | _(vazio ou fluxo de teste)_                  | _(vazio até P01)_                                                                                                | lembretes                       |
+| `N8N_WEBHOOK_SECRET`                                           | qualquer                                     | segredo forte                                                                                                    | lembretes                       |
+| `SEED_ADMIN_NAME` / `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | dev                                          | definidos no Coolify                                                                                             | primeiro administrador (seed)   |
 
 Toda variável nova entra no `backend/.env.example`, com comentário curto
 dizendo para que serve. Nenhum segredo vai para o repositório.
@@ -172,8 +184,8 @@ administrador, então precisa de `DATABASE_URL`, `JWT_SECRET` e
 
 ### Frontend
 
-| Variável | Dev | Staging / Produção |
-| -------- | --- | ------------------ |
+| Variável       | Dev                    | Staging / Produção                                                      |
+| -------------- | ---------------------- | ----------------------------------------------------------------------- |
 | `VITE_API_URL` | `/api` (proxy do Vite) | `https://api.staging.foodshare.com.br` / `https://api.foodshare.com.br` |
 
 ## Frontend: detalhe de build
