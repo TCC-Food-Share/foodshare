@@ -139,9 +139,11 @@ não muda.
 `docs/CONVENCOES.md` antes e migrar tudo de uma vez, para não conviverem
 dois caches.
 
-**Quando:** a correção da revalidação pode entrar já, como `fix` separado
-(afeta o uso diário). A migração da sessão e das cidades, junto da revisão
-da fase 7.1, ou antes, se outra change mexer na sessão.
+**Quando:** a correção da revalidação já entrou (branch
+`fix/revalidacao-queries`): `staleTime` de 5 s, revalidação ao focar a
+janela e `refetchInterval` de 30 s na lista, no detalhe e nos contadores de
+pedidos. Falta a migração da sessão e das cidades, junto da revisão da fase
+7.1, ou antes, se outra change mexer na sessão.
 
 ## Retenção do registro de acesso (`access_log`)
 
