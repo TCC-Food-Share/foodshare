@@ -6,12 +6,14 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 
 import { AppService } from './app.service';
 import { ImageStorageService } from './files/image-storage.service';
 import { PrismaService } from './prisma/prisma.service';
+import { GLOBAL_THROTTLER } from './rate-limit/rate-limit.constants';
 
 @Controller()
 export class AppController {
@@ -53,6 +55,7 @@ export class AppController {
 
   @Get('health')
   @AllowAnonymous()
+  @SkipThrottle({ [GLOBAL_THROTTLER]: true })
   @ApiTags('Geral')
   @ApiOperation({
     summary: 'Health check',

@@ -28,7 +28,7 @@ import {
 import { WizardProgress } from '@/features/auth/sign-up/wizard-progress';
 import { useAuth } from '@/features/auth/use-auth';
 import { imageErrorMessage } from '@/features/files/image-errors';
-import { ApiError } from '@/lib/api';
+import { ApiError, isTooManyRequests } from '@/lib/api';
 
 const LAST_STEP = 4;
 const PHOTO_STEP = 4;
@@ -50,6 +50,7 @@ type ServerError =
   | { kind: 'dup-fields'; fields: string[] }
   | { kind: 'dup-race' }
   | { kind: 'invalid' }
+  | { kind: 'rate-limited' }
   | { kind: 'network' };
 
 function bannerText(error: ServerError): string {
@@ -60,6 +61,8 @@ function bannerText(error: ServerError): string {
       return 'Não foi possível concluir: CNPJ, e-mail ou celular já cadastrados. Revise os dados e tente de novo.';
     case 'invalid':
       return 'Há dados inválidos no formulário. Revise e tente de novo.';
+    case 'rate-limited':
+      return 'Muitas tentativas de cadastro a partir desta rede. Aguarde uma hora e tente de novo.';
     case 'network':
       return 'Não foi possível concluir o cadastro. Tente novamente em instantes.';
   }
@@ -158,6 +161,10 @@ export function SignUpPage() {
     }
     if (error instanceof ApiError && error.status === 400) {
       setServerError({ kind: 'invalid' });
+      return;
+    }
+    if (isTooManyRequests(error)) {
+      setServerError({ kind: 'rate-limited' });
       return;
     }
     setServerError({ kind: 'network' });

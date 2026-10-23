@@ -156,44 +156,6 @@ requisição.
 (tarefa diária no módulo `jobs/`, a partir da 6.1, apagando por
 `createdAt`, que já tem índice). Registrar a decisão em `docs/REQUISITOS.md`.
 
-## Limite de requisições (rate limit) na API
-
-**Situação:** nenhum RF, RNF, RN ou DT cobre limite de requisições na API em
-geral. O único caso previsto é o RNF11 (código de recuperação de senha, uma
-vez a cada 10 minutos por origem, com o limite nativo do better-auth, DT17),
-que entra na 4.1. Hoje existe só o limite nativo do better-auth, com alcance
-pequeno:
-
-- vale apenas para as rotas `/auth/*` chamadas pelo cliente, e só com
-  `NODE_ENV=production`;
-- padrão: 100 requisições a cada 10 s por IP; login e cadastro do próprio
-  better-auth, 3 a cada 10 s;
-- **não** vale para chamadas internas `auth.api.*`. O nosso cadastro
-  (`POST /establishments` e `POST /beneficiary-entities`) chama
-  `auth.api.signUpEmail()`, então não tem limite nenhum. Desde a 0.3, essa
-  rota anônima aceita até 5 MB por requisição gravados no MinIO.
-
-As demais rotas exigem sessão, mas também não têm limite.
-
-**Ideia:** `@nestjs/throttler` (JavaScript puro, sem binário nativo) com um
-limite global por IP e um limite bem mais baixo nas rotas anônimas de
-cadastro. O `trust proxy` já está ligado no `main.ts`, então o IP real do
-cliente chega atrás do Traefik. Armazenamento em memória basta enquanto houver
-uma única instância por ambiente (mesma premissa das tarefas agendadas).
-
-**O que decidir:**
-
-- Os limites: global (ex.: 100 por minuto por IP) e cadastro (ex.: 5 por
-  hora por IP).
-- Resposta: `429` com `code` próprio (ex.: `TOO_MANY_REQUESTS`) e mensagem
-  no frontend.
-- Se o `/health` e o `GET /me` usados pelo Gatus ficam fora do limite.
-- Registrar como RNF ou DT em `docs/REQUISITOS.md` e como item no
-  `docs/PLANO-IMPLEMENTACAO.md`.
-
-**Quando:** antes do deploy de produção (7.3), de preferência logo, porque o
-cadastro anônimo com upload já está no ar.
-
 ## Versão do Node no build (Nixpacks)
 
 **Situação:** o Nixpacks está fixado em Node 22.13.1

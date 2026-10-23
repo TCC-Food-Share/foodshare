@@ -14,9 +14,11 @@ import { FilesModule } from './files/files.module';
 import { FoodsModule } from './foods/foods.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RateLimitModule } from './rate-limit/rate-limit.module';
 
 @Module({
   imports: [
+    RateLimitModule,
     AccessLogModule,
     AuthModule,
     PrismaModule,

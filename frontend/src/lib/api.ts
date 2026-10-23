@@ -12,6 +12,10 @@ export class ApiError extends Error {
   }
 }
 
+export function isTooManyRequests(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 429;
+}
+
 function extractMessage(body: unknown): string | undefined {
   if (typeof body === 'string') return body;
   if (body && typeof body === 'object' && 'message' in body) {
