@@ -1,16 +1,29 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from '../../generated/prisma/client';
+import { IMAGE_FOLDER } from '../files/files.constants';
+import type { ValidatedImage } from '../files/image-file.pipe';
+import { ImageStorageService } from '../files/image-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFoodDto } from './dto/create-food.dto';
 import { FoodResponseDto } from './dto/food-response.dto';
 import { ListFoodsQueryDto } from './dto/list-foods-query.dto';
 import { PaginatedFoodsResponseDto } from './dto/paginated-foods-response.dto';
-import { FOOD_STATUS } from './foods.constants';
+import { checkFoodQuantity } from './food-quantity';
+import { FOOD_STATUS, INVALID_CATALOG_ITEM, INVALID_MEASUREMENT_UNIT } from './foods.constants';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
+
+const FOOD_INCLUDE = {
+  catalogItem: { include: { category: true } },
+  measurementUnit: true,
+  status: true,
+  establishment: { include: { address: true } },
+} as const satisfies Prisma.FoodInclude;
+
+type FoodWithRelations = Prisma.FoodGetPayload<{ include: typeof FOOD_INCLUDE }>;
 
 function startOfTodayUtc(): Date {
   const now = new Date();
@@ -19,40 +32,77 @@ function startOfTodayUtc(): Date {
 
 @Injectable()
 export class FoodsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: ImageStorageService,
+  ) {}
 
-  async create(userId: number, dto: CreateFoodDto): Promise<FoodResponseDto> {
+  async create(
+    userId: number,
+    dto: CreateFoodDto,
+    image: ValidatedImage,
+  ): Promise<FoodResponseDto> {
     const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
     if (!establishment) {
       throw new NotFoundException('Establishment not found.');
     }
 
-    const category = await this.prisma.category.findUnique({ where: { id: dto.categoryId } });
-    if (!category) {
-      throw new BadRequestException('Invalid categoryId.');
+    const catalogItem = await this.prisma.foodCatalogItem.findUnique({
+      where: { id: dto.catalogItemId },
+    });
+    if (!catalogItem) {
+      throw new BadRequestException({
+        code: INVALID_CATALOG_ITEM,
+        message: 'Food catalog item not found.',
+      });
+    }
+
+    const unit = await this.prisma.measurementUnit.findUnique({
+      where: { id: dto.measurementUnitId },
+    });
+    if (!unit) {
+      throw new BadRequestException({
+        code: INVALID_MEASUREMENT_UNIT,
+        message: 'Measurement unit not found.',
+      });
+    }
+
+    const quantityError = checkFoodQuantity(dto.quantity, unit.allowsFraction, dto.requestType);
+    if (quantityError) {
+      throw new BadRequestException({
+        code: quantityError,
+        message: 'Quantity is not valid for this unit and request type.',
+      });
     }
 
     const status = await this.prisma.foodStatus.findUniqueOrThrow({
       where: { name: FOOD_STATUS.ACTIVE },
     });
 
-    const food = await this.prisma.food.create({
-      data: {
-        image: dto.image,
-        name: dto.name,
-        quantity: dto.quantity,
-        quantityUnit: dto.quantityUnit,
-        description: dto.description,
-        expirationDate: new Date(dto.expirationDate),
-        publishedAt: new Date(),
-        categoryId: category.id,
-        establishmentId: establishment.id,
-        statusId: status.id,
-      },
-      include: { category: true, status: true, establishment: { include: { address: true } } },
-    });
+    const imageKey = await this.storage.store(IMAGE_FOLDER.FOODS, image);
 
-    return this.toResponse(food);
+    try {
+      const food = await this.prisma.food.create({
+        data: {
+          image: imageKey,
+          quantity: dto.quantity,
+          requestType: dto.requestType,
+          description: dto.description,
+          notes: dto.notes ?? null,
+          expirationDate: new Date(dto.expirationDate),
+          publishedAt: new Date(),
+          catalogItemId: catalogItem.id,
+          measurementUnitId: unit.id,
+          establishmentId: establishment.id,
+          statusId: status.id,
+        },
+        include: FOOD_INCLUDE,
+      });
+      return this.toResponse(food);
+    } catch (error) {
+      await this.storage.removeQuietly(imageKey);
+      throw error;
+    }
   }
 
   async list(query: ListFoodsQueryDto): Promise<PaginatedFoodsResponseDto> {
@@ -64,6 +114,7 @@ export class FoodsService {
     // resolved via raw SQL and hydrated afterwards with a regular Prisma query.
     const from = Prisma.sql`
       FROM food f
+      JOIN food_catalog_item ci ON ci.id = f."catalogItemId"
       JOIN establishment e ON e.id = f."establishmentId"
       JOIN address a ON a.id = e."addressId"
       JOIN food_status s ON s.id = f."statusId"
@@ -95,16 +146,10 @@ export class FoodsService {
     return this.toResponse(food);
   }
 
-  findAvailableById(id: number): Promise<Prisma.FoodGetPayload<{
-    include: {
-      category: true;
-      status: true;
-      establishment: { include: { address: true } };
-    };
-  }> | null> {
+  findAvailableById(id: number): Promise<FoodWithRelations | null> {
     return this.prisma.food.findFirst({
       where: this.availableFoodWhereInput(id),
-      include: { category: true, status: true, establishment: { include: { address: true } } },
+      include: FOOD_INCLUDE,
     });
   }
 
@@ -116,6 +161,7 @@ export class FoodsService {
       status: { name: FOOD_STATUS.ACTIVE },
       expirationDate: { gte: startOfTodayUtc() },
       quantity: { gt: 0 },
+      establishment: { deleted: false },
       ...(id !== undefined ? { id } : {}),
     };
   }
@@ -126,13 +172,14 @@ export class FoodsService {
       Prisma.sql`s.name = ${FOOD_STATUS.ACTIVE}`,
       Prisma.sql`f."expirationDate" >= ${startOfTodayUtc()}`,
       Prisma.sql`f.quantity > 0`,
+      Prisma.sql`e.deleted = false`,
     ];
 
     if (query.name) {
-      conditions.push(Prisma.sql`unaccent(f.name) ILIKE '%' || unaccent(${query.name}) || '%'`);
+      conditions.push(Prisma.sql`unaccent(ci.name) ILIKE '%' || unaccent(${query.name}) || '%'`);
     }
     if (query.categoryId !== undefined) {
-      conditions.push(Prisma.sql`f."categoryId" = ${query.categoryId}`);
+      conditions.push(Prisma.sql`ci."categoryId" = ${query.categoryId}`);
     }
     if (query.city) {
       conditions.push(Prisma.sql`unaccent(a.city) ILIKE '%' || unaccent(${query.city}) || '%'`);
@@ -147,7 +194,7 @@ export class FoodsService {
   private async hydrate(ids: number[]): Promise<FoodResponseDto[]> {
     const foods = await this.prisma.food.findMany({
       where: { id: { in: ids } },
-      include: { category: true, status: true, establishment: { include: { address: true } } },
+      include: FOOD_INCLUDE,
     });
     const byId = new Map(foods.map((food) => [food.id, food]));
 
@@ -157,29 +204,29 @@ export class FoodsService {
       .map((food) => this.toResponse(food));
   }
 
-  private toResponse(
-    food: Prisma.FoodGetPayload<{
-      include: {
-        category: true;
-        status: true;
-        establishment: { include: { address: true } };
-      };
-    }>,
-  ): FoodResponseDto {
+  private toResponse(food: FoodWithRelations): FoodResponseDto {
     return {
       id: food.id,
-      image: food.image,
-      name: food.name,
+      image: this.storage.toUrl(food.image),
+      name: food.catalogItem.name,
       quantity: food.quantity.toString(),
-      quantityUnit: food.quantityUnit,
+      measurementUnit: {
+        id: food.measurementUnit.id,
+        name: food.measurementUnit.name,
+        abbreviation: food.measurementUnit.abbreviation,
+        allowsFraction: food.measurementUnit.allowsFraction,
+      },
+      requestType: food.requestType,
       description: food.description,
+      notes: food.notes,
       expirationDate: food.expirationDate,
       publishedAt: food.publishedAt,
-      category: { id: food.category.id, name: food.category.name },
+      category: { id: food.catalogItem.category.id, name: food.catalogItem.category.name },
       status: { id: food.status.id, name: food.status.name },
       establishment: {
         id: food.establishment.id,
         companyName: food.establishment.companyName,
+        tradeName: food.establishment.tradeName,
         city: food.establishment.address.city,
         state: food.establishment.address.state,
       },

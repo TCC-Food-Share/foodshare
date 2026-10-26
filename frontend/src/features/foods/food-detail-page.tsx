@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { CalendarIcon, Clock3Icon, ImageOffIcon, PackageIcon, StoreIcon } from 'lucide-react';
+import {
+  CalendarIcon,
+  Clock3Icon,
+  HandHeartIcon,
+  ImageOffIcon,
+  PackageIcon,
+  StoreIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -7,7 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/use-auth';
-import { getFood } from '@/features/foods/foods-api';
+import { FOOD_REQUEST_TYPE_LABELS } from '@/features/foods/food-request-type';
+import { establishmentDisplayName, getFood } from '@/features/foods/foods-api';
 import { RequestDonationCard } from '@/features/orders/request-donation-card';
 import { ApiError } from '@/lib/api';
 import { formatDate, formatQuantity } from '@/lib/format';
@@ -125,13 +133,24 @@ export function FoodDetailPage() {
           <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-6">
             <h2 className="text-foreground text-lg font-semibold">Descrição</h2>
             <p className="text-muted-foreground text-sm leading-relaxed">{food.description}</p>
+            {food.notes && (
+              <>
+                <h3 className="text-foreground text-sm font-semibold">Observações</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{food.notes}</p>
+              </>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <InfoItem
+              icon={HandHeartIcon}
+              label="Tipo de solicitação"
+              value={FOOD_REQUEST_TYPE_LABELS[food.requestType]}
+            />
             <InfoItem
               icon={PackageIcon}
               label="Quantidade"
-              value={`${formatQuantity(food.quantity)} ${food.quantityUnit}`}
+              value={`${formatQuantity(food.quantity)} ${food.measurementUnit.abbreviation}`}
             />
             <InfoItem
               icon={CalendarIcon}
@@ -151,7 +170,7 @@ export function FoodDetailPage() {
               </div>
               <div className="flex flex-col gap-0.5">
                 <span className="text-foreground text-sm font-semibold">
-                  {food.establishment.companyName}
+                  {establishmentDisplayName(food.establishment)}
                 </span>
                 {food.establishment.city && food.establishment.state && (
                   <span className="text-muted-foreground text-xs">

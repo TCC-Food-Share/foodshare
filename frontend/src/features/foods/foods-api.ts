@@ -1,17 +1,28 @@
+import type { MeasurementUnit } from '@/features/catalog/catalog-api';
+import type { FoodRequestType } from '@/features/foods/food-request-type';
 import { api } from '@/lib/api';
+import { toFormData } from '@/lib/form-data';
 
 export interface FoodListItem {
   id: number;
   image: string | null;
   name: string;
   quantity: string;
-  quantityUnit: string;
+  measurementUnit: MeasurementUnit;
+  requestType: FoodRequestType;
   description: string;
+  notes: string | null;
   expirationDate: string;
   publishedAt: string;
   category: { id: number; name: string };
   status: { id: number; name: string };
-  establishment: { id: number; companyName: string; city?: string; state?: string };
+  establishment: {
+    id: number;
+    companyName: string;
+    tradeName: string | null;
+    city: string;
+    state: string;
+  };
 }
 
 export interface PaginatedFoods {
@@ -31,13 +42,13 @@ export interface FoodFilters {
 }
 
 export interface CreateFoodPayload {
-  name: string;
-  categoryId: number;
+  catalogItemId: number;
   description: string;
   quantity: number;
-  quantityUnit: string;
+  measurementUnitId: number;
+  requestType: FoodRequestType;
   expirationDate: string;
-  image?: string;
+  notes?: string;
 }
 
 export const listFoods = (filters: FoodFilters) =>
@@ -45,4 +56,8 @@ export const listFoods = (filters: FoodFilters) =>
 
 export const getFood = (id: number) => api.get<FoodListItem>(`/foods/${id}`);
 
-export const createFood = (payload: CreateFoodPayload) => api.post<FoodListItem>('/foods', payload);
+export const createFood = (payload: CreateFoodPayload, image: File) =>
+  api.post<FoodListItem>('/foods', toFormData(payload, { image }));
+
+export const establishmentDisplayName = (establishment: FoodListItem['establishment']) =>
+  establishment.tradeName ?? establishment.companyName;

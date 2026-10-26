@@ -122,7 +122,7 @@ export function CreateOrderDialog({
   const [blocked, setBlocked] = useState<BlockedReason | null>(null);
 
   const available = Number(food.quantity);
-  const availableLabel = `${formatQuantity(food.quantity)} ${food.quantityUnit}`;
+  const availableLabel = `${formatQuantity(food.quantity)} ${food.measurementUnit.abbreviation}`;
   const schema = useMemo(() => createOrderSchema(available), [available]);
 
   const form = useForm<CreateOrderInput>({
@@ -275,7 +275,7 @@ export function CreateOrderDialog({
                             />
                           </FormControl>
                           <span className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm">
-                            {food.quantityUnit}
+                            {food.measurementUnit.abbreviation}
                           </span>
                         </div>
                         <span className="text-muted-foreground shrink-0 text-xs">

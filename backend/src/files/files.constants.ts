@@ -1,5 +1,6 @@
 export const IMAGE_FOLDER = {
   USERS: 'users',
+  FOODS: 'foods',
 } as const;
 
 export type ImageFolder = (typeof IMAGE_FOLDER)[keyof typeof IMAGE_FOLDER];

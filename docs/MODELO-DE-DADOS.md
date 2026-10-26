@@ -20,7 +20,7 @@ que muda em relação ao schema do MVP.
 | `Address`                            | `address`                            | ✅ igual |                                                                                   |
 | `Establishment`                      | `establishment`                      | ✅ igual |                                                                                   |
 | `BeneficiaryEntity`                  | `beneficiary_entity`                 | ✅ igual |                                                                                   |
-| `Category`                           | `category`                           | 🟡 muda  | Entra `administratorId` e `catalogItems`; `foods` sai na 2.1                      |
+| `Category`                           | `category`                           | 🟡 muda  | Entra `administratorId` e `catalogItems`; `foods` saiu (2.1)                      |
 | `FoodStatus`                         | `food_status`                        | 🟡 dados | Seed: `Ativo`, `Reservado`, `Inativo` (sem `Revisar`, DT16)                       |
 | `OrderStatus`                        | `order_status`                       | 🟡 dados | Seed: `Pendente`, `Em andamento`, `Rejeitado`, `Doado`, `Cancelado`               |
 | `Food`                               | `food`                               | 🟡 muda  | Nome/categoria vêm do catálogo; unidade vira FK; tipo de solicitação; observações |
@@ -73,11 +73,11 @@ fica no DTO.
 
 ### `Category`
 
-| Campo             | Mudança                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `administratorId` | `+ Int?`, FK `User`, relação `"CategoryAdministrator"`. `NULL` nas categorias do seed.                             |
-| `catalogItems`    | `+ FoodCatalogItem[]`. A categoria se liga ao catálogo.                                                            |
-| `foods`           | Sai na 2.1, junto com `Food.categoryId`. Até lá, o cadastro de alimento do MVP continua usando a categoria direto. |
+| Campo             | Mudança                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| `administratorId` | `+ Int?`, FK `User`, relação `"CategoryAdministrator"`. `NULL` nas categorias do seed.     |
+| `catalogItems`    | `+ FoodCatalogItem[]`. A categoria se liga ao catálogo.                                    |
+| `foods`           | Saiu na 2.1, junto com `Food.categoryId`. A categoria do alimento vem do item do catálogo. |
 
 ### `FoodStatus` / `OrderStatus` — só dados
 
@@ -88,6 +88,9 @@ fica no DTO.
   espalhada no código.
 
 ### `Food`
+
+Aplicado na 2.1 (`cadastro_alimento_padronizado`). A migration exige a
+tabela `food` vazia: staging e produção foram recriados antes do deploy.
 
 | Campo                     | Mudança                       | Regra                                                                                 |
 | ------------------------- | ----------------------------- | ------------------------------------------------------------------------------------- |
