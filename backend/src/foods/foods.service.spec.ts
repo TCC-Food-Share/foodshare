@@ -2,37 +2,53 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
-import { Prisma } from '../../generated/prisma/client';
+import { FoodRequestType, Prisma } from '../../generated/prisma/client';
+import { IMAGE_FOLDER } from '../files/files.constants';
+import type { ValidatedImage } from '../files/image-file.pipe';
+import { ImageStorageService } from '../files/image-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFoodDto } from './dto/create-food.dto';
-import { FOOD_STATUS } from './foods.constants';
+import {
+  FOOD_STATUS,
+  FRACTION_NOT_ALLOWED,
+  INVALID_CATALOG_ITEM,
+  INVALID_MEASUREMENT_UNIT,
+  PARTIAL_ONLY_QUANTITY_TOO_LOW,
+} from './foods.constants';
 import { FoodsService } from './foods.service';
 
 describe('FoodsService', () => {
+  const imageKey = 'foods/3f2a0c1e-9b1e-4c7a-8d2e-1f0a9b8c7d6e.webp';
+  const image: ValidatedImage = { buffer: Buffer.from('img'), type: 'webp' };
+
   const dto: CreateFoodDto = {
-    image: 'https://cdn.example.com/food.jpg',
-    name: 'Arroz branco',
-    categoryId: 1,
-    quantity: 5,
-    quantityUnit: 'kg',
-    description: 'Pacotes de 1kg, dentro da validade.',
+    catalogItemId: 13,
+    quantity: 10,
+    measurementUnitId: 1,
+    requestType: FoodRequestType.TOTAL_OR_PARTIAL,
+    description: 'Pães do dia.',
     expirationDate: '2026-12-31',
   };
 
+  const unitRow = { id: 1, name: 'Unidade', abbreviation: 'un', allowsFraction: false };
+  const kgRow = { id: 2, name: 'Quilograma', abbreviation: 'kg', allowsFraction: true };
+
   const foodRow = {
     id: 100,
-    image: dto.image,
-    name: dto.name,
-    quantity: new Prisma.Decimal(dto.quantity),
-    quantityUnit: dto.quantityUnit,
-    description: dto.description,
-    expirationDate: new Date(dto.expirationDate),
+    image: imageKey,
+    quantity: new Prisma.Decimal(5),
+    requestType: FoodRequestType.TOTAL_OR_PARTIAL,
+    description: 'Pães do dia.',
+    notes: null,
+    expirationDate: new Date('2026-12-31'),
     publishedAt: new Date('2026-08-28T12:00:00.000Z'),
-    category: { id: 1, name: 'Não Perecíveis' },
+    catalogItem: { id: 13, name: 'Pão francês', category: { id: 6, name: 'Pães e Massas' } },
+    measurementUnit: unitRow,
     status: { id: 1, name: FOOD_STATUS.ACTIVE },
     establishment: {
       id: 30,
       companyName: 'Test Establishment Ltd',
+      tradeName: 'Test',
       address: { city: 'Birigui', state: 'SP' },
     },
   };
@@ -46,7 +62,10 @@ describe('FoodsService', () => {
     establishment: {
       findUnique: jest.fn<(args: { where: { userId: number } }) => Promise<unknown>>(),
     },
-    category: {
+    foodCatalogItem: {
+      findUnique: jest.fn<(args: { where: { id: number } }) => Promise<unknown>>(),
+    },
+    measurementUnit: {
       findUnique: jest.fn<(args: { where: { id: number } }) => Promise<unknown>>(),
     },
     foodStatus: {
@@ -60,8 +79,20 @@ describe('FoodsService', () => {
     $queryRaw: jest.fn<(sql: Prisma.Sql) => Promise<unknown>>(),
   };
 
+  const storageMock = {
+    store: jest.fn<(folder: string, image: ValidatedImage) => Promise<string>>(),
+    removeQuietly: jest.fn<(key: string) => Promise<void>>(),
+    toUrl: (key: string | null) => (key ? `http://api.test/files/${key}` : null),
+  };
+
   const idQueryCall = (): Prisma.Sql =>
     prismaMock.$queryRaw.mock.calls.map((c) => c[0]).find((s) => !sqlText(s).includes('count(*)'))!;
+
+  const badRequestCode = async (input: CreateFoodDto): Promise<unknown> => {
+    const error = await service.create(20, input, image).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(BadRequestException);
+    return ((error as BadRequestException).getResponse() as { code: string }).code;
+  };
 
   let service: FoodsService;
 
@@ -70,7 +101,8 @@ describe('FoodsService', () => {
     idRows = [{ id: 100 }];
     countValue = 1n;
     prismaMock.establishment.findUnique.mockResolvedValue({ id: 30, userId: 20 });
-    prismaMock.category.findUnique.mockResolvedValue({ id: 1, name: 'Não Perecíveis' });
+    prismaMock.foodCatalogItem.findUnique.mockResolvedValue({ id: 13, name: 'Pão francês' });
+    prismaMock.measurementUnit.findUnique.mockResolvedValue(unitRow);
     prismaMock.foodStatus.findUniqueOrThrow.mockResolvedValue({ id: 1, name: FOOD_STATUS.ACTIVE });
     prismaMock.food.create.mockResolvedValue(foodRow);
     prismaMock.food.findMany.mockResolvedValue([foodRow]);
@@ -80,57 +112,103 @@ describe('FoodsService', () => {
         ? Promise.resolve([{ count: countValue }])
         : Promise.resolve(idRows),
     );
+    storageMock.store.mockResolvedValue(imageKey);
+    storageMock.removeQuietly.mockResolvedValue(undefined);
 
     const moduleRef = await Test.createTestingModule({
-      providers: [FoodsService, { provide: PrismaService, useValue: prismaMock }],
+      providers: [
+        FoodsService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: ImageStorageService, useValue: storageMock },
+      ],
     }).compile();
 
     service = moduleRef.get(FoodsService);
   });
 
-  it('creates a food for the authenticated establishment with status "Ativo"', async () => {
-    const result = await service.create(20, dto);
+  describe('create', () => {
+    it('creates an "Ativo" food from the catalog item and unit, with the image in "foods"', async () => {
+      const result = await service.create(20, dto, image);
 
-    expect(prismaMock.establishment.findUnique).toHaveBeenCalledWith({ where: { userId: 20 } });
-    expect(prismaMock.foodStatus.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { name: FOOD_STATUS.ACTIVE },
+      expect(storageMock.store).toHaveBeenCalledWith(IMAGE_FOLDER.FOODS, image);
+      expect(prismaMock.food.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            image: imageKey,
+            catalogItemId: 13,
+            measurementUnitId: 1,
+            requestType: FoodRequestType.TOTAL_OR_PARTIAL,
+            notes: null,
+            establishmentId: 30,
+            statusId: 1,
+            publishedAt: expect.any(Date),
+          }),
+        }),
+      );
+      expect(result.name).toBe('Pão francês');
+      expect(result.category).toEqual({ id: 6, name: 'Pães e Massas' });
+      expect(result.measurementUnit).toEqual(unitRow);
+      expect(result.image).toBe(`http://api.test/files/${imageKey}`);
+      expect(result.quantity).toBe('5');
+      expect(result.status.name).toBe(FOOD_STATUS.ACTIVE);
     });
-    expect(prismaMock.food.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ establishmentId: 30, categoryId: 1, statusId: 1 }),
-      }),
-    );
-    expect(result.status.name).toBe(FOOD_STATUS.ACTIVE);
-    expect(result.establishment.id).toBe(30);
-  });
 
-  it('sets publishedAt automatically, not from the DTO', async () => {
-    await service.create(20, dto);
+    it('stores the notes when present', async () => {
+      await service.create(20, { ...dto, notes: 'Retirar até as 18h.' }, image);
 
-    expect(prismaMock.food.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ publishedAt: expect.any(Date) }) }),
-    );
-  });
+      expect(prismaMock.food.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ notes: 'Retirar até as 18h.' }),
+        }),
+      );
+    });
 
-  it('returns quantity as a string (avoids floating point precision loss)', async () => {
-    const result = await service.create(20, dto);
+    it('throws NotFoundException when the authenticated user has no establishment', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
 
-    expect(typeof result.quantity).toBe('string');
-    expect(result.quantity).toBe('5');
-  });
+      await expect(service.create(999, dto, image)).rejects.toBeInstanceOf(NotFoundException);
+      expect(storageMock.store).not.toHaveBeenCalled();
+    });
 
-  it('throws NotFoundException when the authenticated user has no establishment', async () => {
-    prismaMock.establishment.findUnique.mockResolvedValue(null);
+    it('rejects an unknown catalog item before storing the image', async () => {
+      prismaMock.foodCatalogItem.findUnique.mockResolvedValue(null);
 
-    await expect(service.create(999, dto)).rejects.toBeInstanceOf(NotFoundException);
-    expect(prismaMock.food.create).not.toHaveBeenCalled();
-  });
+      await expect(badRequestCode(dto)).resolves.toBe(INVALID_CATALOG_ITEM);
+      expect(storageMock.store).not.toHaveBeenCalled();
+    });
 
-  it('throws BadRequestException when categoryId does not exist', async () => {
-    prismaMock.category.findUnique.mockResolvedValue(null);
+    it('rejects an unknown measurement unit before storing the image', async () => {
+      prismaMock.measurementUnit.findUnique.mockResolvedValue(null);
 
-    await expect(service.create(20, dto)).rejects.toBeInstanceOf(BadRequestException);
-    expect(prismaMock.food.create).not.toHaveBeenCalled();
+      await expect(badRequestCode(dto)).resolves.toBe(INVALID_MEASUREMENT_UNIT);
+      expect(storageMock.store).not.toHaveBeenCalled();
+    });
+
+    it('rejects a fraction when the unit does not allow it', async () => {
+      await expect(badRequestCode({ ...dto, quantity: 2.5 })).resolves.toBe(FRACTION_NOT_ALLOWED);
+      expect(prismaMock.food.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts a fraction when the unit allows it', async () => {
+      prismaMock.measurementUnit.findUnique.mockResolvedValue(kgRow);
+
+      await service.create(20, { ...dto, quantity: 2.5, measurementUnitId: 2 }, image);
+
+      expect(prismaMock.food.create).toHaveBeenCalled();
+    });
+
+    it('rejects partial-only when no partial order is possible', async () => {
+      await expect(
+        badRequestCode({ ...dto, quantity: 1, requestType: FoodRequestType.PARTIAL_ONLY }),
+      ).resolves.toBe(PARTIAL_ONLY_QUANTITY_TOO_LOW);
+    });
+
+    it('removes the stored image when the insert fails', async () => {
+      prismaMock.food.create.mockRejectedValue(new Error('db down'));
+
+      await expect(service.create(20, dto, image)).rejects.toThrow('db down');
+      expect(storageMock.removeQuietly).toHaveBeenCalledWith(imageKey);
+    });
   });
 
   describe('list', () => {
@@ -140,6 +218,8 @@ describe('FoodsService', () => {
       const sql = idQueryCall();
       expect(sqlText(sql)).toContain('ORDER BY f."publishedAt" DESC');
       expect(sqlText(sql)).toContain('f.quantity > 0');
+      expect(sqlText(sql)).toContain('e.deleted = false');
+      expect(sqlText(sql)).toContain('JOIN food_catalog_item ci');
       expect(sqlText(sql)).not.toContain('unaccent');
       expect(sqlText(sql)).not.toContain('"categoryId" =');
       expect(sqlText(sql)).not.toContain('a.state =');
@@ -162,18 +242,18 @@ describe('FoodsService', () => {
     });
 
     it('passes name/categoryId/city/state filters into the where clause', async () => {
-      await service.list({ name: 'feijao', categoryId: 2, city: 'birigui', state: 'SP' });
+      await service.list({ name: 'pao', categoryId: 2, city: 'birigui', state: 'SP' });
 
       const sql = idQueryCall();
       expect(sqlText(sql)).toContain('f.quantity > 0');
-      expect(sqlText(sql)).toContain('unaccent(f.name) ILIKE');
-      expect(sqlText(sql)).toContain('f."categoryId" =');
+      expect(sqlText(sql)).toContain('unaccent(ci.name) ILIKE');
+      expect(sqlText(sql)).toContain('ci."categoryId" =');
       expect(sqlText(sql)).toContain('unaccent(a.city) ILIKE');
       expect(sqlText(sql)).toContain('a.state =');
       expect(sql.values).toEqual([
         FOOD_STATUS.ACTIVE,
         expect.any(Date),
-        'feijao',
+        'pao',
         2,
         'birigui',
         'SP',
@@ -224,11 +304,13 @@ describe('FoodsService', () => {
       expect(result.data).toHaveLength(1);
       expect(typeof result.data[0].quantity).toBe('string');
       expect(result.data[0].quantity).toBe('5');
-      expect(result.data[0].category).toEqual({ id: 1, name: 'Não Perecíveis' });
+      expect(result.data[0].name).toBe('Pão francês');
+      expect(result.data[0].category).toEqual({ id: 6, name: 'Pães e Massas' });
       expect(result.data[0].status).toEqual({ id: 1, name: FOOD_STATUS.ACTIVE });
       expect(result.data[0].establishment).toEqual({
         id: 30,
         companyName: 'Test Establishment Ltd',
+        tradeName: 'Test',
         city: 'Birigui',
         state: 'SP',
       });
@@ -247,16 +329,20 @@ describe('FoodsService', () => {
             status: { name: FOOD_STATUS.ACTIVE },
             expirationDate: { gte: expect.any(Date) },
             quantity: { gt: 0 },
+            establishment: { deleted: false },
           },
-          include: { category: true, status: true, establishment: { include: { address: true } } },
         }),
       );
       expect(typeof result.quantity).toBe('string');
-      expect(result.category).toEqual({ id: 1, name: 'Não Perecíveis' });
+      expect(result.requestType).toBe(FoodRequestType.TOTAL_OR_PARTIAL);
+      expect(result.notes).toBeNull();
+      expect(result.publishedAt).toEqual(foodRow.publishedAt);
+      expect(result.category).toEqual({ id: 6, name: 'Pães e Massas' });
       expect(result.status).toEqual({ id: 1, name: FOOD_STATUS.ACTIVE });
       expect(result.establishment).toEqual({
         id: 30,
         companyName: 'Test Establishment Ltd',
+        tradeName: 'Test',
         city: 'Birigui',
         state: 'SP',
       });
@@ -281,6 +367,7 @@ describe('FoodsService', () => {
             status: { name: FOOD_STATUS.ACTIVE },
             expirationDate: { gte: expect.any(Date) },
             quantity: { gt: 0 },
+            establishment: { deleted: false },
           },
         }),
       );
