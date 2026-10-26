@@ -119,7 +119,6 @@ model Category {
   name         String            @unique @db.VarChar(100)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-  foods        Food[]
   catalogItems FoodCatalogItem[]
 
   administratorId Int?
@@ -149,20 +148,23 @@ model OrderStatus {
 }
 
 model Food {
-  id             Int      @id @default(autoincrement())
-  image          String?  @db.VarChar(500)
-  name           String   @db.VarChar(200)
-  quantity       Decimal  @db.Decimal(10, 2)
-  quantityUnit   String   @db.VarChar(50)
-  description    String   @db.VarChar(2000)
+  id             Int             @id @default(autoincrement())
+  image          String          @db.VarChar(500)
+  quantity       Decimal         @db.Decimal(10, 2)
+  requestType    FoodRequestType
+  description    String          @db.VarChar(2000)
+  notes          String?         @db.VarChar(2000)
   expirationDate DateTime
   publishedAt    DateTime
-  deleted        Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  deleted        Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  categoryId Int
-  category   Category @relation(fields: [categoryId], references: [id])
+  catalogItemId Int
+  catalogItem   FoodCatalogItem @relation(fields: [catalogItemId], references: [id])
+
+  measurementUnitId Int
+  measurementUnit   MeasurementUnit @relation(fields: [measurementUnitId], references: [id])
 
   establishmentId Int
   establishment   Establishment @relation(fields: [establishmentId], references: [id])
@@ -172,7 +174,15 @@ model Food {
 
   orders Order[]
 
+  @@index([statusId, deleted])
+  @@index([establishmentId, statusId])
   @@map("food")
+}
+
+enum FoodRequestType {
+  TOTAL_ONLY
+  PARTIAL_ONLY
+  TOTAL_OR_PARTIAL
 }
 
 model CancellationReason {
@@ -225,6 +235,8 @@ model FoodCatalogItem {
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id])
 
+  foods Food[]
+
   administratorId Int?
   administrator   User? @relation("CatalogItemAdministrator", fields: [administratorId], references: [id], onDelete: SetNull)
 
@@ -238,6 +250,7 @@ model MeasurementUnit {
   allowsFraction Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  foods          Food[]
 
   administratorId Int?
   administrator   User? @relation("MeasurementUnitAdministrator", fields: [administratorId], references: [id], onDelete: SetNull)
