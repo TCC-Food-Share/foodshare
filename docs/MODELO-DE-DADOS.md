@@ -354,6 +354,17 @@ nesta ordem:
 6. Termos proibidos: lista inicial curta, validada pela dupla.
 7. Catálogo de alimentos: lido de `prisma/seed-data/food-catalog.ts`, gerado
    pela curadoria da TACO (DT12), cada item com a categoria dele.
+   - Fonte: Tabela Brasileira de Composição de Alimentos (TACO), 4ª edição,
+     NEPA/Unicamp, na planilha publicada pelo NEPA (597 alimentos). A
+     reprodução é permitida com citação da fonte.
+   - Resultado: 234 itens com nome natural, sem variações de preparo e sem
+     bebidas alcoólicas. Os alimentos preparados ficam em "Perecíveis", e
+     "Outros" não recebe nenhum item da TACO.
+   - A lista com o número TACO de cada item está na change arquivada
+     `catalogo-taco` (`catalogo-revisao.md`). Só o nome entra no banco.
+   - O seed não altera itens existentes. Por isso a migration
+     `catalogo_taco_refeicao_pronta` move "Refeição pronta", do catálogo
+     provisório da 1.1, de "Outros" para "Perecíveis".
 8. **Primeiro administrador**, a partir de `SEED_ADMIN_NAME`,
    `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD`. É criado pela API do
    better-auth (para o hash da senha sair igual ao do login), só se ainda
