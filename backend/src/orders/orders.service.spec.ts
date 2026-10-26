@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { Test } from '@nestjs/testing';
 
 import { Prisma } from '../../generated/prisma/client';
+import { ImageStorageService } from '../files/image-storage.service';
 import { FOOD_STATUS } from '../foods/foods.constants';
 import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,7 +27,11 @@ describe('OrdersService', () => {
     quantity: new Prisma.Decimal(4),
     orderDate: new Date('2026-09-03T12:00:00.000Z'),
     status: { id: 1, name: ORDER_STATUS.PENDING },
-    food: { id: 5, name: 'Arroz branco', quantityUnit: 'kg' },
+    food: {
+      id: 5,
+      catalogItem: { id: 16, name: 'Arroz branco' },
+      measurementUnit: { id: 2, abbreviation: 'kg' },
+    },
     establishment: { id: 3, companyName: 'Good Taste Ltd' },
     beneficiaryEntity: { id: 7, companyName: 'Helping Hands' },
   };
@@ -52,13 +57,12 @@ describe('OrdersService', () => {
     status: { id: 2, name: ORDER_STATUS.IN_PROGRESS },
     food: {
       id: 5,
-      image: null,
-      name: 'Arroz branco',
+      image: 'foods/0b5e6f6e-3c2a-4a8e-9b1f-2d3c4e5f6a7b.webp',
       quantity: new Prisma.Decimal(6),
-      quantityUnit: 'kg',
       description: 'Pacotes de 1kg.',
       expirationDate: new Date('2026-12-31T00:00:00.000Z'),
-      category: { id: 1, name: 'Não Perecíveis' },
+      catalogItem: { id: 16, name: 'Arroz branco', category: { id: 1, name: 'Não Perecíveis' } },
+      measurementUnit: { id: 2, abbreviation: 'kg' },
       status: { id: 1, name: FOOD_STATUS.ACTIVE },
     },
     establishment: {
@@ -127,6 +131,10 @@ describe('OrdersService', () => {
     $transaction: jest.fn<(cb: (tx: unknown) => Promise<unknown>) => Promise<unknown>>(),
   };
 
+  const storageMock = {
+    toUrl: (key: string | null) => (key ? `http://api.test/files/${key}` : null),
+  };
+
   const foodsServiceMock = {
     findAvailableById: jest.fn<(id: number) => Promise<unknown>>(),
   };
@@ -155,6 +163,7 @@ describe('OrdersService', () => {
         OrdersService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: FoodsService, useValue: foodsServiceMock },
+        { provide: ImageStorageService, useValue: storageMock },
       ],
     }).compile();
 
@@ -616,6 +625,11 @@ describe('OrdersService', () => {
       );
       expect(result.food.category).toEqual({ id: 1, name: 'Não Perecíveis' });
       expect(result.food.description).toBe('Pacotes de 1kg.');
+      expect(result.food.name).toBe('Arroz branco');
+      expect(result.food.quantityUnit).toBe('kg');
+      expect(result.food.image).toBe(
+        'http://api.test/files/foods/0b5e6f6e-3c2a-4a8e-9b1f-2d3c4e5f6a7b.webp',
+      );
       expect(result.food.quantity).toBe('6');
       expect(result.quantity).toBe('4');
       expect(result.establishment).toEqual({

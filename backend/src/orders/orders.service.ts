@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { Prisma } from '../../generated/prisma/client';
+import { ImageStorageService } from '../files/image-storage.service';
 import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -24,11 +25,19 @@ import {
 
 const MAX_OPEN_ORDERS = 10;
 
+const ORDER_INCLUDE = {
+  status: true,
+  food: { include: { catalogItem: true, measurementUnit: true } },
+  establishment: true,
+  beneficiaryEntity: true,
+} as const satisfies Prisma.OrderInclude;
+
 @Injectable()
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly foodsService: FoodsService,
+    private readonly storage: ImageStorageService,
   ) {}
 
   async create(userId: number, dto: CreateOrderDto): Promise<OrderResponseDto> {
@@ -83,7 +92,7 @@ export class OrdersService {
         establishmentId: food.establishmentId,
         beneficiaryEntityId: beneficiaryEntity.id,
       },
-      include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
+      include: ORDER_INCLUDE,
     });
 
     return this.toResponse(order);
@@ -135,7 +144,7 @@ export class OrdersService {
 
       return tx.order.findUniqueOrThrow({
         where: { id: order.id },
-        include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
+        include: ORDER_INCLUDE,
       });
     });
 
@@ -174,7 +183,7 @@ export class OrdersService {
 
     const updated = await this.prisma.order.findUniqueOrThrow({
       where: { id: order.id },
-      include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
+      include: ORDER_INCLUDE,
     });
 
     return this.toResponse(updated);
@@ -212,7 +221,7 @@ export class OrdersService {
 
     const updated = await this.prisma.order.findUniqueOrThrow({
       where: { id: order.id },
-      include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
+      include: ORDER_INCLUDE,
     });
 
     return this.toResponse(updated);
@@ -242,7 +251,7 @@ export class OrdersService {
     const [rows, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
-        include: { status: true, food: true, establishment: true, beneficiaryEntity: true },
+        include: ORDER_INCLUDE,
         orderBy: { orderDate: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -273,7 +282,13 @@ export class OrdersService {
       },
       include: {
         status: true,
-        food: { include: { category: true, status: true } },
+        food: {
+          include: {
+            catalogItem: { include: { category: true } },
+            measurementUnit: true,
+            status: true,
+          },
+        },
         establishment: { include: { address: true } },
         beneficiaryEntity: { include: { address: true } },
       },
@@ -314,7 +329,13 @@ export class OrdersService {
     order: Prisma.OrderGetPayload<{
       include: {
         status: true;
-        food: { include: { category: true; status: true } };
+        food: {
+          include: {
+            catalogItem: { include: { category: true } };
+            measurementUnit: true;
+            status: true;
+          };
+        };
         establishment: { include: { address: true } };
         beneficiaryEntity: { include: { address: true } };
       };
@@ -327,13 +348,16 @@ export class OrdersService {
       status: { id: order.status.id, name: order.status.name },
       food: {
         id: order.food.id,
-        image: order.food.image,
-        name: order.food.name,
+        image: this.storage.toUrl(order.food.image),
+        name: order.food.catalogItem.name,
         quantity: order.food.quantity.toString(),
-        quantityUnit: order.food.quantityUnit,
+        quantityUnit: order.food.measurementUnit.abbreviation,
         description: order.food.description,
         expirationDate: order.food.expirationDate,
-        category: { id: order.food.category.id, name: order.food.category.name },
+        category: {
+          id: order.food.catalogItem.category.id,
+          name: order.food.catalogItem.category.name,
+        },
         status: { id: order.food.status.id, name: order.food.status.name },
       },
       establishment: this.mapInstitution(order.establishment),
@@ -343,7 +367,7 @@ export class OrdersService {
 
   private toResponse(
     order: Prisma.OrderGetPayload<{
-      include: { status: true; food: true; establishment: true; beneficiaryEntity: true };
+      include: typeof ORDER_INCLUDE;
     }>,
   ): OrderResponseDto {
     return {
@@ -351,7 +375,11 @@ export class OrdersService {
       quantity: order.quantity.toString(),
       orderDate: order.orderDate,
       status: { id: order.status.id, name: order.status.name },
-      food: { id: order.food.id, name: order.food.name, quantityUnit: order.food.quantityUnit },
+      food: {
+        id: order.food.id,
+        name: order.food.catalogItem.name,
+        quantityUnit: order.food.measurementUnit.abbreviation,
+      },
       establishment: {
         id: order.establishment.id,
         companyName: order.establishment.companyName,
