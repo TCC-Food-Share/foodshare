@@ -44,7 +44,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | 1.3 | `admin-listas`                  | RF33–RF40, RF59–RF70                        | 1.1, 0.2       | 14/10 | ⬜     |
 | 1.4 | `termos-proibidos-validacao`    | RNF07                                       | 1.1            | 14/10 | ⬜     |
 | 1.5 | `sugestoes`                     | RF49, RF71, RN39                            | 1.3            | 16/10 | ⬜     |
-| 2.1 | `cadastro-alimento-padronizado` | RF14, RF20, RF21, RN15–RN17, RN25           | 0.3, 1.2       | 19/10 | ⬜     |
+| 2.1 | `cadastro-alimento-padronizado` | RF14, RF20, RF21, RN15–RN17, RN25           | 0.3, 1.2       | 19/10 | ✅     |
 | 2.2 | `meus-alimentos`                | RF15–RF19, RN20–RN24                        | 2.1            | 22/10 | ⬜     |
 | 3.1 | `pedido-tipo-e-reserva`         | RF22, RF23, RF25, RN03, RN07, RN08          | 2.1            | 24/10 | ⬜     |
 | 3.2 | `cancelar-pedido`               | RF26, RN09                                  | 3.1            | 26/10 | ⬜     |
