@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
-import type { FoodListItem } from '@/features/foods/foods-api';
+import { establishmentDisplayName, type FoodListItem } from '@/features/foods/foods-api';
 import { formatDate, formatQuantity } from '@/lib/format';
 
 export function FoodCard({ food }: { food: FoodListItem }) {
@@ -36,14 +36,14 @@ export function FoodCard({ food }: { food: FoodListItem }) {
 
         <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
           <StoreIcon className="size-3.5" />
-          <span>{food.establishment.companyName}</span>
+          <span>{establishmentDisplayName(food.establishment)}</span>
         </div>
 
         <div className="text-muted-foreground flex flex-col gap-1.5 text-[13px]">
           <div className="flex items-center gap-1.5">
             <PackageIcon className="size-3.5" />
             <span>
-              Qtd: {formatQuantity(food.quantity)} {food.quantityUnit}
+              Qtd: {formatQuantity(food.quantity)} {food.measurementUnit.abbreviation}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
