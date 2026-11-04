@@ -41,7 +41,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | 0.3 | `upload-imagens`                | RNF09, RN41, RF01–RF03 (imagem)             | 0.1            | 07/10 | ✅     |
 | 1.1 | `listas-padronizadas-modelo`    | Modelo + seeds das listas, RN31, RN37, RN40 | 0.2            | 09/10 | ✅     |
 | 1.2 | `catalogo-taco`                 | DT12                                        | 1.1            | 12/10 | ✅     |
-| 1.3 | `admin-listas`                  | RF33–RF40, RF59–RF70                        | 1.1, 0.2       | 14/10 | ⬜     |
+| 1.3 | `admin-listas`                  | RF33–RF40, RF59–RF70                        | 1.1, 0.2       | 14/10 | ✅     |
 | 1.4 | `termos-proibidos-validacao`    | RNF07                                       | 1.1            | 14/10 | ⬜     |
 | 1.5 | `sugestoes`                     | RF49, RF71, RN39                            | 1.3            | 16/10 | ⬜     |
 | 2.1 | `cadastro-alimento-padronizado` | RF14, RF20, RF21, RN15–RN17, RN25           | 0.3, 1.2       | 19/10 | ✅     |

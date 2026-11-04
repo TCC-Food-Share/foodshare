@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { Prisma } from '../../generated/prisma/client';
+import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { ImageStorageService } from '../files/image-storage.service';
 import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,8 +17,6 @@ import { OrderResponseDto } from './dto/order-response.dto';
 import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto';
 import {
   DEFAULT_PAGE,
-  DEFAULT_PAGE_SIZE,
-  MAX_PAGE_SIZE,
   OPEN_ORDER_STATUSES,
   ORDER_CONFLICT_CODES,
   ORDER_STATUS,
@@ -246,7 +245,7 @@ export class OrdersService {
     };
 
     const page = query.page ?? DEFAULT_PAGE;
-    const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
 
     const [rows, total] = await Promise.all([
       this.prisma.order.findMany({

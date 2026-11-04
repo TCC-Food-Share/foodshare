@@ -72,25 +72,27 @@ function AccountFooter() {
   }
 
   return (
-    <div className="flex flex-col gap-3 border-t pt-4">
+    <div className="flex items-center gap-2.5 border-t px-1 pt-3">
       {user && (
-        <div className="flex items-center gap-3 px-3">
-          <span className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+        <>
+          <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">
             {initials(user.name)}
           </span>
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-semibold">{user.name}</span>
-            <span className="text-muted-foreground truncate text-xs">{user.email}</span>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-[13px] font-semibold">{user.name}</span>
+            <span className="text-muted-foreground truncate text-[11px]">{user.email}</span>
           </div>
-        </div>
+        </>
       )}
       <Button
         variant="ghost"
-        className="justify-start gap-3 px-3"
+        size="icon"
+        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive ml-auto size-8 shrink-0"
+        aria-label="Sair"
+        title="Sair"
         onClick={() => void handleSignOut()}
       >
         <LogOutIcon className="size-4" />
-        Sair
       </Button>
     </div>
   );

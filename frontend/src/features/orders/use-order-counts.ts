@@ -2,12 +2,13 @@ import { useQueries } from '@tanstack/react-query';
 
 import { ORDER_STATUSES, type OrderStatusName } from '@/features/orders/order-status';
 import { listOrders, ORDERS_REFETCH_INTERVAL } from '@/features/orders/orders-api';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
 export function useOrderCounts(): Record<OrderStatusName, number | undefined> {
   const results = useQueries({
     queries: ORDER_STATUSES.map((status) => ({
       queryKey: ['orders', 'count', status],
-      queryFn: () => listOrders({ status, page: 1, pageSize: 1 }),
+      queryFn: () => listOrders({ status, page: 1, pageSize: DEFAULT_PAGE_SIZE }),
       refetchInterval: ORDERS_REFETCH_INTERVAL,
     })),
   });

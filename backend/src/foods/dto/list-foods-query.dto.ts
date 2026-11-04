@@ -1,6 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+
+import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../common/pagination';
 
 const trimToUndefined = ({ value }: { value: unknown }): string | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -25,15 +27,13 @@ export class ListFoodsQueryDto {
   page?: number;
 
   @ApiPropertyOptional({
-    example: 20,
-    description: 'Itens por página. Default 20, limitado a no máximo 50',
-    minimum: 1,
-    default: 20,
+    enum: PAGE_SIZES,
+    default: DEFAULT_PAGE_SIZE,
+    description: 'Itens por página',
   })
   @IsOptional()
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsIn(PAGE_SIZES)
   pageSize?: number;
 
   @ApiPropertyOptional({

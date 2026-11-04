@@ -3,6 +3,7 @@ import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { PageSizeSelect } from '@/components/page-size-select';
 import { PaginationBar } from '@/components/pagination-bar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +13,7 @@ import { EmptyState } from '@/features/foods/empty-state';
 import { FoodCard } from '@/features/foods/food-card';
 import { listFoods } from '@/features/foods/foods-api';
 import { SearchFilters } from '@/features/foods/search-filters';
+import { DEFAULT_PAGE_SIZE, parsePageSize } from '@/lib/pagination';
 
 const FILTER_KEYS = ['name', 'categoryId', 'city', 'state'] as const;
 
@@ -21,12 +23,14 @@ export function FeedPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const page = Number(searchParams.get('page') ?? '1') || 1;
+  const pageSize = parsePageSize(searchParams.get('pageSize'));
   const filters = {
     name: searchParams.get('name') ?? undefined,
     categoryId: searchParams.get('categoryId') ? Number(searchParams.get('categoryId')) : undefined,
     city: searchParams.get('city') ?? undefined,
     state: searchParams.get('state') ?? undefined,
     page,
+    pageSize,
   };
 
   const query = useQuery({
@@ -37,7 +41,16 @@ export function FeedPage() {
   const hasActiveFilters = FILTER_KEYS.some((key) => searchParams.get(key));
 
   function clearFilters() {
-    setSearchParams({});
+    setSearchParams(pageSize === DEFAULT_PAGE_SIZE ? {} : { pageSize: String(pageSize) });
+  }
+
+  function changePageSize(next: number) {
+    setSearchParams((params) => {
+      params.delete('page');
+      if (next === DEFAULT_PAGE_SIZE) params.delete('pageSize');
+      else params.set('pageSize', String(next));
+      return params;
+    });
   }
 
   function goToPage(nextPage: number) {
@@ -101,7 +114,15 @@ export function FeedPage() {
             ))}
           </div>
 
-          <PaginationBar page={page} totalPages={totalPages} onPageChange={goToPage} />
+          <div className="flex flex-col items-center gap-3 md:flex-row md:justify-between">
+            <PageSizeSelect value={pageSize} onChange={changePageSize} />
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              className="mx-0 w-auto"
+            />
+          </div>
         </>
       )}
     </div>

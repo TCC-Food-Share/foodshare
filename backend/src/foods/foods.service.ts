@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from '../../generated/prisma/client';
+import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { IMAGE_FOLDER } from '../files/files.constants';
 import type { ValidatedImage } from '../files/image-file.pipe';
 import { ImageStorageService } from '../files/image-storage.service';
@@ -13,8 +14,6 @@ import { checkFoodQuantity } from './food-quantity';
 import { FOOD_STATUS, INVALID_CATALOG_ITEM, INVALID_MEASUREMENT_UNIT } from './foods.constants';
 
 const DEFAULT_PAGE = 1;
-const DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE = 50;
 
 const FOOD_INCLUDE = {
   catalogItem: { include: { category: true } },
@@ -107,7 +106,7 @@ export class FoodsService {
 
   async list(query: ListFoodsQueryDto): Promise<PaginatedFoodsResponseDto> {
     const page = query.page ?? DEFAULT_PAGE;
-    const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
     const skip = (page - 1) * pageSize;
 
     // `unaccent()` has no Prisma query-builder equivalent, so the filtered page is

@@ -101,8 +101,12 @@ Nesses casos, um comentário curto na linha relevante.
   - Papel errado responde `403` com `code: ROLE_NOT_ALLOWED`. Os nomes dos
     papéis vêm só da constante `ROLE` (`auth/roles.constants.ts`).
 - `/auth/*` é reservado ao better-auth (ver abaixo).
-- Listagens paginadas seguem o padrão do MVP: `page`, `pageSize` (padrão 20,
-  teto 50), resposta `{ data, total, page, pageSize }`. Busca e ordenação
+- Toda listagem paginada usa `page` e `pageSize` (10, 20, 50 ou 100; padrão
+  10; outro valor responde `400`), com resposta
+  `{ data, total, page, pageSize }`, e a tela oferece o select "Itens por
+  página". Os valores ficam em `common/pagination.ts` (backend) e
+  `lib/pagination.ts` (frontend). As rotas `/catalog/...` dos selects não são
+  paginadas. Busca e ordenação
   por query string (`sort=field`, `order=asc|desc`).
 
 ### Auditoria

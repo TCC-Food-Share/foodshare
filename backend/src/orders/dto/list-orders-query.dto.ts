@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Min } from 'class-validator';
 
+import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../common/pagination';
 import { ORDER_STATUS_NAMES } from '../orders.constants';
 
 export class ListOrdersQueryDto {
@@ -18,15 +19,13 @@ export class ListOrdersQueryDto {
   page?: number;
 
   @ApiPropertyOptional({
-    example: 20,
-    description: 'Itens por página. Default 20, limitado a no máximo 50',
-    minimum: 1,
-    default: 20,
+    enum: PAGE_SIZES,
+    default: DEFAULT_PAGE_SIZE,
+    description: 'Itens por página',
   })
   @IsOptional()
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsIn(PAGE_SIZES)
   pageSize?: number;
 
   @ApiPropertyOptional({
