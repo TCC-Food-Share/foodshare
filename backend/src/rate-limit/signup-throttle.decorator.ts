@@ -7,7 +7,7 @@ export function SignupThrottle() {
   return applyDecorators(
     SetMetadata(SIGNUP_THROTTLE_KEY, true),
     ApiTooManyRequestsResponse({
-      description: 'Limite de cadastros por IP excedido: 5 por hora (`code: TOO_MANY_REQUESTS`).',
+      description: 'Limite de cadastros por IP excedido: 10 por hora (`code: TOO_MANY_REQUESTS`).',
     }),
   );
 }
