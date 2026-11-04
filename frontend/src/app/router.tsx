@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
@@ -5,6 +6,11 @@ import { AdminHomePage } from '@/features/admin/admin-home-page';
 import { AdminLayout } from '@/features/admin/admin-layout';
 import { ADMIN_NAV_ITEMS } from '@/features/admin/admin-nav-items';
 import { AdminPlaceholderPage } from '@/features/admin/admin-placeholder-page';
+import { AdminCancellationReasonsPage } from '@/features/admin/lists/admin-cancellation-reasons-page';
+import { AdminCategoriesPage } from '@/features/admin/lists/admin-categories-page';
+import { AdminFoodItemsPage } from '@/features/admin/lists/admin-food-items-page';
+import { AdminMeasurementUnitsPage } from '@/features/admin/lists/admin-measurement-units-page';
+import { AdminProhibitedTermsPage } from '@/features/admin/lists/admin-prohibited-terms-page';
 import { ADMIN_HOME, INSTITUTION_ROLES } from '@/features/auth/home-path';
 import { HomeRedirect } from '@/features/auth/home-redirect';
 import { LoginPage } from '@/features/auth/login-page';
@@ -16,6 +22,14 @@ import { FoodDetailPage } from '@/features/foods/food-detail-page';
 import { OrderDetailPage } from '@/features/orders/order-detail-page';
 import { OrdersPage } from '@/features/orders/orders-page';
 import { ProfilePage } from '@/features/profile/profile-page';
+
+const ADMIN_LIST_PAGES: Record<string, ReactNode> = {
+  '/admin/categorias': <AdminCategoriesPage />,
+  '/admin/catalogo': <AdminFoodItemsPage />,
+  '/admin/unidades': <AdminMeasurementUnitsPage />,
+  '/admin/motivos': <AdminCancellationReasonsPage />,
+  '/admin/termos-proibidos': <AdminProhibitedTermsPage />,
+};
 
 export const router = createBrowserRouter([
   {
@@ -57,7 +71,7 @@ export const router = createBrowserRouter([
               { index: true, element: <AdminHomePage /> },
               ...ADMIN_NAV_ITEMS.map((item) => ({
                 path: item.to,
-                element: <AdminPlaceholderPage title={item.label} />,
+                element: ADMIN_LIST_PAGES[item.to] ?? <AdminPlaceholderPage title={item.label} />,
               })),
               { path: '*', element: <Navigate to={ADMIN_HOME} replace /> },
             ],

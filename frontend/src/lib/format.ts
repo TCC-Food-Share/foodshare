@@ -24,3 +24,5 @@ export function initials(name: string): string {
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
 }
+
+export const formatAdminId = (id: number) => `#${String(id).padStart(3, '0')}`;
