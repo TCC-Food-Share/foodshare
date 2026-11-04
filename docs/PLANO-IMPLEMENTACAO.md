@@ -42,7 +42,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | 1.1 | `listas-padronizadas-modelo`    | Modelo + seeds das listas, RN31, RN37, RN40 | 0.2            | 09/10 | ✅     |
 | 1.2 | `catalogo-taco`                 | DT12                                        | 1.1            | 12/10 | ✅     |
 | 1.3 | `admin-listas`                  | RF33–RF40, RF59–RF70                        | 1.1, 0.2       | 14/10 | ✅     |
-| 1.4 | `termos-proibidos-validacao`    | RNF07                                       | 1.1            | 14/10 | ⬜     |
+| 1.4 | `termos-proibidos-validacao`    | RNF07                                       | 1.1            | 14/10 | ✅     |
 | 1.5 | `sugestoes`                     | RF49, RF71, RN39                            | 1.3            | 16/10 | ⬜     |
 | 2.1 | `cadastro-alimento-padronizado` | RF14, RF20, RF21, RN15–RN17, RN25           | 0.3, 1.2       | 19/10 | ✅     |
 | 2.2 | `meus-alimentos`                | RF15–RF19, RN20–RN24                        | 2.1            | 22/10 | ⬜     |
@@ -155,7 +155,7 @@ o cronograma da disciplina pedir.
 
 ### 1.5 `sugestoes`
 
-- **Backend:** criar sugestão (RF71, instituições); listar, aprovar e recusar (RF49, admin). Aprovar cria a opção na lista, na mesma transação, com ajuste de texto e escolha de categoria para item do catálogo.
+- **Backend:** criar sugestão (RF71, instituições); listar, aprovar e recusar (RF49, admin). Aprovar cria a opção na lista, na mesma transação, com ajuste de texto e escolha de categoria para item do catálogo. O texto da sugestão usa `@NoProhibitedContent()` (DT24).
 - **Frontend**
   - Ação "Sugerir nova opção" no componente de select com busca: um diálogo curto que não fecha o formulário em andamento.
   - Tela de sugestões no painel, com filtros por tipo e status.
@@ -230,7 +230,7 @@ o cronograma da disciplina pedir.
 
 ### 4.2 `perfil-completo`
 
-- **Backend + frontend:** passam a ser editáveis também o nome fantasia, o celular pessoal e o nome do responsável (RF03). Continuam somente leitura: e-mail pessoal, CNPJ e razão social.
+- **Backend + frontend:** passam a ser editáveis também o nome fantasia, o celular pessoal e o nome do responsável (RF03). Continuam somente leitura: e-mail pessoal, CNPJ e razão social. O nome fantasia editável usa `@NoProhibitedContent()` (DT24).
 - **Pronto quando:** a tela de perfil cobre todos os campos do RF03 e do RF11.
 
 ### 4.3 `instituicoes-e-perfil-publico`
@@ -263,6 +263,7 @@ auditoria.
 
 - Cadastrar uma instituição de qualquer tipo pelo painel (RF41, reaproveitando o service do cadastro).
 - Editar, incluindo o campo deletado (RF44).
+- Descrição e nome fantasia usam `@NoProhibitedContent()` no cadastro e na edição (DT24).
 - Imagem no cadastro e na edição pelo padrão da 0.3 (`@ImageUpload()`, pasta `users`), com a troca apagando a anterior depois do commit.
 - Listar com a busca ampla, incluindo dados do responsável (RF47, RF57, RF58).
 - Perfil completo somente leitura, com indicadores de atividade (RF48).
@@ -277,7 +278,7 @@ auditoria.
 
 - Listar com todos os filtros (RF52).
 - Detalhe com destaque para estabelecimento excluído (RF53).
-- Editar (RF50, respeitando a RN20). A imagem segue o padrão da 0.3 (`@ImageUpload()`, pasta `foods` criada na 2.1).
+- Editar (RF50, respeitando a RN20). A imagem segue o padrão da 0.3 (`@ImageUpload()`, pasta `foods` criada na 2.1). Descrição e observações usam `@NoProhibitedContent()` (DT24).
 - Excluir permanentemente (RF51).
 
 ### 5.5 `admin-pedidos`

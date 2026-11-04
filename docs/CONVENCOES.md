@@ -88,6 +88,15 @@ Nesses casos, um comentário curto na linha relevante.
   `ORDERS_IN_PROGRESS_LIMIT_REACHED` e `DUPLICATE_ORDER_IN_PROGRESS`. Todo
   `409` novo ganha uma `code`.
 
+### Textos livres (RNF07, DT24)
+
+- Todo campo de texto livre coberto pela DT24 usa `@NoProhibitedContent()` no
+  DTO (`content-moderation/no-prohibited-content.validator.ts`). Campo novo
+  desse tipo entra com o decorator desde o início.
+- A recusa responde `400` com `code: PROHIBITED_CONTENT` e `fields`. O frontend
+  mostra `PROHIBITED_CONTENT_MESSAGE` nos campos, com
+  `prohibitedContentFields` (`lib/prohibited-content.ts`).
+
 ### Rotas
 
 - Rotas de administrador ficam sob `/admin/*`, protegidas por guard de papel
