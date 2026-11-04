@@ -29,11 +29,14 @@ import { WizardProgress } from '@/features/auth/sign-up/wizard-progress';
 import { useAuth } from '@/features/auth/use-auth';
 import { imageErrorMessage } from '@/features/files/image-errors';
 import { ApiError, isTooManyRequests } from '@/lib/api';
+import { PROHIBITED_CONTENT_MESSAGE, prohibitedContentFields } from '@/lib/prohibited-content';
 
 const LAST_STEP = 4;
 const PHOTO_STEP = 4;
 
 const FIELD_TO_STEP: Record<string, number> = {
+  tradeName: 1,
+  description: 1,
   cnpj: 1,
   institutionalEmail: 1,
   institutionalPhone: 1,
@@ -151,6 +154,14 @@ export function SignUpPage() {
         return;
       }
       setServerError({ kind: 'dup-race' });
+      return;
+    }
+    const prohibitedFields = prohibitedContentFields(error);
+    if (prohibitedFields.length > 0) {
+      for (const fieldName of prohibitedFields) {
+        form.setError(fieldName as keyof SignUpInput, { message: PROHIBITED_CONTENT_MESSAGE });
+      }
+      setStep(Math.min(...prohibitedFields.map((name) => FIELD_TO_STEP[name] ?? LAST_STEP)));
       return;
     }
     const imageMessage = imageErrorMessage(error);
