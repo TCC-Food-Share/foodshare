@@ -11,6 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { NoProhibitedContent } from '../../content-moderation/no-prohibited-content.validator';
 import { AddressDto } from '../../establishments/dto/address.dto';
 
 export class CreateBeneficiaryEntityDto {
@@ -61,6 +62,7 @@ export class CreateBeneficiaryEntityDto {
   @IsOptional()
   @IsString()
   @MaxLength(200)
+  @NoProhibitedContent()
   tradeName?: string;
 
   @ApiProperty({
@@ -93,6 +95,7 @@ export class CreateBeneficiaryEntityDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
+  @NoProhibitedContent()
   description!: string;
 
   @ApiProperty({ type: () => AddressDto })

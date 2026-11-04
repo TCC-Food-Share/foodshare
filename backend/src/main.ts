@@ -1,11 +1,11 @@
 import 'dotenv/config';
 
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { OpenAPIObject } from '@nestjs/swagger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
+import { useContainer } from 'class-validator';
 import express from 'express';
 import { join } from 'path';
 
@@ -13,6 +13,7 @@ import { createAccessLogMiddleware } from './access-log/access-log.middleware';
 import { AccessLogService } from './access-log/access-log.service';
 import { AppModule } from './app.module';
 import { auth, trustedOrigins } from './auth/auth.instance';
+import { AppValidationPipe } from './common/app-validation.pipe';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
@@ -34,8 +35,9 @@ async function bootstrap() {
   });
   app.useStaticAssets(join(process.cwd(), 'public'));
   app.use(express.json());
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
   app.useGlobalPipes(
-    new ValidationPipe({
+    new AppValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,

@@ -53,6 +53,7 @@ import {
 } from '@/features/foods/food-request-type';
 import { createFood } from '@/features/foods/foods-api';
 import { ApiError } from '@/lib/api';
+import { PROHIBITED_CONTENT_MESSAGE, prohibitedContentFields } from '@/lib/prohibited-content';
 
 type ServerError = 'invalid' | 'network';
 
@@ -155,6 +156,15 @@ export function CreateFoodDialog({
   });
 
   function handleServerError(error: unknown) {
+    const prohibitedFields = prohibitedContentFields(error).filter(
+      (field) => field === 'description' || field === 'notes',
+    );
+    if (prohibitedFields.length > 0) {
+      for (const field of prohibitedFields) {
+        form.setError(field, { message: PROHIBITED_CONTENT_MESSAGE });
+      }
+      return;
+    }
     const code = errorCode(error);
     if (code === 'FRACTION_NOT_ALLOWED' || code === 'PARTIAL_ONLY_QUANTITY_TOO_LOW') {
       form.setError('quantity', { message: FOOD_QUANTITY_MESSAGES[code] });

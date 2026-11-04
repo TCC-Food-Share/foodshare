@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEmail, IsOptional, IsString, Matches, MaxLength, ValidateNested } from 'class-validator';
 
+import { NoProhibitedContent } from '../../content-moderation/no-prohibited-content.validator';
 import { AddressDto } from '../../establishments/dto/address.dto';
 
 export class UpdateBeneficiaryEntityDto {
@@ -38,6 +39,7 @@ export class UpdateBeneficiaryEntityDto {
   @IsOptional()
   @IsString()
   @MaxLength(2000)
+  @NoProhibitedContent()
   description?: string;
 
   @ApiPropertyOptional({

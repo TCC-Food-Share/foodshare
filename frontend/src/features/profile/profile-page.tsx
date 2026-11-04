@@ -23,6 +23,7 @@ import {
 } from '@/features/profile/profile-schema';
 import { ProfileView } from '@/features/profile/profile-view';
 import { ApiError } from '@/lib/api';
+import { PROHIBITED_CONTENT_MESSAGE, prohibitedContentFields } from '@/lib/prohibited-content';
 
 const FIELD_MESSAGES: Record<string, string> = {
   institutionalEmail: 'Este e-mail institucional já está em uso por outro cadastro.',
@@ -132,6 +133,10 @@ export function ProfilePage() {
       toast.success('Perfil atualizado.');
       setMode('view');
     } catch (error) {
+      if (prohibitedContentFields(error).includes('description')) {
+        form.setError('description', { message: PROHIBITED_CONTENT_MESSAGE });
+        return;
+      }
       const imageMessage = imageErrorMessage(error);
       if (imageMessage) {
         form.setError('image', { message: imageMessage });

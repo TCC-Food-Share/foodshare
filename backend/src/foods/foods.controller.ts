@@ -49,7 +49,8 @@ export class FoodsController {
   @ApiCreatedResponse({ description: 'Alimento cadastrado com sucesso.', type: FoodResponseDto })
   @ApiBadRequestResponse({
     description:
-      'Dados inválidos, item do catálogo ou unidade inexistentes (`code: INVALID_CATALOG_ITEM`, ' +
+      'Dados inválidos, termo proibido ou link em texto livre (`code: PROHIBITED_CONTENT`, ' +
+      'com `fields`), item do catálogo ou unidade inexistentes (`code: INVALID_CATALOG_ITEM`, ' +
       '`INVALID_MEASUREMENT_UNIT`), quantidade fracionada em unidade sem fração ' +
       '(`FRACTION_NOT_ALLOWED`), "Somente parcial" sem pedido parcial possível ' +
       '(`PARTIAL_ONLY_QUANTITY_TOO_LOW`) ou imagem ausente ou recusada (`IMAGE_REQUIRED`, ' +
