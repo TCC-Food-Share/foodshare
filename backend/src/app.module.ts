@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { RolesModule } from './auth/roles.module';
 import { BeneficiaryEntitiesModule } from './beneficiary-entities/beneficiary-entities.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { ContentModerationModule } from './content-moderation/content-moderation.module';
 import { EstablishmentsModule } from './establishments/establishments.module';
 import { FilesModule } from './files/files.module';
 import { FoodsModule } from './foods/foods.module';
@@ -22,6 +23,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
     AccessLogModule,
     AuthModule,
     PrismaModule,
+    ContentModerationModule,
     RolesModule,
     AuditModule,
     FilesModule,
