@@ -223,22 +223,15 @@ describe('FoodsService', () => {
       expect(sqlText(sql)).not.toContain('unaccent');
       expect(sqlText(sql)).not.toContain('"categoryId" =');
       expect(sqlText(sql)).not.toContain('a.state =');
-      expect(sql.values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 20, 0]);
+      expect(sql.values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 10, 0]);
       expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(20);
+      expect(result.pageSize).toBe(10);
     });
 
     it('builds LIMIT/OFFSET from the requested page and pageSize', async () => {
-      await service.list({ page: 3, pageSize: 5 });
+      await service.list({ page: 3, pageSize: 20 });
 
-      expect(idQueryCall().values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 5, 10]);
-    });
-
-    it('clamps pageSize to 50', async () => {
-      const result = await service.list({ pageSize: 999 });
-
-      expect(idQueryCall().values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 50, 0]);
-      expect(result.pageSize).toBe(50);
+      expect(idQueryCall().values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 20, 40]);
     });
 
     it('passes name/categoryId/city/state filters into the where clause', async () => {
@@ -257,7 +250,7 @@ describe('FoodsService', () => {
         2,
         'birigui',
         'SP',
-        20,
+        10,
         0,
       ]);
     });

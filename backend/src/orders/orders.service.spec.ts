@@ -524,14 +524,14 @@ describe('OrdersService', () => {
           where: { deleted: false, establishmentId: 3 },
           orderBy: { orderDate: 'desc' },
           skip: 0,
-          take: 20,
+          take: 10,
         }),
       );
       expect(result).toEqual({
         data: [expect.objectContaining({ id: 50 })],
         total: 1,
         page: 1,
-        pageSize: 20,
+        pageSize: 10,
       });
     });
 
@@ -582,20 +582,13 @@ describe('OrdersService', () => {
     });
 
     it('applies page and pageSize', async () => {
-      const result = await service.list(30, { page: 2, pageSize: 5 });
+      const result = await service.list(30, { page: 2, pageSize: 20 });
 
       expect(prismaMock.order.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 5, take: 5 }),
+        expect.objectContaining({ skip: 20, take: 20 }),
       );
       expect(result.page).toBe(2);
-      expect(result.pageSize).toBe(5);
-    });
-
-    it('clamps pageSize to the maximum of 50', async () => {
-      const result = await service.list(30, { pageSize: 100 });
-
-      expect(prismaMock.order.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 50 }));
-      expect(result.pageSize).toBe(50);
+      expect(result.pageSize).toBe(20);
     });
 
     it('reports the total from order.count using the same where as findMany', async () => {

@@ -69,7 +69,7 @@ export class OrdersController {
       'os pedidos que criou (RF27). Filtro opcional `status` (`Pendente` | `Em andamento` | ' +
       '`Rejeitado` | `Doado` | `Cancelado`) para separar por status; ausente traz todos. ' +
       'Paginação por ' +
-      '`page` (default 1) e `pageSize` (default 20, máximo 50). Ordenado do pedido mais ' +
+      '`page` (default 1) e `pageSize` (10, 20, 50 ou 100; default 10). Ordenado do pedido mais ' +
       'recente para o mais antigo.',
   })
   @ApiOkResponse({
