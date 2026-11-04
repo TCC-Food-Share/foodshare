@@ -1,4 +1,4 @@
-import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react';
+import { CheckIcon, ChevronsUpDownIcon, LightbulbIcon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ interface SearchableSelectProps {
   disabled?: boolean;
   invalid?: boolean;
   footer?: ReactNode;
+  onSuggest?: (search: string) => void;
 }
 
 function filterOption(value: string, search: string, keywords?: string[]): number {
@@ -50,12 +51,19 @@ export function SearchableSelect({
   disabled,
   invalid,
   footer,
+  onSuggest,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const selected = options.find((option) => option.value === value);
 
+  function changeOpen(next: boolean) {
+    setOpen(next);
+    if (!next) setSearch('');
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -81,7 +89,7 @@ export function SearchableSelect({
         portalled={false}
       >
         <Command filter={filterOption}>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
@@ -92,7 +100,7 @@ export function SearchableSelect({
                   keywords={option.keywords}
                   onSelect={() => {
                     onChange(option.value);
-                    setOpen(false);
+                    changeOpen(false);
                   }}
                 >
                   <CheckIcon className={cn(option.value === value ? 'opacity-100' : 'opacity-0')} />
@@ -102,6 +110,24 @@ export function SearchableSelect({
             </CommandGroup>
           </CommandList>
           {footer}
+          {onSuggest && (
+            <div className="border-t p-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start font-normal"
+                onClick={() => {
+                  const term = search.trim();
+                  changeOpen(false);
+                  onSuggest(term);
+                }}
+              >
+                <LightbulbIcon />
+                Sugerir nova opção
+              </Button>
+            </div>
+          )}
         </Command>
       </PopoverContent>
     </Popover>
