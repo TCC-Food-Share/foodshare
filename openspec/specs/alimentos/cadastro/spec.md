@@ -96,12 +96,22 @@ O sistema SHALL atribuir automaticamente o status "Ativo" a todo alimento no mom
 
 ### Requirement: Formulário de cadastro de alimento
 
-O modal "Cadastrar Alimento" SHALL usar as listas padronizadas, sem texto livre para alimento ou unidade: um select com busca sem acento no catálogo de alimentos, que mostra a categoria do item escolhido sem permitir editá-la; um select das unidades de medida; uma escolha do tipo de solicitação entre as três opções; o campo de observações, opcional; e, no topo do formulário, uma área de upload da foto do alimento que aceita clique ou arrastar e soltar e mostra a prévia da imagem escolhida. O formulário SHALL validar antes de enviar a quantidade fracionada pela unidade escolhida e a regra do "Somente parcial", e SHALL mostrar no campo certo os erros devolvidos pelo servidor.
+O modal "Cadastrar Alimento" SHALL usar as listas padronizadas, sem texto livre para alimento ou unidade, e com a ação "Sugerir nova opção" nos dois selects: um select com busca sem acento no catálogo de alimentos, que mostra a categoria do item escolhido sem permitir editá-la; um select com busca das unidades de medida, por nome ou sigla; uma escolha do tipo de solicitação entre as três opções; o campo de observações, opcional; e, no topo do formulário, uma área de upload da foto do alimento que aceita clique ou arrastar e soltar e mostra a prévia da imagem escolhida. O formulário SHALL validar antes de enviar a quantidade fracionada pela unidade escolhida e a regra do "Somente parcial", e SHALL mostrar no campo certo os erros devolvidos pelo servidor.
 
 #### Scenario: Busca sem acento no select do catálogo
 
 - **WHEN** o estabelecimento digita "pao" no select de alimento
 - **THEN** o select mostra "Pão francês", "Pão de forma" e os demais itens que contêm o trecho
+
+#### Scenario: Busca no select de unidade
+
+- **WHEN** o estabelecimento digita "kg" no select de unidade
+- **THEN** o select mostra "Quilograma (kg)"
+
+#### Scenario: Sugestão sem perder o formulário
+
+- **WHEN** o estabelecimento escolhe "Sugerir nova opção" no select de alimento e envia a sugestão
+- **THEN** o modal continua aberto, com os dados já preenchidos
 
 #### Scenario: Categoria preenchida pelo alimento
 

@@ -8,7 +8,7 @@ Bloquear termos proibidos e links nos textos livres enviados pelas instituiçõe
 
 ### Requirement: Campos de texto livre validados
 
-O sistema SHALL validar o conteúdo dos seguintes campos, sempre que enviados: descrição e nome fantasia no cadastro de estabelecimento e de entidade beneficiária; descrição na edição de estabelecimento e de entidade beneficiária; descrição e observações no cadastro de alimento. Campo opcional não enviado ou vazio SHALL ser aceito. Razão social, nome do responsável e endereço SHALL NOT passar por esta validação.
+O sistema SHALL validar o conteúdo dos seguintes campos, sempre que enviados: descrição e nome fantasia no cadastro de estabelecimento e de entidade beneficiária; descrição na edição de estabelecimento e de entidade beneficiária; descrição e observações no cadastro de alimento; texto da sugestão de nova opção. Campo opcional não enviado ou vazio SHALL ser aceito. Razão social, nome do responsável e endereço SHALL NOT passar por esta validação.
 
 #### Scenario: Cadastro de instituição com termo proibido na descrição
 
@@ -39,6 +39,11 @@ O sistema SHALL validar o conteúdo dos seguintes campos, sempre que enviados: d
 
 - **WHEN** uma submissão de cadastro traz um termo proibido apenas na razão social
 - **THEN** o sistema não recusa o cadastro por esse motivo
+
+#### Scenario: Sugestão com termo proibido ou link
+
+- **WHEN** uma instituição envia uma sugestão com termo proibido ou link no texto
+- **THEN** o sistema recusa a sugestão com `400` e `code` `PROHIBITED_CONTENT`, informando o campo `text`, sem gravar nada
 
 ### Requirement: Comparação de termos por palavra inteira
 
