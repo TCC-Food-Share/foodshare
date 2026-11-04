@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Navigate, useSearchParams } from 'react-router-dom';
 
+import { PageSizeSelect } from '@/components/page-size-select';
 import { PaginationBar } from '@/components/pagination-bar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,8 +20,8 @@ import { OrdersEmptyState } from '@/features/orders/orders-empty-state';
 import { OrdersTable } from '@/features/orders/orders-table';
 import { useOrderCounts } from '@/features/orders/use-order-counts';
 import { cn } from '@/lib/cn';
+import { DEFAULT_PAGE_SIZE, parsePageSize } from '@/lib/pagination';
 
-const ORDERS_PAGE_SIZE = 10;
 const DEFAULT_STATUS: OrderStatusName = ORDER_STATUS.PENDING;
 
 const PAGE_COPY = {
@@ -34,9 +35,12 @@ const PAGE_COPY = {
   },
 };
 
-function ordersUrl(status: OrderStatusName, page: number): string {
-  const query = `status=${encodeURIComponent(status)}`;
-  return page > 1 ? `/pedidos?${query}&page=${page}` : `/pedidos?${query}`;
+function ordersParams(status: OrderStatusName, page: number, pageSize: number) {
+  return {
+    status,
+    ...(page > 1 && { page: String(page) }),
+    ...(pageSize !== DEFAULT_PAGE_SIZE && { pageSize: String(pageSize) }),
+  };
 }
 
 export function OrdersPage() {
@@ -48,26 +52,28 @@ export function OrdersPage() {
   const status = isOrderStatus(statusParam) ? statusParam : DEFAULT_STATUS;
   const pageParam = Number(searchParams.get('page'));
   const page = Number.isInteger(pageParam) && pageParam > 1 ? pageParam : 1;
+  const pageSize = parsePageSize(searchParams.get('pageSize'));
 
   const query = useQuery({
-    queryKey: ['orders', 'list', { status, page }],
-    queryFn: () => listOrders({ status, page, pageSize: ORDERS_PAGE_SIZE }),
+    queryKey: ['orders', 'list', { status, page, pageSize }],
+    queryFn: () => listOrders({ status, page, pageSize }),
     refetchInterval: ORDERS_REFETCH_INTERVAL,
   });
 
   const copy = PAGE_COPY[role === 'establishment' ? 'establishment' : 'beneficiary'];
 
   function changeStatus(next: string) {
-    if (isOrderStatus(next)) setSearchParams({ status: next });
+    if (isOrderStatus(next)) setSearchParams(ordersParams(next, 1, pageSize));
   }
 
   function goToPage(nextPage: number) {
-    setSearchParams(nextPage > 1 ? { status, page: String(nextPage) } : { status });
+    setSearchParams(ordersParams(status, nextPage, pageSize));
   }
 
   if (query.data && query.data.data.length === 0 && query.data.total > 0 && page > 1) {
-    const lastPage = Math.ceil(query.data.total / ORDERS_PAGE_SIZE);
-    return <Navigate replace to={ordersUrl(status, lastPage)} />;
+    const lastPage = Math.ceil(query.data.total / pageSize);
+    const params = new URLSearchParams(ordersParams(status, lastPage, pageSize));
+    return <Navigate replace to={`/pedidos?${params.toString()}`} />;
   }
 
   return (
@@ -127,8 +133,10 @@ export function OrdersPage() {
               orders={query.data.data}
               total={query.data.total}
               page={page}
+              pageSize={pageSize}
               role={role}
               onPageChange={goToPage}
+              onPageSizeChange={(next) => setSearchParams(ordersParams(status, 1, next))}
             />
           )}
         </TabsContent>
@@ -141,13 +149,23 @@ interface OrdersListProps {
   orders: Order[];
   total: number;
   page: number;
+  pageSize: number;
   role: Role | null;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }
 
-function OrdersList({ orders, total, page, role, onPageChange }: OrdersListProps) {
-  const totalPages = Math.max(1, Math.ceil(total / ORDERS_PAGE_SIZE));
-  const from = (page - 1) * ORDERS_PAGE_SIZE + 1;
+function OrdersList({
+  orders,
+  total,
+  page,
+  pageSize,
+  role,
+  onPageChange,
+  onPageSizeChange,
+}: OrdersListProps) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const from = (page - 1) * pageSize + 1;
   const to = from + orders.length - 1;
   const range = from === to ? `${from}` : `${from}–${to}`;
 
@@ -156,9 +174,12 @@ function OrdersList({ orders, total, page, role, onPageChange }: OrdersListProps
       <OrdersTable orders={orders} role={role} />
       <OrderCards orders={orders} role={role} />
       <div className="flex flex-col items-center gap-3 md:flex-row md:justify-between">
-        <p className="text-muted-foreground text-sm">
-          Mostrando {range} de {total} {total === 1 ? 'pedido' : 'pedidos'}
-        </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          <p className="text-muted-foreground text-sm">
+            Mostrando {range} de {total} {total === 1 ? 'pedido' : 'pedidos'}
+          </p>
+          <PageSizeSelect value={pageSize} onChange={onPageSizeChange} />
+        </div>
         <PaginationBar
           page={page}
           totalPages={totalPages}
