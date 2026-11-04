@@ -27,13 +27,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useFoodItems, useMeasurementUnits } from '@/features/catalog/catalog-api';
 import { imageErrorMessage } from '@/features/files/image-errors';
@@ -52,6 +45,10 @@ import {
   type FoodRequestType,
 } from '@/features/foods/food-request-type';
 import { createFood } from '@/features/foods/foods-api';
+import {
+  type SuggestionDraft,
+  SuggestOptionDialog,
+} from '@/features/suggestions/suggest-option-dialog';
 import { ApiError } from '@/lib/api';
 import { PROHIBITED_CONTENT_MESSAGE, prohibitedContentFields } from '@/lib/prohibited-content';
 
@@ -102,6 +99,7 @@ export function CreateFoodDialog({
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<ServerError | null>(null);
+  const [suggestion, setSuggestion] = useState<SuggestionDraft | null>(null);
 
   const foodItemsQuery = useFoodItems();
   const unitsQuery = useMeasurementUnits();
@@ -134,6 +132,16 @@ export function CreateFoodDialog({
         keywords: [item.category.name],
       })),
     [foodItems],
+  );
+
+  const unitOptions = useMemo(
+    () =>
+      units.map((unit) => ({
+        value: String(unit.id),
+        label: `${unit.name} (${unit.abbreviation})`,
+        keywords: [unit.abbreviation],
+      })),
+    [units],
   );
 
   const catalogItemId = useWatch({ control: form.control, name: 'catalogItemId' });
@@ -249,7 +257,6 @@ export function CreateFoodDialog({
                           field.onChange(file);
                         }}
                         onReject={(message) => form.setError('image', { message })}
-                        onBlur={field.onBlur}
                       />
                     </FormControl>
                     <FormMessage />
@@ -278,6 +285,7 @@ export function CreateFoodDialog({
                           }
                           searchPlaceholder="Buscar alimento…"
                           emptyMessage="Nenhum alimento encontrado."
+                          onSuggest={(text) => setSuggestion({ type: 'FOOD_CATALOG_ITEM', text })}
                           disabled={foodItemsQuery.isLoading}
                           invalid={Boolean(fieldState.error)}
                         />
@@ -344,31 +352,30 @@ export function CreateFoodDialog({
                 <FormField
                   control={form.control}
                   name="measurementUnitId"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>
                         Unidade de medida <RequiredMark />
                       </FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          if (form.getValues('quantity')) void form.trigger('quantity');
-                        }}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Ex: unidades, kg, L..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {units.map((unit) => (
-                            <SelectItem key={unit.id} value={String(unit.id)}>
-                              {unit.name} ({unit.abbreviation})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          options={unitOptions}
+                          value={field.value}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            field.onBlur();
+                            if (form.getValues('quantity')) void form.trigger('quantity');
+                          }}
+                          placeholder={
+                            unitsQuery.isLoading ? 'Carregando…' : 'Ex: unidades, kg, L...'
+                          }
+                          searchPlaceholder="Buscar unidade…"
+                          emptyMessage="Nenhuma unidade encontrada."
+                          disabled={unitsQuery.isLoading}
+                          invalid={Boolean(fieldState.error)}
+                          onSuggest={(text) => setSuggestion({ type: 'MEASUREMENT_UNIT', text })}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -459,6 +466,7 @@ export function CreateFoodDialog({
               </Button>
             </DialogFooter>
           </form>
+          <SuggestOptionDialog draft={suggestion} onClose={() => setSuggestion(null)} />
         </Form>
       </DialogContent>
     </Dialog>

@@ -46,7 +46,7 @@ A área administrativa SHALL ter um layout próprio, separado do layout das inst
 
 ### Requirement: Seções ainda vazias
 
-Cada item do menu SHALL abrir uma seção própria, com endereço próprio sob `/admin/...`. As cinco seções do grupo **Listas padronizadas** (Categorias, Catálogo de alimentos, Unidades de medida, Motivos de cancelamento e Termos proibidos) SHALL mostrar a gestão da lista correspondente. As demais seções SHALL mostrar o título e um aviso de que a funcionalidade ainda está em construção. A entrada `/admin` SHALL exibir uma página inicial com uma saudação ao administrador. Endereços `/admin/...` que não correspondem a nenhuma seção SHALL levar para `/admin`.
+Cada item do menu SHALL abrir uma seção própria, com endereço próprio sob `/admin/...`. As cinco seções do grupo **Listas padronizadas** (Categorias, Catálogo de alimentos, Unidades de medida, Motivos de cancelamento e Termos proibidos) SHALL mostrar a gestão da lista correspondente. A seção **Sugestões** SHALL mostrar a tela de sugestões. As demais seções SHALL mostrar o título e um aviso de que a funcionalidade ainda está em construção. A entrada `/admin` SHALL exibir uma página inicial com uma saudação ao administrador. Endereços `/admin/...` que não correspondem a nenhuma seção SHALL levar para `/admin`.
 
 #### Scenario: Seção ainda não implementada
 
@@ -57,6 +57,11 @@ Cada item do menu SHALL abrir uma seção própria, com endereço próprio sob `
 
 - **WHEN** o administrador abre a seção "Categorias"
 - **THEN** a interface mostra a tabela de categorias, sem o aviso de "em construção"
+
+#### Scenario: Seção de sugestões
+
+- **WHEN** o administrador abre a seção "Sugestões"
+- **THEN** a interface mostra a tabela de sugestões, sem o aviso de "em construção"
 
 #### Scenario: Endereço administrativo inexistente
 

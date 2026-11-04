@@ -26,5 +26,11 @@ import { AdminProhibitedTermsService } from './prohibited-terms/admin-prohibited
     AdminCancellationReasonsService,
     AdminProhibitedTermsService,
   ],
+  exports: [
+    AdminCategoriesService,
+    AdminFoodItemsService,
+    AdminMeasurementUnitsService,
+    AdminCancellationReasonsService,
+  ],
 })
 export class AdminListsModule {}

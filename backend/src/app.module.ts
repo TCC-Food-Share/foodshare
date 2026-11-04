@@ -16,6 +16,7 @@ import { FoodsModule } from './foods/foods.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
+import { SuggestionsModule } from './suggestions/suggestions.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
     FoodsModule,
     OrdersModule,
     CatalogModule,
+    SuggestionsModule,
     AdminModule,
   ],
   controllers: [AppController],

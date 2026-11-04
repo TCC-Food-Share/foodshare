@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import { Prisma } from '../../../../generated/prisma/client';
 import { type AuditAdministrator, AuditService } from '../../../audit/audit.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
@@ -58,24 +59,30 @@ export class AdminCancellationReasonsService {
     dto: SaveCancellationReasonDto,
   ): Promise<AdminCancellationReasonDto> {
     return this.prisma
-      .$transaction(async (tx) => {
-        if (await hasDuplicate(tx, 'cancellation_reason', 'name', dto.name)) {
-          throw conflict(DUPLICATE_NAME, 'Reason name already registered.');
-        }
-        const reason = await tx.cancellationReason.create({
-          data: { name: dto.name, isSystem: false, administratorId: admin.id },
-          include: INCLUDE,
-        });
-        await this.audit.record(tx, {
-          administrator: admin,
-          action: 'cancellation_reason.create',
-          entityType: 'CancellationReason',
-          entityId: reason.id,
-          details: { created: { name: reason.name } },
-        });
-        return toDto(reason);
-      })
+      .$transaction((tx) => this.createInTransaction(tx, admin, dto))
       .catch(translatePrismaError);
+  }
+
+  async createInTransaction(
+    tx: Prisma.TransactionClient,
+    admin: AuditAdministrator,
+    dto: SaveCancellationReasonDto,
+  ): Promise<AdminCancellationReasonDto> {
+    if (await hasDuplicate(tx, 'cancellation_reason', 'name', dto.name)) {
+      throw conflict(DUPLICATE_NAME, 'Reason name already registered.');
+    }
+    const reason = await tx.cancellationReason.create({
+      data: { name: dto.name, isSystem: false, administratorId: admin.id },
+      include: INCLUDE,
+    });
+    await this.audit.record(tx, {
+      administrator: admin,
+      action: 'cancellation_reason.create',
+      entityType: 'CancellationReason',
+      entityId: reason.id,
+      details: { created: { name: reason.name } },
+    });
+    return toDto(reason);
   }
 
   async update(

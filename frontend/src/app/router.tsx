@@ -11,6 +11,7 @@ import { AdminCategoriesPage } from '@/features/admin/lists/admin-categories-pag
 import { AdminFoodItemsPage } from '@/features/admin/lists/admin-food-items-page';
 import { AdminMeasurementUnitsPage } from '@/features/admin/lists/admin-measurement-units-page';
 import { AdminProhibitedTermsPage } from '@/features/admin/lists/admin-prohibited-terms-page';
+import { AdminSuggestionsPage } from '@/features/admin/suggestions/admin-suggestions-page';
 import { ADMIN_HOME, INSTITUTION_ROLES } from '@/features/auth/home-path';
 import { HomeRedirect } from '@/features/auth/home-redirect';
 import { LoginPage } from '@/features/auth/login-page';
@@ -29,6 +30,7 @@ const ADMIN_LIST_PAGES: Record<string, ReactNode> = {
   '/admin/unidades': <AdminMeasurementUnitsPage />,
   '/admin/motivos': <AdminCancellationReasonsPage />,
   '/admin/termos-proibidos': <AdminProhibitedTermsPage />,
+  '/admin/sugestoes': <AdminSuggestionsPage />,
 };
 
 export const router = createBrowserRouter([

@@ -4,20 +4,26 @@ import { useSearchParams } from 'react-router-dom';
 import type { AdminListParams } from '@/features/admin/lists/list-api';
 import { DEFAULT_PAGE_SIZE, parsePageSize } from '@/lib/pagination';
 
-export function useAdminListParams() {
+const NO_FILTERS: readonly string[] = [];
+
+export function useAdminListParams(filterKeys: readonly string[] = NO_FILTERS) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const params = useMemo<AdminListParams>(() => {
     const page = Number(searchParams.get('page'));
     const order = searchParams.get('order');
+    const filters = Object.fromEntries(
+      filterKeys.map((key) => [key, searchParams.get(key) ?? undefined]),
+    );
     return {
+      ...filters,
       search: searchParams.get('search') ?? undefined,
       sort: searchParams.get('sort') ?? undefined,
       order: order === 'desc' ? 'desc' : order === 'asc' ? 'asc' : undefined,
       page: Number.isInteger(page) && page > 1 ? page : 1,
       pageSize: parsePageSize(searchParams.get('pageSize')),
     };
-  }, [searchParams]);
+  }, [searchParams, filterKeys]);
 
   const setParams = useCallback(
     (next: AdminListParams) => {

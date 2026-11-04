@@ -35,6 +35,7 @@ interface AdminTableProps<T extends { id: number }> {
   searchPlaceholder: string;
   itemLabel: string;
   rowActions?: (row: T) => ReactNode;
+  toolbar?: ReactNode;
 }
 
 const SEARCH_DELAY_MS = 300;
@@ -103,6 +104,7 @@ export function AdminTable<T extends { id: number }>({
   searchPlaceholder,
   itemLabel,
   rowActions,
+  toolbar,
 }: AdminTableProps<T>) {
   const [search, setSearch] = useState(params.search ?? '');
 
@@ -129,15 +131,18 @@ export function AdminTable<T extends { id: number }>({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative">
-        <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={searchPlaceholder}
-          className="pl-9"
-          aria-label={searchPlaceholder}
-        />
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={searchPlaceholder}
+            className="pl-9"
+            aria-label={searchPlaceholder}
+          />
+        </div>
+        {toolbar}
       </div>
 
       <div className="bg-card overflow-hidden rounded-lg border">

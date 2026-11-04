@@ -70,22 +70,28 @@ export class AdminMeasurementUnitsService {
     dto: SaveMeasurementUnitDto,
   ): Promise<AdminMeasurementUnitDto> {
     return this.prisma
-      .$transaction(async (tx) => {
-        await this.ensureUnique(tx, dto);
-        const unit = await tx.measurementUnit.create({
-          data: { ...dto, administratorId: admin.id },
-          include: INCLUDE,
-        });
-        await this.audit.record(tx, {
-          administrator: admin,
-          action: 'measurement_unit.create',
-          entityType: 'MeasurementUnit',
-          entityId: unit.id,
-          details: { created: snapshot(unit) },
-        });
-        return toDto(unit);
-      })
+      .$transaction((tx) => this.createInTransaction(tx, admin, dto))
       .catch(translatePrismaError);
+  }
+
+  async createInTransaction(
+    tx: Prisma.TransactionClient,
+    admin: AuditAdministrator,
+    dto: SaveMeasurementUnitDto,
+  ): Promise<AdminMeasurementUnitDto> {
+    await this.ensureUnique(tx, dto);
+    const unit = await tx.measurementUnit.create({
+      data: { ...dto, administratorId: admin.id },
+      include: INCLUDE,
+    });
+    await this.audit.record(tx, {
+      administrator: admin,
+      action: 'measurement_unit.create',
+      entityType: 'MeasurementUnit',
+      entityId: unit.id,
+      details: { created: snapshot(unit) },
+    });
+    return toDto(unit);
   }
 
   async update(
