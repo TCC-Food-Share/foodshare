@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 
 import { FoodRequestType } from '../../../generated/prisma/client';
+import { NoProhibitedContent } from '../../content-moderation/no-prohibited-content.validator';
 
 const trimToUndefined = ({ value }: { value: unknown }): unknown => {
   if (typeof value !== 'string') return value;
@@ -58,6 +59,7 @@ export class CreateFoodDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
+  @NoProhibitedContent()
   description!: string;
 
   @ApiPropertyOptional({
@@ -69,6 +71,7 @@ export class CreateFoodDto {
   @Transform(trimToUndefined)
   @IsString()
   @MaxLength(2000)
+  @NoProhibitedContent()
   notes?: string;
 
   @ApiProperty({ example: '2026-12-31', description: 'Data de vencimento (ISO 8601)' })

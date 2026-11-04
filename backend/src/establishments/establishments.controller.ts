@@ -43,7 +43,8 @@ export class EstablishmentsController {
   })
   @ApiBadRequestResponse({
     description:
-      'Dados de cadastro inválidos, ou imagem ausente ou recusada ' +
+      'Dados de cadastro inválidos, termo proibido ou link em texto livre ' +
+      '(`code: PROHIBITED_CONTENT`, com `fields`), ou imagem ausente ou recusada ' +
       '(`code: IMAGE_REQUIRED`, `IMAGE_TOO_LARGE` ou `IMAGE_INVALID_TYPE`).',
   })
   @ApiConflictResponse({
@@ -87,7 +88,9 @@ export class EstablishmentsController {
   })
   @ApiBadRequestResponse({
     description:
-      'Dados de edição inválidos, ou imagem recusada (`code: IMAGE_TOO_LARGE` ou `IMAGE_INVALID_TYPE`).',
+      'Dados de edição inválidos, termo proibido ou link em texto livre ' +
+      '(`code: PROHIBITED_CONTENT`, com `fields`), ou imagem recusada ' +
+      '(`code: IMAGE_TOO_LARGE` ou `IMAGE_INVALID_TYPE`).',
   })
   @ApiConflictResponse({
     description: 'Celular institucional ou e-mail institucional já usados por outro cadastro.',
