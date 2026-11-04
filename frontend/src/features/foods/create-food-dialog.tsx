@@ -249,7 +249,6 @@ export function CreateFoodDialog({
                           field.onChange(file);
                         }}
                         onReject={(message) => form.setError('image', { message })}
-                        onBlur={field.onBlur}
                       />
                     </FormControl>
                     <FormMessage />
