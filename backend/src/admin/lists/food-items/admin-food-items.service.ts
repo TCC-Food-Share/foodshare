@@ -54,25 +54,31 @@ export class AdminFoodItemsService {
 
   async create(admin: AuditAdministrator, dto: SaveFoodItemDto): Promise<AdminFoodItemDto> {
     return this.prisma
-      .$transaction(async (tx) => {
-        await this.ensureCategory(tx, dto.categoryId);
-        if (await hasDuplicate(tx, 'food_catalog_item', 'name', dto.name)) {
-          throw conflict(DUPLICATE_NAME, 'Catalog item name already registered.');
-        }
-        const item = await tx.foodCatalogItem.create({
-          data: { name: dto.name, categoryId: dto.categoryId, administratorId: admin.id },
-          include: INCLUDE,
-        });
-        await this.audit.record(tx, {
-          administrator: admin,
-          action: 'food_catalog_item.create',
-          entityType: 'FoodCatalogItem',
-          entityId: item.id,
-          details: { created: snapshot(item) },
-        });
-        return toDto(item);
-      })
+      .$transaction((tx) => this.createInTransaction(tx, admin, dto))
       .catch(translatePrismaError);
+  }
+
+  async createInTransaction(
+    tx: Prisma.TransactionClient,
+    admin: AuditAdministrator,
+    dto: SaveFoodItemDto,
+  ): Promise<AdminFoodItemDto> {
+    await this.ensureCategory(tx, dto.categoryId);
+    if (await hasDuplicate(tx, 'food_catalog_item', 'name', dto.name)) {
+      throw conflict(DUPLICATE_NAME, 'Catalog item name already registered.');
+    }
+    const item = await tx.foodCatalogItem.create({
+      data: { name: dto.name, categoryId: dto.categoryId, administratorId: admin.id },
+      include: INCLUDE,
+    });
+    await this.audit.record(tx, {
+      administrator: admin,
+      action: 'food_catalog_item.create',
+      entityType: 'FoodCatalogItem',
+      entityId: item.id,
+      details: { created: snapshot(item) },
+    });
+    return toDto(item);
   }
 
   async update(

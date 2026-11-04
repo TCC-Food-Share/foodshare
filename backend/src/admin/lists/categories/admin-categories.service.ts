@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import { Prisma } from '../../../../generated/prisma/client';
 import { type AuditAdministrator, AuditService } from '../../../audit/audit.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
@@ -45,23 +46,29 @@ export class AdminCategoriesService {
 
   async create(admin: AuditAdministrator, dto: SaveCategoryDto): Promise<AdminCategoryDto> {
     return this.prisma
-      .$transaction(async (tx) => {
-        if (await hasDuplicate(tx, 'category', 'name', dto.name)) {
-          throw conflict(DUPLICATE_NAME, 'Category name already registered.');
-        }
-        const category = await tx.category.create({
-          data: { name: dto.name, administratorId: admin.id },
-        });
-        await this.audit.record(tx, {
-          administrator: admin,
-          action: 'category.create',
-          entityType: 'Category',
-          entityId: category.id,
-          details: { created: { name: category.name } },
-        });
-        return { id: category.id, name: category.name, usageCount: 0 };
-      })
+      .$transaction((tx) => this.createInTransaction(tx, admin, dto))
       .catch(translatePrismaError);
+  }
+
+  async createInTransaction(
+    tx: Prisma.TransactionClient,
+    admin: AuditAdministrator,
+    dto: SaveCategoryDto,
+  ): Promise<AdminCategoryDto> {
+    if (await hasDuplicate(tx, 'category', 'name', dto.name)) {
+      throw conflict(DUPLICATE_NAME, 'Category name already registered.');
+    }
+    const category = await tx.category.create({
+      data: { name: dto.name, administratorId: admin.id },
+    });
+    await this.audit.record(tx, {
+      administrator: admin,
+      action: 'category.create',
+      entityType: 'Category',
+      entityId: category.id,
+      details: { created: { name: category.name } },
+    });
+    return { id: category.id, name: category.name, usageCount: 0 };
   }
 
   async update(
