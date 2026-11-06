@@ -14,12 +14,18 @@ import { Session } from '@thallesp/nestjs-better-auth';
 
 import { RequireRoles } from '../auth/require-roles.decorator';
 import { INSTITUTION_ROLES } from '../auth/roles.constants';
+import { AcceptImpactResponseDto } from './dto/accept-impact-response.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto';
 import { OrdersService } from './orders.service';
+
+const ACCEPT_CONFLICT_DESCRIPTION =
+  'Aceite recusado. O corpo traz o campo `code`: `ORDER_NOT_PENDING` (o pedido não está ' +
+  '"Pendente"), `FOOD_NOT_AVAILABLE` (alimento vencido, excluído, não "Ativo" ou sem ' +
+  'quantidade) ou `INSUFFICIENT_FOOD_QUANTITY` (estoque menor que a quantidade do pedido).';
 
 @ApiTags('Pedidos')
 @RequireRoles(...INSTITUTION_ROLES)
@@ -41,7 +47,12 @@ export class OrdersController {
   })
   @ApiCreatedResponse({ description: 'Pedido criado com sucesso.', type: OrderResponseDto })
   @ApiBadRequestResponse({
-    description: 'Dados inválidos ou quantidade acima da disponível no alimento.',
+    description:
+      'Dados inválidos, ou quantidade recusada pelo alimento. Neste caso o corpo traz o campo ' +
+      '`code`: `QUANTITY_EXCEEDS_AVAILABLE` (acima do estoque), `FRACTION_NOT_ALLOWED` ' +
+      '(fração em unidade que não aceita), `TOTAL_QUANTITY_REQUIRED` (alimento "Somente ' +
+      'total" pedido em parte) ou `PARTIAL_QUANTITY_REQUIRED` (alimento "Somente parcial" ' +
+      'pedido inteiro enquanto um pedido parcial ainda é possível).',
   })
   @ApiNotFoundResponse({
     description: 'Nenhuma entidade beneficiária vinculada ao usuário, ou alimento indisponível.',
@@ -111,14 +122,39 @@ export class OrdersController {
     return this.ordersService.getById(Number(session.user.id), id);
   }
 
+  @Get(':id/accept-impact')
+  @ApiOperation({
+    summary: 'Prévia do efeito do aceite',
+    description:
+      'Informa, sem alterar nada, o que o aceite do pedido "Pendente" faria naquele momento: ' +
+      'quantos outros pedidos "Pendente" do alimento seriam rejeitados, quantos pedidos ' +
+      'totais passariam a pedir o novo estoque e se o alimento passaria a "Reservado". ' +
+      'Aplica as mesmas recusas do aceite. Exclusivo do estabelecimento dono do pedido.',
+  })
+  @ApiOkResponse({ description: 'Efeito do aceite.', type: AcceptImpactResponseDto })
+  @ApiNotFoundResponse({
+    description:
+      'Nenhum estabelecimento vinculado ao usuário, ou pedido inexistente / de outro estabelecimento.',
+  })
+  @ApiConflictResponse({ description: ACCEPT_CONFLICT_DESCRIPTION })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  acceptImpact(
+    @Session() session: UserSession,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<AcceptImpactResponseDto> {
+    return this.ordersService.acceptImpact(Number(session.user.id), id);
+  }
+
   @Patch(':id/accept')
   @ApiOperation({
     summary: 'Aceite de pedido de doação',
     description:
       'O estabelecimento autenticado aceita um pedido "Pendente" que recebeu, reservando a ' +
       'quantidade do alimento vinculado — a quantidade aceita é subtraída do estoque do ' +
-      'alimento e o pedido passa para "Em andamento" (RF23). O pedido é resolvido pela ' +
-      'sessão; ' +
+      'alimento e o pedido passa para "Em andamento" (RF23). Se o estoque zerar, o alimento ' +
+      'passa a "Reservado" e todos os outros pedidos "Pendente" dele são rejeitados; se ' +
+      'sobrar estoque, os pedidos totais "Pendente" passam a pedir o novo estoque e os ' +
+      'parciais que não cabem são rejeitados (RN07). O pedido é resolvido pela sessão; ' +
       'exclusivo do estabelecimento dono do pedido.',
   })
   @ApiOkResponse({ description: 'Pedido aceito com sucesso.', type: OrderResponseDto })
@@ -126,11 +162,7 @@ export class OrdersController {
     description:
       'Nenhum estabelecimento vinculado ao usuário, ou pedido inexistente / de outro estabelecimento.',
   })
-  @ApiConflictResponse({
-    description:
-      'Pedido não está "Pendente", alimento vinculado indisponível, ou estoque insuficiente ' +
-      'para cobrir a quantidade do pedido.',
-  })
+  @ApiConflictResponse({ description: ACCEPT_CONFLICT_DESCRIPTION })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   accept(
     @Session() session: UserSession,
@@ -155,7 +187,8 @@ export class OrdersController {
   })
   @ApiConflictResponse({
     description:
-      'Pedido não está "Pendente" (já "Em andamento", "Rejeitado", "Doado" ou "Cancelado").',
+      'Pedido não está "Pendente" (já "Em andamento", "Rejeitado", "Doado" ou "Cancelado"). ' +
+      'O corpo traz `code: ORDER_NOT_PENDING`.',
   })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   reject(
@@ -171,8 +204,10 @@ export class OrdersController {
     description:
       'A entidade beneficiária autenticada confirma que recebeu o alimento de um pedido ' +
       '"Em andamento" que é dela — o pedido passa para o status terminal "Doado", ' +
-      'encerrando-o (RF25). O estoque do alimento não muda: a quantidade já foi reservada no aceite. O ' +
-      'pedido é resolvido pela sessão; exclusivo da entidade beneficiária dona do pedido.',
+      'encerrando-o (RF25). O estoque do alimento não muda: a quantidade já foi reservada no ' +
+      'aceite. Se o estoque é zero e não resta outro pedido "Em andamento" do alimento, ele ' +
+      'passa a "Inativo" e os pedidos "Pendente" restantes são rejeitados (RN08). O pedido é ' +
+      'resolvido pela sessão; exclusivo da entidade beneficiária dona do pedido.',
   })
   @ApiOkResponse({
     description: 'Recebimento confirmado; pedido encerrado.',
@@ -185,7 +220,7 @@ export class OrdersController {
   @ApiConflictResponse({
     description:
       'Pedido não está "Em andamento" (ainda "Pendente", ou já "Rejeitado", "Doado" ou ' +
-      '"Cancelado").',
+      '"Cancelado"). O corpo traz `code: ORDER_NOT_IN_PROGRESS`.',
   })
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   receive(
