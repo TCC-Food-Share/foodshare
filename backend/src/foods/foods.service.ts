@@ -5,11 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { Prisma } from '../../generated/prisma/client';
+import { OrderCancelledBy, Prisma } from '../../generated/prisma/client';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { IMAGE_FOLDER } from '../files/files.constants';
 import type { ValidatedImage } from '../files/image-file.pipe';
 import { ImageStorageService } from '../files/image-storage.service';
+import { assertSelectableReason } from '../orders/cancellation-reason';
 import { ORDER_STATUS } from '../orders/orders.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFoodDto } from './dto/create-food.dto';
@@ -33,13 +34,11 @@ import {
 } from './food-order-effects';
 import { checkFoodQuantity } from './food-quantity';
 import {
-  CANCELLATION_REASON_REQUIRED,
   EXPIRATION_DATE_IN_PAST,
   FOOD_HAS_ORDERS_IN_PROGRESS,
   FOOD_NOT_ACTIVE,
   FOOD_NOT_INACTIVE,
   FOOD_STATUS,
-  INVALID_CANCELLATION_REASON,
   INVALID_CATALOG_ITEM,
   INVALID_MEASUREMENT_UNIT,
   type MyFoodsSortField,
@@ -336,11 +335,15 @@ export class FoodsService {
       const inProgressId = await orderStatusId(tx, ORDER_STATUS.IN_PROGRESS);
       const inProgressWhere = { foodId: id, statusId: inProgressId, deleted: false };
       if ((await tx.order.count({ where: inProgressWhere })) > 0) {
-        await this.assertSelectableReason(tx, cancellationReasonId);
+        await assertSelectableReason(tx, cancellationReasonId);
         const cancelledId = await orderStatusId(tx, ORDER_STATUS.CANCELLED);
         await tx.order.updateMany({
           where: inProgressWhere,
-          data: { statusId: cancelledId, cancellationReasonId },
+          data: {
+            statusId: cancelledId,
+            cancellationReasonId,
+            cancelledBy: OrderCancelledBy.ESTABLISHMENT,
+          },
         });
       }
 
@@ -410,25 +413,6 @@ export class FoodsService {
       throw new BadRequestException({
         code: error,
         message: 'Quantity is not valid for this unit and request type.',
-      });
-    }
-  }
-
-  private async assertSelectableReason(
-    tx: Prisma.TransactionClient,
-    cancellationReasonId: number | undefined,
-  ): Promise<void> {
-    if (cancellationReasonId === undefined) {
-      throw new BadRequestException({
-        code: CANCELLATION_REASON_REQUIRED,
-        message: 'A cancellation reason is required when the food has orders in progress.',
-      });
-    }
-    const reason = await tx.cancellationReason.findUnique({ where: { id: cancellationReasonId } });
-    if (!reason || reason.isSystem) {
-      throw new BadRequestException({
-        code: INVALID_CANCELLATION_REASON,
-        message: 'Cancellation reason not found.',
       });
     }
   }

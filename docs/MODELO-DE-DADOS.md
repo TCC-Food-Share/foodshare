@@ -25,7 +25,7 @@ que muda em relação ao schema do MVP.
 | `OrderStatus`                        | `order_status`                       | 🟡 dados | Seed: `Pendente`, `Em andamento`, `Rejeitado`, `Doado`, `Cancelado`               |
 | `Food`                               | `food`                               | 🟡 muda  | Nome/categoria vêm do catálogo; unidade vira FK; tipo de solicitação; observações |
 | `CancellationReason`                 | `cancellation_reason`                | 🟡 muda  | Entra `isSystem`; `administratorId` opcional                                      |
-| `Order`                              | `order`                              | 🟡 muda  | Entram `type`, `acceptedAt`, `quantityUpdatedAt`                                  |
+| `Order`                              | `order`                              | 🟡 muda  | Entram `type`, `acceptedAt`, `quantityUpdatedAt`, `cancelledBy`                   |
 | `FoodCatalogItem`                    | `food_catalog_item`                  | 🆕       | Catálogo de alimentos (DT12)                                                      |
 | `MeasurementUnit`                    | `measurement_unit`                   | 🆕       | Unidades de medida (RF59–RF62)                                                    |
 | `ProhibitedTerm`                     | `prohibited_term`                    | 🆕       | Termos proibidos (RNF07, RF67–RF70)                                               |
@@ -48,6 +48,7 @@ como no MVP.
 | ------------------- | -------------------------------------------------------------------------- | -------------------- |
 | `FoodRequestType`   | `TOTAL_ONLY`, `PARTIAL_ONLY`, `TOTAL_OR_PARTIAL`                           | `Food.requestType`   |
 | `OrderType`         | `TOTAL`, `PARTIAL`                                                         | `Order.type`         |
+| `OrderCancelledBy`  | `ESTABLISHMENT`, `BENEFICIARY_ENTITY`, `ADMINISTRATOR`, `SYSTEM`           | `Order.cancelledBy`  |
 | `SuggestionType`    | `CATEGORY`, `FOOD_CATALOG_ITEM`, `MEASUREMENT_UNIT`, `CANCELLATION_REASON` | `Suggestion.type`    |
 | `SuggestionStatus`  | `PENDING`, `APPROVED`, `REJECTED`                                          | `Suggestion.status`  |
 | `OrderReminderKind` | `ENTITY_DAY_3`, `ENTITY_DAY_7`, `ESTABLISHMENT_DAY_5`                      | `OrderReminder.kind` |
@@ -134,6 +135,7 @@ Os três motivos de sistema são buscados pelo nome através de uma constante no
 | `acceptedAt`        | `+ DateTime?`                 | Preenchido no aceite. Base dos lembretes da entidade (RF73)                                               |
 | `quantityUpdatedAt` | `+ DateTime?`                 | Preenchido quando um pedido total muda de quantidade por alteração de estoque (RN20). Mostrado no detalhe |
 | `orderDate`         | sem mudança                   | Base da expiração de 7 dias (RF72) e do lembrete do estabelecimento (RF74)                                |
+| `cancelledBy`       | `+ OrderCancelledBy?`         | DT33: quem cancelou. Preenchido só em pedido `Cancelado`, junto do motivo                                 |
 | relações            | `+ reminders OrderReminder[]` |                                                                                                           |
 
 Índices: `@@index([beneficiaryEntityId, statusId])` para o limite de 10 e a
@@ -151,6 +153,12 @@ Aplicado na 3.1 (`pedido_tipo_e_reserva`): `acceptedAt` e o índice
 `updatedAt` dos pedidos `Em andamento` que já existem, porque nada altera um
 pedido depois do aceite. Os pedidos `Doado` antigos ficam com `null`. O índice
 `(statusId, orderDate)` continua para a 6.1.
+
+Aplicado na 3.2 (`cancelar_pedido`): o enum `OrderCancelledBy` e `cancelledBy`.
+A migration preenche `ESTABLISHMENT` nos pedidos `Cancelado` que já existem,
+porque até ali só a exclusão de alimento (RF16) cancelava. Os quatro valores
+entram de uma vez: a 3.2 grava `ESTABLISHMENT` e `BENEFICIARY_ENTITY`, e as
+changes 4.4, 5.3 e 6.1 gravam o valor de cada fluxo delas.
 
 ## Listas padronizadas: regras comuns
 

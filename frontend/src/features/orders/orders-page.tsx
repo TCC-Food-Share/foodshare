@@ -135,6 +135,7 @@ export function OrdersPage() {
               page={page}
               pageSize={pageSize}
               role={role}
+              status={status}
               onPageChange={goToPage}
               onPageSizeChange={(next) => setSearchParams(ordersParams(status, 1, next))}
             />
@@ -151,6 +152,7 @@ interface OrdersListProps {
   page: number;
   pageSize: number;
   role: Role | null;
+  status: OrderStatusName;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }
@@ -161,6 +163,7 @@ function OrdersList({
   page,
   pageSize,
   role,
+  status,
   onPageChange,
   onPageSizeChange,
 }: OrdersListProps) {
@@ -171,8 +174,8 @@ function OrdersList({
 
   return (
     <>
-      <OrdersTable orders={orders} role={role} />
-      <OrderCards orders={orders} role={role} />
+      <OrdersTable orders={orders} role={role} status={status} />
+      <OrderCards orders={orders} role={role} status={status} />
       <div className="flex flex-col items-center gap-3 md:flex-row md:justify-between">
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           <p className="text-muted-foreground text-sm">

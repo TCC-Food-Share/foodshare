@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
-import { FoodRequestType, OrderType, Prisma } from '../../generated/prisma/client';
+import {
+  FoodRequestType,
+  OrderCancelledBy,
+  OrderType,
+  Prisma,
+} from '../../generated/prisma/client';
 import { ImageStorageService } from '../files/image-storage.service';
 import { FOOD_STATUS } from '../foods/foods.constants';
 import { FoodsService } from '../foods/foods.service';
@@ -36,6 +41,8 @@ describe('OrdersService', () => {
     },
     establishment: { id: 3, companyName: 'Good Taste Ltd' },
     beneficiaryEntity: { id: 7, companyName: 'Helping Hands' },
+    cancellationReason: null,
+    cancelledBy: null,
   };
 
   const pendingOrderRow = {
@@ -99,6 +106,8 @@ describe('OrdersService', () => {
         state: 'SP',
       },
     },
+    cancellationReason: null,
+    cancelledBy: null,
   };
 
   const orderStatusByName: Record<string, { id: number; name: string }> = {
@@ -131,6 +140,7 @@ describe('OrdersService', () => {
     orderStatus: {
       findUniqueOrThrow: jest.fn<(args: { where: { name: string } }) => Promise<unknown>>(),
     },
+    cancellationReason: { findUnique: jest.fn<(args: unknown) => Promise<unknown>>() },
     order: {
       count: jest.fn<(args: unknown) => Promise<number>>(),
       create: jest.fn<(args: unknown) => Promise<unknown>>(),
@@ -186,6 +196,7 @@ describe('OrdersService', () => {
     );
     prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
     prismaMock.$queryRaw.mockResolvedValue([]);
+    prismaMock.cancellationReason.findUnique.mockResolvedValue({ id: 4, isSystem: false });
     foodsServiceMock.findAvailableById.mockResolvedValue(foodRow);
 
     const moduleRef = await Test.createTestingModule({
@@ -858,6 +869,223 @@ describe('OrdersService', () => {
     });
   });
 
+  describe('cancel', () => {
+    const reason = { id: 4, name: 'Solicitação feita por engano' };
+    const cancelledOrderRow = {
+      ...orderRow,
+      status: { id: 5, name: ORDER_STATUS.CANCELLED },
+      cancellationReason: reason,
+      cancelledBy: OrderCancelledBy.BENEFICIARY_ENTITY,
+    };
+    const foodState = (quantity: number, status: string, extra: object = {}) => ({
+      id: 5,
+      quantity: new Prisma.Decimal(quantity),
+      deleted: false,
+      status: foodStatusByName[status],
+      ...extra,
+    });
+    // First read: the order reread after the lock. Second: the order returned to the client.
+    const orderAfterLock = (statusId: number) =>
+      prismaMock.order.findUniqueOrThrow
+        .mockResolvedValueOnce({ ...pendingOrderRow, statusId })
+        .mockResolvedValueOnce(cancelledOrderRow);
+    const asEntity = () => prismaMock.establishment.findUnique.mockResolvedValue(null);
+    const badRequestCode = async (promise: Promise<unknown>): Promise<unknown> => {
+      const error = await promise.catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(BadRequestException);
+      return ((error as BadRequestException).getResponse() as { code?: string }).code;
+    };
+    const expectNothingChanged = () => {
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+      expect(prismaMock.food.update).not.toHaveBeenCalled();
+    };
+
+    beforeEach(() => {
+      prismaMock.food.findUniqueOrThrow.mockResolvedValue(foodState(6, FOOD_STATUS.ACTIVE));
+    });
+
+    it.each([
+      ['entity', 'pending', 1, OrderCancelledBy.BENEFICIARY_ENTITY, { beneficiaryEntityId: 7 }],
+      ['entity', 'in progress', 2, OrderCancelledBy.BENEFICIARY_ENTITY, { beneficiaryEntityId: 7 }],
+      ['establishment', 'pending', 1, OrderCancelledBy.ESTABLISHMENT, { establishmentId: 3 }],
+      ['establishment', 'in progress', 2, OrderCancelledBy.ESTABLISHMENT, { establishmentId: 3 }],
+    ])(
+      'lets the %s cancel a %s order, recording the reason and the canceller',
+      async (party, _status, statusId, cancelledBy, owner) => {
+        if (party === 'entity') asEntity();
+        orderAfterLock(statusId);
+
+        const result = await service.cancel(20, 50, { cancellationReasonId: 4 });
+
+        expect(prismaMock.order.findFirst).toHaveBeenCalledWith({
+          where: { id: 50, deleted: false, ...owner },
+        });
+        expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+          where: { id: 50, statusId, deleted: false },
+          data: { statusId: 5, cancellationReasonId: 4, cancelledBy },
+        });
+        expect(result.cancellationReason).toEqual(reason);
+        expect(result.status.name).toBe(ORDER_STATUS.CANCELLED);
+      },
+    );
+
+    it('validates the reason, then locks the food before rereading the order', async () => {
+      orderAfterLock(1);
+
+      await service.cancel(20, 50, { cancellationReasonId: 4 });
+
+      const lockCall = prismaMock.$queryRaw.mock.invocationCallOrder[0];
+      expect(prismaMock.cancellationReason.findUnique.mock.invocationCallOrder[0]).toBeLessThan(
+        lockCall,
+      );
+      expect(lockCall).toBeLessThan(prismaMock.order.findUniqueOrThrow.mock.invocationCallOrder[0]);
+    });
+
+    it('keeps the food and the other orders when the order was pending', async () => {
+      orderAfterLock(1);
+
+      await service.cancel(20, 50, { cancellationReasonId: 4 });
+
+      expect(prismaMock.food.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(prismaMock.food.update).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives the quantity back to an active food when the order was in progress', async () => {
+      orderAfterLock(2);
+
+      await service.cancel(20, 50, { cancellationReasonId: 4 });
+
+      expect(prismaMock.food.update).toHaveBeenCalledWith({
+        where: { id: 5 },
+        data: { quantity: { increment: new Prisma.Decimal(4) } },
+      });
+    });
+
+    it('moves a reserved food back to "Ativo"', async () => {
+      prismaMock.food.findUniqueOrThrow.mockResolvedValue(foodState(0, FOOD_STATUS.RESERVED));
+      orderAfterLock(2);
+
+      await service.cancel(20, 50, { cancellationReasonId: 4 });
+
+      expect(prismaMock.food.update).toHaveBeenCalledWith({
+        where: { id: 5 },
+        data: { quantity: { increment: new Prisma.Decimal(4) }, statusId: 10 },
+      });
+    });
+
+    it('moves an expired reserved food back to "Ativo" as well', async () => {
+      prismaMock.food.findUniqueOrThrow.mockResolvedValue(
+        foodState(0, FOOD_STATUS.RESERVED, { expirationDate: new Date('2020-01-01') }),
+      );
+      orderAfterLock(2);
+
+      await service.cancel(20, 50, { cancellationReasonId: 4 });
+
+      expect(prismaMock.food.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ statusId: 10 }) }),
+      );
+    });
+
+    it('does not give stock back to a deleted food', async () => {
+      prismaMock.food.findUniqueOrThrow.mockResolvedValue(
+        foodState(0, FOOD_STATUS.RESERVED, { deleted: true }),
+      );
+      orderAfterLock(2);
+
+      await service.cancel(20, 50, { cancellationReasonId: 4 });
+
+      expect(prismaMock.food.update).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('makes pending total orders follow the returned stock and leaves partial ones (DT32)', async () => {
+      orderAfterLock(2);
+
+      await service.cancel(20, 50, { cancellationReasonId: 4 });
+
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+        where: {
+          foodId: 5,
+          statusId: 1,
+          deleted: false,
+          type: OrderType.TOTAL,
+          quantity: { not: 10 },
+        },
+        data: { quantity: 10, quantityUpdatedAt: expect.any(Date) },
+      });
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+        where: {
+          foodId: 5,
+          statusId: 1,
+          deleted: false,
+          type: OrderType.PARTIAL,
+          quantity: { gt: 10 },
+        },
+        data: { statusId: 3 },
+      });
+    });
+
+    it('requires a reason', async () => {
+      expect(await badRequestCode(service.cancel(20, 50, {}))).toBe('CANCELLATION_REASON_REQUIRED');
+      expectNothingChanged();
+    });
+
+    it.each([
+      ['missing', null],
+      ['a system reason', { id: 4, isSystem: true }],
+    ])('refuses a reason that is %s', async (_name, row) => {
+      prismaMock.cancellationReason.findUnique.mockResolvedValue(row);
+
+      expect(await badRequestCode(service.cancel(20, 50, { cancellationReasonId: 4 }))).toBe(
+        'INVALID_CANCELLATION_REASON',
+      );
+      expectNothingChanged();
+    });
+
+    it.each([
+      ['Rejeitado', 3],
+      ['Doado', 4],
+      ['Cancelado', 5],
+    ])('answers ORDER_NOT_OPEN for an order already "%s"', async (_name, statusId) => {
+      prismaMock.order.findUniqueOrThrow.mockResolvedValueOnce({ ...pendingOrderRow, statusId });
+
+      expect(await conflictCode(service.cancel(20, 50, { cancellationReasonId: 4 }))).toBe(
+        'ORDER_NOT_OPEN',
+      );
+      expectNothingChanged();
+    });
+
+    it('answers ORDER_NOT_OPEN and gives no stock back when a concurrent transition won the race', async () => {
+      orderAfterLock(2);
+      prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+
+      expect(await conflictCode(service.cancel(20, 50, { cancellationReasonId: 4 }))).toBe(
+        'ORDER_NOT_OPEN',
+      );
+      expect(prismaMock.food.update).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the order is missing, deleted or the requester is not a party', async () => {
+      prismaMock.order.findFirst.mockResolvedValue(null);
+
+      await expect(service.cancel(20, 50, { cancellationReasonId: 4 })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expectNothingChanged();
+    });
+
+    it('throws NotFoundException when the account has no establishment nor beneficiary entity', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(null);
+
+      await expect(service.cancel(99, 50, { cancellationReasonId: 4 })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(prismaMock.order.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
   describe('list', () => {
     beforeEach(() => {
       prismaMock.order.count.mockResolvedValue(1);
@@ -915,6 +1143,32 @@ describe('OrdersService', () => {
           },
         }),
       );
+    });
+
+    it('brings the reason and the canceller of a cancelled order, and nulls for the others', async () => {
+      prismaMock.order.findMany.mockResolvedValue([
+        orderRow,
+        {
+          ...orderRow,
+          id: 51,
+          status: { id: 5, name: ORDER_STATUS.CANCELLED },
+          cancellationReason: { id: 4, name: 'Solicitação feita por engano' },
+          cancelledBy: OrderCancelledBy.BENEFICIARY_ENTITY,
+        },
+      ]);
+
+      const result = await service.list(30, {});
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({ cancellationReason: true }),
+        }),
+      );
+      expect(result.data[0]).toMatchObject({ cancellationReason: null, cancelledBy: null });
+      expect(result.data[1]).toMatchObject({
+        cancellationReason: { id: 4, name: 'Solicitação feita por engano' },
+        cancelledBy: OrderCancelledBy.BENEFICIARY_ENTITY,
+      });
     });
 
     it('accepts "Cancelado" as a status filter', async () => {
@@ -984,6 +1238,30 @@ describe('OrdersService', () => {
         state: 'SP',
       });
       expect(result.beneficiaryEntity.city).toBe('Araçatuba');
+    });
+
+    it('brings the reason and the canceller of a cancelled order', async () => {
+      prismaMock.order.findFirst.mockResolvedValue({
+        ...orderDetailRow,
+        status: { id: 5, name: ORDER_STATUS.CANCELLED },
+        cancellationReason: { id: 2, name: 'Alimento não está mais disponível' },
+        cancelledBy: OrderCancelledBy.ESTABLISHMENT,
+      });
+
+      const result = await service.getById(30, 50);
+
+      expect(result.cancellationReason).toEqual({
+        id: 2,
+        name: 'Alimento não está mais disponível',
+      });
+      expect(result.cancelledBy).toBe(OrderCancelledBy.ESTABLISHMENT);
+    });
+
+    it('brings null reason and canceller for an order that is not cancelled', async () => {
+      const result = await service.getById(30, 50);
+
+      expect(result.cancellationReason).toBeNull();
+      expect(result.cancelledBy).toBeNull();
     });
 
     it('resolves the beneficiary entity party when the account is not an establishment', async () => {

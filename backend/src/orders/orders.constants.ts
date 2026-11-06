@@ -19,6 +19,7 @@ export const ORDER_CONFLICT_CODES = {
   notInProgress: 'ORDER_NOT_IN_PROGRESS',
   foodNotAvailable: 'FOOD_NOT_AVAILABLE',
   insufficientQuantity: 'INSUFFICIENT_FOOD_QUANTITY',
+  notOpen: 'ORDER_NOT_OPEN',
 } as const;
 
 export const ORDER_QUANTITY_CODES = {

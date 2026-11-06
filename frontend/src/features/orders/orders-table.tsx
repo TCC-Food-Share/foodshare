@@ -13,6 +13,11 @@ import {
 } from '@/components/ui/table';
 import type { Role } from '@/features/auth/auth-context';
 import { counterpartLabel, counterpartName } from '@/features/orders/order-counterpart';
+import {
+  cancelledByLabel,
+  ORDER_STATUS,
+  type OrderStatusName,
+} from '@/features/orders/order-status';
 import { OrderStatusBadge } from '@/features/orders/order-status-badge';
 import type { Order } from '@/features/orders/orders-api';
 import { formatLocalDate, formatQuantity } from '@/lib/format';
@@ -20,10 +25,14 @@ import { formatLocalDate, formatQuantity } from '@/lib/format';
 interface OrdersTableProps {
   orders: Order[];
   role: Role | null;
+  status: OrderStatusName;
 }
 
-export function OrdersTable({ orders, role }: OrdersTableProps) {
+export function OrdersTable({ orders, role, status }: OrdersTableProps) {
   const navigate = useNavigate();
+  // The "Cancelado" tab swaps the status column (always the same there) for the reason and who
+  // cancelled (RF26, DT33).
+  const cancelledTab = status === ORDER_STATUS.CANCELLED;
 
   return (
     <div className="border-border bg-card hidden overflow-hidden rounded-lg border md:block">
@@ -34,7 +43,14 @@ export function OrdersTable({ orders, role }: OrdersTableProps) {
             <TableHead className="px-4">Alimento</TableHead>
             <TableHead className="px-4 text-right">Quantidade</TableHead>
             <TableHead className="px-4">Data</TableHead>
-            <TableHead className="px-4">Status</TableHead>
+            {cancelledTab ? (
+              <>
+                <TableHead className="px-4">Motivo</TableHead>
+                <TableHead className="px-4">Cancelado por</TableHead>
+              </>
+            ) : (
+              <TableHead className="px-4">Status</TableHead>
+            )}
             <TableHead className="px-4">{counterpartLabel(role)}</TableHead>
             <TableHead className="px-4 text-right">Ações</TableHead>
           </TableRow>
@@ -58,9 +74,20 @@ export function OrdersTable({ orders, role }: OrdersTableProps) {
               <TableCell className="text-muted-foreground px-4 py-3">
                 {formatLocalDate(order.orderDate)}
               </TableCell>
-              <TableCell className="px-4 py-3">
-                <OrderStatusBadge status={order.status.name} />
-              </TableCell>
+              {cancelledTab ? (
+                <>
+                  <TableCell className="min-w-40 px-4 py-3 whitespace-normal">
+                    {order.cancellationReason?.name ?? '—'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground px-4 py-3">
+                    {cancelledByLabel(order.cancelledBy, role)}
+                  </TableCell>
+                </>
+              ) : (
+                <TableCell className="px-4 py-3">
+                  <OrderStatusBadge status={order.status.name} />
+                </TableCell>
+              )}
               <TableCell className="min-w-40 px-4 py-3 whitespace-normal">
                 {counterpartName(order, role)}
               </TableCell>
