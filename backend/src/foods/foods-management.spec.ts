@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
-import { FoodRequestType, OrderType, Prisma } from '../../generated/prisma/client';
+import {
+  FoodRequestType,
+  OrderCancelledBy,
+  OrderType,
+  Prisma,
+} from '../../generated/prisma/client';
 import { ImageStorageService } from '../files/image-storage.service';
 import { ORDER_STATUS } from '../orders/orders.constants';
 import { PrismaService } from '../prisma/prisma.service';
@@ -396,7 +401,7 @@ describe('FoodsService management', () => {
       expect(prismaMock.order.updateMany).toHaveBeenCalledWith(pendingToRejected);
     });
 
-    it('cancels the orders in progress with the reason, without touching stock or status', async () => {
+    it('cancels the orders in progress with the reason and the establishment as canceller, without touching stock or status', async () => {
       prismaMock.order.count.mockResolvedValue(2);
       prismaMock.cancellationReason.findUnique.mockResolvedValue({ id: 4, isSystem: false });
 
@@ -404,7 +409,11 @@ describe('FoodsService management', () => {
 
       expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
         where: { foodId: 100, statusId: ORDER_STATUS_ID[ORDER_STATUS.IN_PROGRESS], deleted: false },
-        data: { statusId: ORDER_STATUS_ID[ORDER_STATUS.CANCELLED], cancellationReasonId: 4 },
+        data: {
+          statusId: ORDER_STATUS_ID[ORDER_STATUS.CANCELLED],
+          cancellationReasonId: 4,
+          cancelledBy: OrderCancelledBy.ESTABLISHMENT,
+        },
       });
       expect(prismaMock.order.updateMany).toHaveBeenCalledWith(pendingToRejected);
       expect(prismaMock.food.update).toHaveBeenCalledTimes(1);

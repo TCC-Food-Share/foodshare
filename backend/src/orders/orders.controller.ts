@@ -15,6 +15,7 @@ import { Session } from '@thallesp/nestjs-better-auth';
 import { RequireRoles } from '../auth/require-roles.decorator';
 import { INSTITUTION_ROLES } from '../auth/roles.constants';
 import { AcceptImpactResponseDto } from './dto/accept-impact-response.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
@@ -228,5 +229,43 @@ export class OrdersController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<OrderResponseDto> {
     return this.ordersService.receive(Number(session.user.id), id);
+  }
+
+  @Patch(':id/cancel')
+  @ApiOperation({
+    summary: 'Cancelamento de pedido',
+    description:
+      'O estabelecimento de origem ou a entidade beneficiária cancela um pedido "Pendente" ou ' +
+      '"Em andamento" do qual é parte, informando um motivo da lista (RF26, RN09). O pedido ' +
+      'passa ao status terminal "Cancelado" e guarda o motivo e quem cancelou (DT33). Se o ' +
+      'pedido estava "Em andamento", a quantidade volta ao estoque do alimento, o alimento ' +
+      '"Reservado" volta a "Ativo" e os pedidos totais "Pendente" dele passam a pedir o novo ' +
+      'estoque (DT32). Cancelar um pedido "Pendente" não muda o estoque. O pedido e a parte ' +
+      'são resolvidos pela sessão.',
+  })
+  @ApiOkResponse({ description: 'Pedido cancelado com sucesso.', type: OrderResponseDto })
+  @ApiBadRequestResponse({
+    description:
+      'Id ou corpo inválido, ou motivo recusado. O corpo traz o campo `code`: ' +
+      '`CANCELLATION_REASON_REQUIRED` (motivo ausente) ou `INVALID_CANCELLATION_REASON` (motivo ' +
+      'inexistente ou de sistema). O motivo é conferido antes do status do pedido.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'Nenhuma instituição vinculada ao usuário, ou pedido inexistente, excluído ou de que o ' +
+      'solicitante não é parte.',
+  })
+  @ApiConflictResponse({
+    description:
+      'Pedido não está em aberto (já "Rejeitado", "Doado" ou "Cancelado"). O corpo traz ' +
+      '`code: ORDER_NOT_OPEN`.',
+  })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  cancel(
+    @Session() session: UserSession,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CancelOrderDto,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.cancel(Number(session.user.id), id, dto);
   }
 }

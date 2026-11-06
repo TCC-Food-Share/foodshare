@@ -225,6 +225,7 @@ model Order {
 
   cancellationReasonId Int?
   cancellationReason   CancellationReason? @relation(fields: [cancellationReasonId], references: [id])
+  cancelledBy          OrderCancelledBy?
 
   @@index([foodId, statusId])
   @@index([beneficiaryEntityId, statusId])
@@ -234,6 +235,13 @@ model Order {
 enum OrderType {
   TOTAL
   PARTIAL
+}
+
+enum OrderCancelledBy {
+  ESTABLISHMENT
+  BENEFICIARY_ENTITY
+  ADMINISTRATOR
+  SYSTEM
 }
 
 model FoodCatalogItem {

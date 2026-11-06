@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { OrderCancelledBy } from '../../../generated/prisma/client';
+import {
+  CANCELLATION_REASON_PROPERTY,
+  CANCELLED_BY_PROPERTY,
+  OrderCancellationReasonDto,
+} from './order-cancellation.dto';
+
 class OrderStatusDetailDto {
   @ApiProperty({ example: 2 })
   id!: number;
@@ -92,4 +99,10 @@ export class OrderDetailResponseDto {
 
   @ApiProperty({ type: () => OrderInstitutionDetailDto })
   beneficiaryEntity!: OrderInstitutionDetailDto;
+
+  @ApiProperty(CANCELLATION_REASON_PROPERTY)
+  cancellationReason!: OrderCancellationReasonDto | null;
+
+  @ApiProperty(CANCELLED_BY_PROPERTY)
+  cancelledBy!: OrderCancelledBy | null;
 }

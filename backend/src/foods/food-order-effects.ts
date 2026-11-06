@@ -1,5 +1,6 @@
 import { OrderType, Prisma } from '../../generated/prisma/client';
 import { ORDER_STATUS } from '../orders/orders.constants';
+import { FOOD_STATUS } from './foods.constants';
 
 export function lockFood(tx: Prisma.TransactionClient, foodId: number): Promise<unknown> {
   return tx.$queryRaw`SELECT id FROM food WHERE id = ${foodId} FOR UPDATE`;
@@ -68,4 +69,32 @@ export async function rejectAllPendingOrders(
     where: { foodId, statusId: pendingId, deleted: false },
     data: { statusId: rejectedId },
   });
+}
+
+// RN09 + DT32: cancelling an order in progress gives its quantity back to the food. The caller
+// must hold the food lock. A deleted food never gets stock back (DT27).
+export async function returnReservedQuantity(
+  tx: Prisma.TransactionClient,
+  foodId: number,
+  quantity: Prisma.Decimal,
+): Promise<void> {
+  const food = await tx.food.findUniqueOrThrow({
+    where: { id: foodId },
+    include: { status: true },
+  });
+  if (food.deleted) {
+    return;
+  }
+
+  const newQuantity = food.quantity.plus(quantity);
+  const active =
+    food.status.name === FOOD_STATUS.RESERVED
+      ? await tx.foodStatus.findUniqueOrThrow({ where: { name: FOOD_STATUS.ACTIVE } })
+      : null;
+  await tx.food.update({
+    where: { id: foodId },
+    data: { quantity: { increment: quantity }, ...(active ? { statusId: active.id } : {}) },
+  });
+
+  await applyNewQuantityToPendingOrders(tx, foodId, newQuantity.toNumber());
 }

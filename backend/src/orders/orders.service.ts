@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { Prisma } from '../../generated/prisma/client';
+import { OrderCancelledBy, Prisma } from '../../generated/prisma/client';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { ImageStorageService } from '../files/image-storage.service';
 import {
@@ -14,12 +14,15 @@ import {
   orderStatusId,
   partialOrdersToRejectWhere,
   rejectAllPendingOrders,
+  returnReservedQuantity,
   totalOrdersToUpdateWhere,
 } from '../foods/food-order-effects';
 import { FOOD_STATUS } from '../foods/foods.constants';
 import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertSelectableReason } from './cancellation-reason';
 import { AcceptImpactResponseDto } from './dto/accept-impact-response.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
@@ -40,6 +43,7 @@ const ORDER_INCLUDE = {
   food: { include: { catalogItem: true, measurementUnit: true } },
   establishment: true,
   beneficiaryEntity: true,
+  cancellationReason: true,
 } as const satisfies Prisma.OrderInclude;
 
 type OrderConflictCode = (typeof ORDER_CONFLICT_CODES)[keyof typeof ORDER_CONFLICT_CODES];
@@ -298,6 +302,49 @@ export class OrdersService {
     return this.toResponse(updated);
   }
 
+  async cancel(userId: number, orderId: number, dto: CancelOrderDto): Promise<OrderResponseDto> {
+    const party = await this.resolveParty(userId);
+    const found = await this.findOwnOrder(orderId, party.owner);
+
+    const [pendingId, inProgressId, cancelledId] = await Promise.all([
+      orderStatusId(this.prisma, ORDER_STATUS.PENDING),
+      orderStatusId(this.prisma, ORDER_STATUS.IN_PROGRESS),
+      orderStatusId(this.prisma, ORDER_STATUS.CANCELLED),
+    ]);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await assertSelectableReason(tx, dto.cancellationReasonId);
+
+      // Food first, then the order, as in accept/receive. The stock effect depends on the status
+      // read after the lock: an accept that won the race has already taken the stock.
+      await lockFood(tx, found.foodId);
+      const order = await tx.order.findUniqueOrThrow({ where: { id: found.id } });
+      if (order.statusId !== pendingId && order.statusId !== inProgressId) {
+        throw orderConflict(ORDER_CONFLICT_CODES.notOpen, 'Order is not open.');
+      }
+
+      const moved = await tx.order.updateMany({
+        where: { id: order.id, statusId: order.statusId, deleted: false },
+        data: {
+          statusId: cancelledId,
+          cancellationReasonId: dto.cancellationReasonId,
+          cancelledBy: party.cancelledBy,
+        },
+      });
+      if (moved.count === 0) {
+        throw orderConflict(ORDER_CONFLICT_CODES.notOpen, 'Order is not open.');
+      }
+
+      if (order.statusId === inProgressId) {
+        await returnReservedQuantity(tx, order.foodId, order.quantity);
+      }
+
+      return tx.order.findUniqueOrThrow({ where: { id: order.id }, include: ORDER_INCLUDE });
+    });
+
+    return this.toResponse(updated);
+  }
+
   async list(userId: number, query: ListOrdersQueryDto): Promise<PaginatedOrdersResponseDto> {
     const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
     const beneficiaryEntity = establishment
@@ -362,6 +409,7 @@ export class OrdersService {
         },
         establishment: { include: { address: true } },
         beneficiaryEntity: { include: { address: true } },
+        cancellationReason: true,
       },
     });
     if (!order) {
@@ -377,6 +425,39 @@ export class OrdersService {
       throw new NotFoundException('Establishment not found.');
     }
     return establishment.id;
+  }
+
+  private async resolveParty(userId: number): Promise<{
+    owner: { establishmentId: number } | { beneficiaryEntityId: number };
+    cancelledBy: OrderCancelledBy;
+  }> {
+    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
+    if (establishment) {
+      return {
+        owner: { establishmentId: establishment.id },
+        cancelledBy: OrderCancelledBy.ESTABLISHMENT,
+      };
+    }
+    const beneficiaryEntity = await this.prisma.beneficiaryEntity.findUnique({ where: { userId } });
+    if (beneficiaryEntity) {
+      return {
+        owner: { beneficiaryEntityId: beneficiaryEntity.id },
+        cancelledBy: OrderCancelledBy.BENEFICIARY_ENTITY,
+      };
+    }
+    throw new NotFoundException('Order not found.');
+  }
+
+  private mapCancellation(order: {
+    cancellationReason: { id: number; name: string } | null;
+    cancelledBy: OrderCancelledBy | null;
+  }) {
+    return {
+      cancellationReason: order.cancellationReason
+        ? { id: order.cancellationReason.id, name: order.cancellationReason.name }
+        : null,
+      cancelledBy: order.cancelledBy,
+    };
   }
 
   private async findOwnOrder(
@@ -465,6 +546,7 @@ export class OrdersService {
         };
         establishment: { include: { address: true } };
         beneficiaryEntity: { include: { address: true } };
+        cancellationReason: true;
       };
     }>,
   ): OrderDetailResponseDto {
@@ -489,6 +571,7 @@ export class OrdersService {
       },
       establishment: this.mapInstitution(order.establishment),
       beneficiaryEntity: this.mapInstitution(order.beneficiaryEntity),
+      ...this.mapCancellation(order),
     };
   }
 
@@ -515,6 +598,7 @@ export class OrdersService {
         id: order.beneficiaryEntity.id,
         companyName: order.beneficiaryEntity.companyName,
       },
+      ...this.mapCancellation(order),
     };
   }
 }
