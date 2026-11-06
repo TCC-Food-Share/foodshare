@@ -187,7 +187,7 @@ O sistema SHALL permitir reativar um alimento "Inativo", exigindo nova data de v
 
 ### Requirement: Exclusão lógica de alimento
 
-O sistema SHALL permitir excluir logicamente um alimento em qualquer status, marcando-o como excluído. Os pedidos "Pendente" SHALL virar "Rejeitado" e os "Em andamento" SHALL virar "Cancelado" com o motivo escolhido, obrigatório nesse caso. O motivo SHALL ser um motivo existente que não seja de sistema. A quantidade e o status do alimento SHALL NOT mudar (DT27). O alimento excluído SHALL continuar visível nos pedidos "Doado", "Rejeitado" e "Cancelado".
+O sistema SHALL permitir excluir logicamente um alimento em qualquer status, marcando-o como excluído. Os pedidos "Pendente" SHALL virar "Rejeitado" e os "Em andamento" SHALL virar "Cancelado" com o motivo escolhido, obrigatório nesse caso, e com o estabelecimento registrado como quem cancelou (DT33). O motivo SHALL ser um motivo existente que não seja de sistema. A quantidade e o status do alimento SHALL NOT mudar (DT27). O alimento excluído SHALL continuar visível nos pedidos "Doado", "Rejeitado" e "Cancelado".
 
 #### Scenario: Exclusão sem pedidos em aberto
 
@@ -202,7 +202,7 @@ O sistema SHALL permitir excluir logicamente um alimento em qualquer status, mar
 #### Scenario: Cancelamento automático dos pedidos em andamento ao excluir
 
 - **WHEN** o estabelecimento exclui um alimento com pedidos "Em andamento", informando um motivo válido
-- **THEN** todos esses pedidos viram "Cancelado" com esse motivo
+- **THEN** todos esses pedidos viram "Cancelado" com esse motivo e com o estabelecimento registrado como quem cancelou
 
 #### Scenario: Pedido em andamento sem motivo
 
