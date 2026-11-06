@@ -7,7 +7,7 @@ export type Role = 'establishment' | 'beneficiary' | 'administrator';
 
 export type InstitutionRole = Exclude<Role, 'administrator'>;
 
-export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
+export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
 export interface AuthContextValue {
   status: AuthStatus;
@@ -16,6 +16,7 @@ export interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  retrySession: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
