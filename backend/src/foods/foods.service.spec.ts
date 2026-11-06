@@ -312,7 +312,7 @@ describe('FoodsService', () => {
 
   describe('getById', () => {
     it('queries by id within the available-food filter and maps the response', async () => {
-      const result = await service.getById(100);
+      const result = await service.getById(20, 100);
 
       expect(prismaMock.food.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -344,7 +344,21 @@ describe('FoodsService', () => {
     it('throws NotFoundException when no available food matches the id', async () => {
       prismaMock.food.findFirst.mockResolvedValue(null);
 
-      await expect(service.getById(999)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.getById(20, 999)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('falls back to the own non-deleted food, in any status, for its owner', async () => {
+      const inactive = { ...foodRow, status: { id: 3, name: FOOD_STATUS.INACTIVE } };
+      prismaMock.food.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(inactive);
+
+      const result = await service.getById(20, 100);
+
+      expect(prismaMock.food.findFirst).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: { id: 100, deleted: false, establishment: { userId: 20 } },
+        }),
+      );
+      expect(result.status.name).toBe(FOOD_STATUS.INACTIVE);
     });
   });
 

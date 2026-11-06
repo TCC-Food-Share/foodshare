@@ -5,9 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { Prisma } from '../../generated/prisma/client';
+import { FoodRequestType, OrderType, Prisma } from '../../generated/prisma/client';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { ImageStorageService } from '../files/image-storage.service';
+import { lockFood } from '../foods/food-order-effects';
 import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -30,6 +31,14 @@ const ORDER_INCLUDE = {
   establishment: true,
   beneficiaryEntity: true,
 } as const satisfies Prisma.OrderInclude;
+
+function orderTypeFor(
+  quantity: number,
+  food: { quantity: Prisma.Decimal; requestType: FoodRequestType },
+): OrderType {
+  if (food.requestType === FoodRequestType.PARTIAL_ONLY) return OrderType.PARTIAL;
+  return food.quantity.equals(quantity) ? OrderType.TOTAL : OrderType.PARTIAL;
+}
 
 @Injectable()
 export class OrdersService {
@@ -57,41 +66,46 @@ export class OrdersService {
       });
     }
 
-    const food = await this.foodsService.findAvailableById(dto.foodId);
-    if (!food) {
-      throw new NotFoundException('Food not found.');
-    }
+    const order = await this.prisma.$transaction(async (tx) => {
+      await lockFood(tx, dto.foodId);
 
-    const duplicate = await this.prisma.order.findFirst({
-      where: { ...this.openOrdersWhere(beneficiaryEntity.id), foodId: food.id },
-      select: { id: true },
-    });
-    if (duplicate) {
-      throw new ConflictException({
-        statusCode: 409,
-        error: 'Conflict',
-        message: 'Beneficiary entity already has an open order for this food.',
-        code: ORDER_CONFLICT_CODES.duplicateInProgress,
+      const food = await this.foodsService.findAvailableById(dto.foodId, tx);
+      if (!food) {
+        throw new NotFoundException('Food not found.');
+      }
+
+      const duplicate = await tx.order.findFirst({
+        where: { ...this.openOrdersWhere(beneficiaryEntity.id), foodId: food.id },
+        select: { id: true },
       });
-    }
+      if (duplicate) {
+        throw new ConflictException({
+          statusCode: 409,
+          error: 'Conflict',
+          message: 'Beneficiary entity already has an open order for this food.',
+          code: ORDER_CONFLICT_CODES.duplicateInProgress,
+        });
+      }
 
-    if (new Prisma.Decimal(dto.quantity).greaterThan(food.quantity)) {
-      throw new BadRequestException('Requested quantity exceeds the available amount.');
-    }
+      if (new Prisma.Decimal(dto.quantity).greaterThan(food.quantity)) {
+        throw new BadRequestException('Requested quantity exceeds the available amount.');
+      }
 
-    const status = await this.prisma.orderStatus.findUniqueOrThrow({
-      where: { name: ORDER_STATUS.PENDING },
-    });
+      const status = await tx.orderStatus.findUniqueOrThrow({
+        where: { name: ORDER_STATUS.PENDING },
+      });
 
-    const order = await this.prisma.order.create({
-      data: {
-        quantity: dto.quantity,
-        foodId: food.id,
-        statusId: status.id,
-        establishmentId: food.establishmentId,
-        beneficiaryEntityId: beneficiaryEntity.id,
-      },
-      include: ORDER_INCLUDE,
+      return tx.order.create({
+        data: {
+          quantity: dto.quantity,
+          type: orderTypeFor(dto.quantity, food),
+          foodId: food.id,
+          statusId: status.id,
+          establishmentId: food.establishmentId,
+          beneficiaryEntityId: beneficiaryEntity.id,
+        },
+        include: ORDER_INCLUDE,
+      });
     });
 
     return this.toResponse(order);
@@ -103,10 +117,10 @@ export class OrdersService {
       throw new NotFoundException('Establishment not found.');
     }
 
-    const order = await this.prisma.order.findFirst({
+    const found = await this.prisma.order.findFirst({
       where: { id: orderId, establishmentId: establishment.id, deleted: false },
     });
-    if (!order) {
+    if (!found) {
       throw new NotFoundException('Order not found.');
     }
 
@@ -114,17 +128,22 @@ export class OrdersService {
       this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.PENDING } }),
       this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.IN_PROGRESS } }),
     ]);
-    if (order.statusId !== pending.id) {
-      throw new ConflictException('Order is not pending.');
-    }
-
-    const food = await this.foodsService.findAvailableById(order.foodId);
-    if (!food) {
-      throw new ConflictException('Linked food is no longer available.');
-    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      // Conditional update as a compare-and-swap: a concurrent accept sees count 0 here.
+      // The food row is locked before any order row, in the same order as the food actions,
+      // so an accept and a stock edit cannot deadlock. Order and stock are read after the lock.
+      await lockFood(tx, found.foodId);
+
+      const order = await tx.order.findFirst({ where: { id: found.id, deleted: false } });
+      if (order?.statusId !== pending.id) {
+        throw new ConflictException('Order is not pending.');
+      }
+
+      const food = await this.foodsService.findAvailableById(order.foodId, tx);
+      if (!food) {
+        throw new ConflictException('Linked food is no longer available.');
+      }
+
       const moved = await tx.order.updateMany({
         where: { id: order.id, statusId: pending.id },
         data: { statusId: inProgress.id },

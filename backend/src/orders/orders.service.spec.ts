@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
-import { Prisma } from '../../generated/prisma/client';
+import { FoodRequestType, OrderType, Prisma } from '../../generated/prisma/client';
 import { ImageStorageService } from '../files/image-storage.service';
 import { FOOD_STATUS } from '../foods/foods.constants';
 import { FoodsService } from '../foods/foods.service';
@@ -19,6 +19,7 @@ describe('OrdersService', () => {
     name: 'Arroz branco',
     quantityUnit: 'kg',
     quantity: new Prisma.Decimal(10),
+    requestType: FoodRequestType.TOTAL_OR_PARTIAL,
     establishmentId: 3,
   };
 
@@ -129,6 +130,7 @@ describe('OrdersService', () => {
       updateMany: jest.fn<(args: unknown) => Promise<{ count: number }>>(),
     },
     $transaction: jest.fn<(cb: (tx: unknown) => Promise<unknown>) => Promise<unknown>>(),
+    $queryRaw: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
   };
 
   const storageMock = {
@@ -136,7 +138,7 @@ describe('OrdersService', () => {
   };
 
   const foodsServiceMock = {
-    findAvailableById: jest.fn<(id: number) => Promise<unknown>>(),
+    findAvailableById: jest.fn<(id: number, client?: unknown) => Promise<unknown>>(),
   };
 
   let service: OrdersService;
@@ -156,6 +158,7 @@ describe('OrdersService', () => {
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.food.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
+    prismaMock.$queryRaw.mockResolvedValue([]);
     foodsServiceMock.findAvailableById.mockResolvedValue(foodRow);
 
     const moduleRef = await Test.createTestingModule({
@@ -187,7 +190,7 @@ describe('OrdersService', () => {
       expect(prismaMock.beneficiaryEntity.findUnique).toHaveBeenCalledWith({
         where: { userId: 20 },
       });
-      expect(foodsServiceMock.findAvailableById).toHaveBeenCalledWith(5);
+      expect(foodsServiceMock.findAvailableById).toHaveBeenCalledWith(5, prismaMock);
       expect(prismaMock.order.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -223,6 +226,43 @@ describe('OrdersService', () => {
         BadRequestException,
       );
       expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('locks the food before reading it', async () => {
+      await service.create(20, dto);
+
+      expect(prismaMock.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        foodsServiceMock.findAvailableById.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('records a TOTAL order when the quantity equals the stock', async () => {
+      await service.create(20, { foodId: 5, quantity: 10 });
+
+      expect(prismaMock.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ type: OrderType.TOTAL }) }),
+      );
+    });
+
+    it('records a PARTIAL order when the quantity is below the stock', async () => {
+      await service.create(20, dto);
+
+      expect(prismaMock.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ type: OrderType.PARTIAL }) }),
+      );
+    });
+
+    it('records a PARTIAL order for the whole stock of a "Somente parcial" food', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        requestType: FoodRequestType.PARTIAL_ONLY,
+      });
+
+      await service.create(20, { foodId: 5, quantity: 10 });
+
+      expect(prismaMock.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ type: OrderType.PARTIAL }) }),
+      );
     });
 
     it('allows a quantity equal to the full food quantity', async () => {
@@ -380,14 +420,41 @@ describe('OrdersService', () => {
       prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 2 });
 
       await expect(service.accept(30, 50)).rejects.toBeInstanceOf(ConflictException);
-      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+      expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('locks the food and rereads the order inside the transaction', async () => {
+      prismaMock.order.findFirst
+        .mockResolvedValueOnce(pendingOrderRow)
+        .mockResolvedValueOnce({ ...pendingOrderRow, quantity: new Prisma.Decimal(3) });
+
+      await service.accept(30, 50);
+
+      expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(prismaMock.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        prismaMock.order.updateMany.mock.invocationCallOrder[0],
+      );
+      expect(prismaMock.food.updateMany).toHaveBeenCalledWith({
+        where: { id: 5, quantity: { gte: new Prisma.Decimal(3) } },
+        data: { quantity: { decrement: new Prisma.Decimal(3) } },
+      });
+    });
+
+    it('throws ConflictException when the order changes status before the lock is acquired', async () => {
+      prismaMock.order.findFirst
+        .mockResolvedValueOnce(pendingOrderRow)
+        .mockResolvedValueOnce({ ...pendingOrderRow, statusId: 3 });
+
+      await expect(service.accept(30, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
     });
 
     it('throws ConflictException when the linked food is no longer available', async () => {
       foodsServiceMock.findAvailableById.mockResolvedValue(null);
 
       await expect(service.accept(30, 50)).rejects.toBeInstanceOf(ConflictException);
-      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     });
 
     it('throws ConflictException when the remaining food quantity does not cover the order', async () => {

@@ -1,19 +1,56 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { Prisma } from '../../generated/prisma/client';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { IMAGE_FOLDER } from '../files/files.constants';
 import type { ValidatedImage } from '../files/image-file.pipe';
 import { ImageStorageService } from '../files/image-storage.service';
+import { ORDER_STATUS } from '../orders/orders.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFoodDto } from './dto/create-food.dto';
 import { FoodResponseDto } from './dto/food-response.dto';
 import { ListFoodsQueryDto } from './dto/list-foods-query.dto';
+import { ListMyFoodsQueryDto } from './dto/list-my-foods-query.dto';
+import {
+  MyFoodResponseDto,
+  PaginatedMyFoodsResponseDto,
+  QuantityImpactResponseDto,
+} from './dto/my-food-response.dto';
 import { PaginatedFoodsResponseDto } from './dto/paginated-foods-response.dto';
+import { ReactivateFoodDto, UpdateFoodDto } from './dto/update-food.dto';
+import {
+  lockFood,
+  partialOrdersToRejectWhere,
+  totalOrdersToUpdateWhere,
+} from './food-order-effects';
 import { checkFoodQuantity } from './food-quantity';
-import { FOOD_STATUS, INVALID_CATALOG_ITEM, INVALID_MEASUREMENT_UNIT } from './foods.constants';
+import {
+  CANCELLATION_REASON_REQUIRED,
+  EXPIRATION_DATE_IN_PAST,
+  FOOD_HAS_ORDERS_IN_PROGRESS,
+  FOOD_NOT_ACTIVE,
+  FOOD_NOT_INACTIVE,
+  FOOD_STATUS,
+  INVALID_CANCELLATION_REASON,
+  INVALID_CATALOG_ITEM,
+  INVALID_MEASUREMENT_UNIT,
+  type MyFoodsSortField,
+} from './foods.constants';
 
 const DEFAULT_PAGE = 1;
+
+const MY_FOODS_SORT_COLUMNS: Record<MyFoodsSortField, string> = {
+  name: 'lower(unaccent(ci.name))',
+  category: 'lower(unaccent(cat.name))',
+  quantity: 'f.quantity',
+  expirationDate: 'f."expirationDate"',
+  publishedAt: 'f."publishedAt"',
+};
 
 const FOOD_INCLUDE = {
   catalogItem: { include: { category: true } },
@@ -136,8 +173,13 @@ export class FoodsService {
     return { data, total, page, pageSize };
   }
 
-  async getById(id: number): Promise<FoodResponseDto> {
-    const food = await this.findAvailableById(id);
+  async getById(userId: number, id: number): Promise<FoodResponseDto> {
+    const food =
+      (await this.findAvailableById(id)) ??
+      (await this.prisma.food.findFirst({
+        where: { id, deleted: false, establishment: { userId } },
+        include: FOOD_INCLUDE,
+      }));
     if (!food) {
       throw new NotFoundException('Food not found.');
     }
@@ -145,11 +187,333 @@ export class FoodsService {
     return this.toResponse(food);
   }
 
-  findAvailableById(id: number): Promise<FoodWithRelations | null> {
-    return this.prisma.food.findFirst({
+  findAvailableById(
+    id: number,
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<FoodWithRelations | null> {
+    return client.food.findFirst({
       where: this.availableFoodWhereInput(id),
       include: FOOD_INCLUDE,
     });
+  }
+
+  async listMine(userId: number, query: ListMyFoodsQueryDto): Promise<PaginatedMyFoodsResponseDto> {
+    const establishmentId = await this.requireEstablishmentId(userId);
+    const page = query.page ?? DEFAULT_PAGE;
+    const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
+    const skip = (page - 1) * pageSize;
+
+    const from = Prisma.sql`
+      FROM food f
+      JOIN food_catalog_item ci ON ci.id = f."catalogItemId"
+      JOIN category cat ON cat.id = ci."categoryId"
+      JOIN food_status s ON s.id = f."statusId"
+      WHERE ${this.buildMyFoodsWhere(establishmentId, query)}
+    `;
+    const column = MY_FOODS_SORT_COLUMNS[query.sort ?? 'publishedAt'];
+    const direction = query.sort ? (query.order ?? 'asc') : 'desc';
+
+    const idRows = await this.prisma.$queryRaw<{ id: number }[]>(Prisma.sql`
+      SELECT f.id ${from}
+      ORDER BY ${Prisma.raw(`${column} ${direction}`)}, f.id DESC
+      LIMIT ${pageSize} OFFSET ${skip}
+    `);
+    const countRows = await this.prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
+      SELECT count(*) AS count ${from}
+    `);
+
+    const data = await this.hydrateMine(idRows.map((row) => row.id));
+    return { data, total: Number(countRows[0]?.count ?? 0), page, pageSize };
+  }
+
+  async quantityImpact(
+    userId: number,
+    id: number,
+    quantity: number,
+  ): Promise<QuantityImpactResponseDto> {
+    const establishmentId = await this.requireEstablishmentId(userId);
+    const food = await this.prisma.food.findFirst({
+      where: { id, establishmentId, deleted: false },
+    });
+    if (!food) {
+      throw new NotFoundException('Food not found.');
+    }
+    if (new Prisma.Decimal(quantity).equals(food.quantity)) {
+      return { totalOrdersToUpdate: 0, partialOrdersToReject: 0 };
+    }
+
+    const pendingId = await this.orderStatusId(this.prisma, ORDER_STATUS.PENDING);
+    const [totalOrdersToUpdate, partialOrdersToReject] = await Promise.all([
+      this.prisma.order.count({ where: totalOrdersToUpdateWhere(id, pendingId, quantity) }),
+      this.prisma.order.count({ where: partialOrdersToRejectWhere(id, pendingId, quantity) }),
+    ]);
+    return { totalOrdersToUpdate, partialOrdersToReject };
+  }
+
+  async update(userId: number, id: number, dto: UpdateFoodDto): Promise<MyFoodResponseDto> {
+    if (dto.expirationDate === undefined && dto.quantity === undefined) {
+      throw new BadRequestException('Provide expirationDate or quantity.');
+    }
+    const establishmentId = await this.requireEstablishmentId(userId);
+
+    await this.prisma.$transaction(async (tx) => {
+      const food = await this.lockOwnedFood(tx, establishmentId, id);
+      this.assertStatus(food, FOOD_STATUS.ACTIVE, FOOD_NOT_ACTIVE);
+      await this.assertNoOrdersInProgress(tx, id);
+      if (dto.expirationDate !== undefined) this.assertNotPast(dto.expirationDate);
+      if (dto.quantity !== undefined) this.assertQuantity(dto.quantity, food);
+
+      await tx.food.update({
+        where: { id },
+        data: {
+          ...(dto.expirationDate !== undefined && {
+            expirationDate: new Date(dto.expirationDate),
+          }),
+          ...(dto.quantity !== undefined && { quantity: dto.quantity }),
+        },
+      });
+
+      if (dto.quantity !== undefined && !food.quantity.equals(dto.quantity)) {
+        await this.applyNewQuantityToPendingOrders(tx, id, dto.quantity);
+      }
+    });
+
+    return this.getMine(id);
+  }
+
+  async deactivate(userId: number, id: number): Promise<MyFoodResponseDto> {
+    const establishmentId = await this.requireEstablishmentId(userId);
+
+    await this.prisma.$transaction(async (tx) => {
+      const food = await this.lockOwnedFood(tx, establishmentId, id);
+      this.assertStatus(food, FOOD_STATUS.ACTIVE, FOOD_NOT_ACTIVE);
+      await this.assertNoOrdersInProgress(tx, id);
+
+      const inactive = await tx.foodStatus.findUniqueOrThrow({
+        where: { name: FOOD_STATUS.INACTIVE },
+      });
+      await tx.food.update({ where: { id }, data: { statusId: inactive.id } });
+      await this.rejectPendingOrders(tx, id);
+    });
+
+    return this.getMine(id);
+  }
+
+  async reactivate(userId: number, id: number, dto: ReactivateFoodDto): Promise<MyFoodResponseDto> {
+    const establishmentId = await this.requireEstablishmentId(userId);
+
+    await this.prisma.$transaction(async (tx) => {
+      const food = await this.lockOwnedFood(tx, establishmentId, id);
+      this.assertStatus(food, FOOD_STATUS.INACTIVE, FOOD_NOT_INACTIVE);
+      this.assertNotPast(dto.expirationDate);
+      this.assertQuantity(dto.quantity, food);
+
+      const active = await tx.foodStatus.findUniqueOrThrow({
+        where: { name: FOOD_STATUS.ACTIVE },
+      });
+      await tx.food.update({
+        where: { id },
+        data: {
+          statusId: active.id,
+          quantity: dto.quantity,
+          expirationDate: new Date(dto.expirationDate),
+        },
+      });
+    });
+
+    return this.getMine(id);
+  }
+
+  async remove(userId: number, id: number, cancellationReasonId?: number): Promise<void> {
+    const establishmentId = await this.requireEstablishmentId(userId);
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockOwnedFood(tx, establishmentId, id);
+
+      const inProgressId = await this.orderStatusId(tx, ORDER_STATUS.IN_PROGRESS);
+      const inProgressWhere = { foodId: id, statusId: inProgressId, deleted: false };
+      if ((await tx.order.count({ where: inProgressWhere })) > 0) {
+        await this.assertSelectableReason(tx, cancellationReasonId);
+        const cancelledId = await this.orderStatusId(tx, ORDER_STATUS.CANCELLED);
+        await tx.order.updateMany({
+          where: inProgressWhere,
+          data: { statusId: cancelledId, cancellationReasonId },
+        });
+      }
+
+      await this.rejectPendingOrders(tx, id);
+      await tx.food.update({ where: { id }, data: { deleted: true } });
+    });
+  }
+
+  private async requireEstablishmentId(userId: number): Promise<number> {
+    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
+    if (!establishment) {
+      throw new NotFoundException('Establishment not found.');
+    }
+    return establishment.id;
+  }
+
+  private async lockOwnedFood(
+    tx: Prisma.TransactionClient,
+    establishmentId: number,
+    id: number,
+  ): Promise<FoodWithRelations> {
+    await lockFood(tx, id);
+    const food = await tx.food.findFirst({
+      where: { id, establishmentId, deleted: false },
+      include: FOOD_INCLUDE,
+    });
+    if (!food) {
+      throw new NotFoundException('Food not found.');
+    }
+    return food;
+  }
+
+  private assertStatus(food: FoodWithRelations, expected: string, code: string): void {
+    if (food.status.name !== expected) {
+      throw new ConflictException({ code, message: `Food is not "${expected}".` });
+    }
+  }
+
+  private async assertNoOrdersInProgress(tx: Prisma.TransactionClient, foodId: number) {
+    const inProgress = await tx.order.count({
+      where: { foodId, deleted: false, status: { name: ORDER_STATUS.IN_PROGRESS } },
+    });
+    if (inProgress > 0) {
+      throw new ConflictException({
+        code: FOOD_HAS_ORDERS_IN_PROGRESS,
+        message: 'Food has orders in progress.',
+      });
+    }
+  }
+
+  private assertNotPast(expirationDate: string): void {
+    if (new Date(expirationDate) < startOfTodayUtc()) {
+      throw new BadRequestException({
+        code: EXPIRATION_DATE_IN_PAST,
+        message: 'Expiration date cannot be in the past.',
+      });
+    }
+  }
+
+  private assertQuantity(quantity: number, food: FoodWithRelations): void {
+    const error = checkFoodQuantity(
+      quantity,
+      food.measurementUnit.allowsFraction,
+      food.requestType,
+    );
+    if (error) {
+      throw new BadRequestException({
+        code: error,
+        message: 'Quantity is not valid for this unit and request type.',
+      });
+    }
+  }
+
+  private async assertSelectableReason(
+    tx: Prisma.TransactionClient,
+    cancellationReasonId: number | undefined,
+  ): Promise<void> {
+    if (cancellationReasonId === undefined) {
+      throw new BadRequestException({
+        code: CANCELLATION_REASON_REQUIRED,
+        message: 'A cancellation reason is required when the food has orders in progress.',
+      });
+    }
+    const reason = await tx.cancellationReason.findUnique({ where: { id: cancellationReasonId } });
+    if (!reason || reason.isSystem) {
+      throw new BadRequestException({
+        code: INVALID_CANCELLATION_REASON,
+        message: 'Cancellation reason not found.',
+      });
+    }
+  }
+
+  private async orderStatusId(
+    client: Prisma.TransactionClient,
+    name: (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS],
+  ): Promise<number> {
+    const status = await client.orderStatus.findUniqueOrThrow({ where: { name } });
+    return status.id;
+  }
+
+  private async applyNewQuantityToPendingOrders(
+    tx: Prisma.TransactionClient,
+    foodId: number,
+    quantity: number,
+  ): Promise<void> {
+    const pendingId = await this.orderStatusId(tx, ORDER_STATUS.PENDING);
+    const rejectedId = await this.orderStatusId(tx, ORDER_STATUS.REJECTED);
+    await tx.order.updateMany({
+      where: totalOrdersToUpdateWhere(foodId, pendingId, quantity),
+      data: { quantity, quantityUpdatedAt: new Date() },
+    });
+    await tx.order.updateMany({
+      where: partialOrdersToRejectWhere(foodId, pendingId, quantity),
+      data: { statusId: rejectedId },
+    });
+  }
+
+  private async rejectPendingOrders(tx: Prisma.TransactionClient, foodId: number): Promise<void> {
+    const pendingId = await this.orderStatusId(tx, ORDER_STATUS.PENDING);
+    const rejectedId = await this.orderStatusId(tx, ORDER_STATUS.REJECTED);
+    await tx.order.updateMany({
+      where: { foodId, statusId: pendingId, deleted: false },
+      data: { statusId: rejectedId },
+    });
+  }
+
+  private buildMyFoodsWhere(establishmentId: number, query: ListMyFoodsQueryDto): Prisma.Sql {
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`f.deleted = false`,
+      Prisma.sql`f."establishmentId" = ${establishmentId}`,
+    ];
+    if (query.status) {
+      conditions.push(Prisma.sql`s.name = ${query.status}`);
+    }
+    if (query.search) {
+      const term = query.search;
+      const quantityTerm = term.replace(',', '.');
+      conditions.push(Prisma.sql`(
+        unaccent(ci.name) ILIKE '%' || unaccent(${term}) || '%'
+        OR unaccent(cat.name) ILIKE '%' || unaccent(${term}) || '%'
+        OR unaccent(f.description) ILIKE '%' || unaccent(${term}) || '%'
+        OR f.quantity::text ILIKE '%' || ${quantityTerm} || '%'
+        OR to_char(f."expirationDate", 'DD/MM/YYYY') ILIKE '%' || ${term} || '%'
+        OR to_char(f."publishedAt", 'DD/MM/YYYY') ILIKE '%' || ${term} || '%'
+      )`);
+    }
+    return Prisma.join(conditions, ' AND ');
+  }
+
+  private async getMine(id: number): Promise<MyFoodResponseDto> {
+    const [food] = await this.hydrateMine([id]);
+    return food;
+  }
+
+  private async hydrateMine(ids: number[]): Promise<MyFoodResponseDto[]> {
+    if (ids.length === 0) return [];
+
+    const [foods, pendingId, inProgressId] = await Promise.all([
+      this.hydrate(ids),
+      this.orderStatusId(this.prisma, ORDER_STATUS.PENDING),
+      this.orderStatusId(this.prisma, ORDER_STATUS.IN_PROGRESS),
+    ]);
+    const groups = await this.prisma.order.groupBy({
+      by: ['foodId', 'statusId'],
+      where: { foodId: { in: ids }, deleted: false, statusId: { in: [pendingId, inProgressId] } },
+      _count: { _all: true },
+    });
+    const countOf = (foodId: number, statusId: number): number =>
+      groups.find((group) => group.foodId === foodId && group.statusId === statusId)?._count._all ??
+      0;
+
+    return foods.map((food) => ({
+      ...food,
+      pendingOrders: countOf(food.id, pendingId),
+      inProgressOrders: countOf(food.id, inProgressId),
+    }));
   }
 
   // Mirrors `buildAvailableAndFilteredWhere`'s base filter (kept separate because
