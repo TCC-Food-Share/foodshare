@@ -1,29 +1,28 @@
 import { z } from 'zod';
 
-import { QUANTITY_REGEX } from '@/lib/validation';
+import {
+  type OrderMode,
+  orderModes,
+  type OrderQuantityRules,
+  partialQuantityError,
+} from '@/features/orders/order-quantity';
 
-function quantityError(quantity: string, available: number): string | null {
-  if (!quantity) return 'Informe a quantidade.';
-  const amount = Number(quantity);
-  if (!(amount > 0)) return 'A quantidade deve ser maior que zero.';
-  if (!QUANTITY_REGEX.test(quantity)) return 'Use um número com no máximo 2 casas decimais.';
-  if (amount > available) return 'A quantidade não pode ser maior que a disponível.';
-  return null;
-}
-
-export function createOrderSchema(available: number) {
+export function createOrderSchema(rules: OrderQuantityRules) {
   return z
     .object({
-      mode: z.enum(['total', 'partial']),
+      mode: z.enum(['total', 'partial', 'remainder']),
       quantity: z.string(),
     })
     .superRefine(({ mode, quantity }, ctx) => {
-      if (mode === 'total') return;
-      const message = quantityError(quantity, available);
+      if (mode !== 'partial') return;
+      const message = partialQuantityError(quantity, rules);
       if (message) ctx.addIssue({ code: 'custom', message, path: ['quantity'] });
     });
 }
 
 export type CreateOrderInput = z.infer<ReturnType<typeof createOrderSchema>>;
 
-export const DEFAULT_VALUES: CreateOrderInput = { mode: 'total', quantity: '' };
+export function defaultValues(rules: OrderQuantityRules): CreateOrderInput {
+  const mode: OrderMode = orderModes(rules)[0];
+  return { mode, quantity: '' };
+}

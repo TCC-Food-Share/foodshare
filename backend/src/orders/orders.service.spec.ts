@@ -20,6 +20,7 @@ describe('OrdersService', () => {
     quantityUnit: 'kg',
     quantity: new Prisma.Decimal(10),
     requestType: FoodRequestType.TOTAL_OR_PARTIAL,
+    measurementUnit: { id: 2, abbreviation: 'kg', allowsFraction: true },
     establishmentId: 3,
   };
 
@@ -108,6 +109,18 @@ describe('OrdersService', () => {
     [ORDER_STATUS.CANCELLED]: { id: 5, name: ORDER_STATUS.CANCELLED },
   };
 
+  const foodStatusByName: Record<string, { id: number; name: string }> = {
+    [FOOD_STATUS.ACTIVE]: { id: 10, name: FOOD_STATUS.ACTIVE },
+    [FOOD_STATUS.RESERVED]: { id: 20, name: FOOD_STATUS.RESERVED },
+    [FOOD_STATUS.INACTIVE]: { id: 30, name: FOOD_STATUS.INACTIVE },
+  };
+
+  const conflictCode = async (promise: Promise<unknown>): Promise<unknown> => {
+    const error = await promise.catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ConflictException);
+    return ((error as ConflictException).getResponse() as { code?: string }).code;
+  };
+
   const prismaMock = {
     beneficiaryEntity: {
       findUnique: jest.fn<(args: { where: { userId: number } }) => Promise<unknown>>(),
@@ -128,6 +141,11 @@ describe('OrdersService', () => {
     },
     food: {
       updateMany: jest.fn<(args: unknown) => Promise<{ count: number }>>(),
+      update: jest.fn<(args: unknown) => Promise<unknown>>(),
+      findUniqueOrThrow: jest.fn<(args: unknown) => Promise<unknown>>(),
+    },
+    foodStatus: {
+      findUniqueOrThrow: jest.fn<(args: { where: { name: string } }) => Promise<unknown>>(),
     },
     $transaction: jest.fn<(cb: (tx: unknown) => Promise<unknown>) => Promise<unknown>>(),
     $queryRaw: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
@@ -157,6 +175,15 @@ describe('OrdersService', () => {
     prismaMock.order.findUniqueOrThrow.mockResolvedValue(inProgressOrderRow);
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.food.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.food.update.mockResolvedValue({});
+    prismaMock.food.findUniqueOrThrow.mockResolvedValue({
+      id: 5,
+      quantity: new Prisma.Decimal(2),
+      deleted: false,
+    });
+    prismaMock.foodStatus.findUniqueOrThrow.mockImplementation((args) =>
+      Promise.resolve(foodStatusByName[args.where.name]),
+    );
     prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
     prismaMock.$queryRaw.mockResolvedValue([]);
     foodsServiceMock.findAvailableById.mockResolvedValue(foodRow);
@@ -221,11 +248,56 @@ describe('OrdersService', () => {
       expect(prismaMock.order.create).not.toHaveBeenCalled();
     });
 
-    it('throws BadRequestException when the requested quantity exceeds the food quantity', async () => {
-      await expect(service.create(20, { foodId: 5, quantity: 10.5 })).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+    const badRequestBody = async (input: CreateOrderDto): Promise<unknown> => {
+      const error = await service.create(20, input).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(BadRequestException);
       expect(prismaMock.order.create).not.toHaveBeenCalled();
+      return (error as BadRequestException).getResponse();
+    };
+
+    it('throws BadRequestException when the requested quantity exceeds the food quantity', async () => {
+      expect(await badRequestBody({ foodId: 5, quantity: 10.5 })).toMatchObject({
+        code: 'QUANTITY_EXCEEDS_AVAILABLE',
+      });
+    });
+
+    it('refuses a fraction when the unit does not allow it', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        measurementUnit: { id: 1, abbreviation: 'un', allowsFraction: false },
+      });
+
+      expect(await badRequestBody({ foodId: 5, quantity: 2.5 })).toMatchObject({
+        code: 'FRACTION_NOT_ALLOWED',
+      });
+    });
+
+    it('refuses part of the stock of a "Somente total" food', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        requestType: FoodRequestType.TOTAL_ONLY,
+      });
+
+      expect(await badRequestBody(dto)).toMatchObject({ code: 'TOTAL_QUANTITY_REQUIRED' });
+    });
+
+    it('refuses the whole stock of a "Somente parcial" food while a partial order is possible', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        requestType: FoodRequestType.PARTIAL_ONLY,
+      });
+
+      expect(await badRequestBody({ foodId: 5, quantity: 10 })).toMatchObject({
+        code: 'PARTIAL_QUANTITY_REQUIRED',
+      });
+    });
+
+    it('checks the quantity against the stock read after the lock', async () => {
+      await service.create(20, dto);
+
+      expect(foodsServiceMock.findAvailableById.mock.invocationCallOrder[0]).toBeLessThan(
+        prismaMock.order.create.mock.invocationCallOrder[0],
+      );
     });
 
     it('locks the food before reading it', async () => {
@@ -252,16 +324,33 @@ describe('OrdersService', () => {
       );
     });
 
-    it('records a PARTIAL order for the whole stock of a "Somente parcial" food', async () => {
+    it('records a TOTAL order for a "Somente total" food', async () => {
       foodsServiceMock.findAvailableById.mockResolvedValue({
         ...foodRow,
-        requestType: FoodRequestType.PARTIAL_ONLY,
+        requestType: FoodRequestType.TOTAL_ONLY,
       });
 
       await service.create(20, { foodId: 5, quantity: 10 });
 
       expect(prismaMock.order.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ type: OrderType.PARTIAL }) }),
+        expect.objectContaining({ data: expect.objectContaining({ type: OrderType.TOTAL }) }),
+      );
+    });
+
+    it('records a PARTIAL order for the leftover of a "Somente parcial" food', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        quantity: new Prisma.Decimal(1),
+        requestType: FoodRequestType.PARTIAL_ONLY,
+        measurementUnit: { id: 1, abbreviation: 'un', allowsFraction: false },
+      });
+
+      await service.create(20, { foodId: 5, quantity: 1 });
+
+      expect(prismaMock.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ quantity: 1, type: OrderType.PARTIAL }),
+        }),
       );
     });
 
@@ -393,13 +482,85 @@ describe('OrdersService', () => {
       });
       expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
         where: { id: 50, statusId: 1 },
-        data: { statusId: 2 },
+        data: { statusId: 2, acceptedAt: expect.any(Date) },
       });
       expect(prismaMock.food.updateMany).toHaveBeenCalledWith({
         where: { id: 5, quantity: { gte: pendingOrderRow.quantity } },
         data: { quantity: { decrement: pendingOrderRow.quantity } },
       });
       expect(result.status.name).toBe(ORDER_STATUS.IN_PROGRESS);
+    });
+
+    it('keeps the food "Ativo", moves pending totals to the new stock and rejects partials that no longer fit', async () => {
+      await service.accept(30, 50);
+
+      expect(prismaMock.food.update).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+        where: {
+          foodId: 5,
+          statusId: 1,
+          deleted: false,
+          type: OrderType.TOTAL,
+          quantity: { not: 6 },
+        },
+        data: { quantity: 6, quantityUpdatedAt: expect.any(Date) },
+      });
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+        where: {
+          foodId: 5,
+          statusId: 1,
+          deleted: false,
+          type: OrderType.PARTIAL,
+          quantity: { gt: 6 },
+        },
+        data: { statusId: 3 },
+      });
+    });
+
+    it('reserves the food and rejects every other pending order when the stock reaches zero', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        quantity: new Prisma.Decimal(4),
+      });
+
+      await service.accept(30, 50);
+
+      expect(prismaMock.food.update).toHaveBeenCalledWith({
+        where: { id: 5 },
+        data: { statusId: 20 },
+      });
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+        where: { foodId: 5, statusId: 1, deleted: false },
+        data: { statusId: 3 },
+      });
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ quantity: 0 }) }),
+      );
+    });
+
+    it('answers ORDER_NOT_PENDING when the order is no longer pending', async () => {
+      prismaMock.order.findFirst
+        .mockResolvedValueOnce(pendingOrderRow)
+        .mockResolvedValueOnce({ ...pendingOrderRow, statusId: 3 });
+
+      expect(await conflictCode(service.accept(30, 50))).toBe('ORDER_NOT_PENDING');
+    });
+
+    it('answers FOOD_NOT_AVAILABLE when the food is no longer available', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue(null);
+
+      expect(await conflictCode(service.accept(30, 50))).toBe('FOOD_NOT_AVAILABLE');
+    });
+
+    it('answers INSUFFICIENT_FOOD_QUANTITY without writing when the stock does not cover the order', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        quantity: new Prisma.Decimal(3),
+      });
+
+      expect(await conflictCode(service.accept(30, 50))).toBe('INSUFFICIENT_FOOD_QUANTITY');
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+      expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException when the user has no establishment', async () => {
@@ -472,6 +633,83 @@ describe('OrdersService', () => {
     });
   });
 
+  describe('acceptImpact', () => {
+    it('counts partials to reject and totals to update when stock remains, without writing', async () => {
+      prismaMock.order.count.mockResolvedValueOnce(2).mockResolvedValueOnce(1);
+
+      const result = await service.acceptImpact(30, 50);
+
+      expect(result).toEqual({
+        pendingOrdersToReject: 2,
+        totalOrdersToUpdate: 1,
+        foodWillBeReserved: false,
+      });
+      expect(prismaMock.order.count).toHaveBeenCalledWith({
+        where: {
+          foodId: 5,
+          statusId: 1,
+          deleted: false,
+          type: OrderType.PARTIAL,
+          quantity: { gt: 6 },
+          id: { not: 50 },
+        },
+      });
+      expect(prismaMock.order.count).toHaveBeenCalledWith({
+        where: {
+          foodId: 5,
+          statusId: 1,
+          deleted: false,
+          type: OrderType.TOTAL,
+          quantity: { not: 6 },
+          id: { not: 50 },
+        },
+      });
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+      expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('counts every other pending order and reports the reservation when the stock reaches zero', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        quantity: new Prisma.Decimal(4),
+      });
+      prismaMock.order.count.mockResolvedValueOnce(3);
+
+      const result = await service.acceptImpact(30, 50);
+
+      expect(result).toEqual({
+        pendingOrdersToReject: 3,
+        totalOrdersToUpdate: 0,
+        foodWillBeReserved: true,
+      });
+      expect(prismaMock.order.count).toHaveBeenCalledWith({
+        where: { foodId: 5, statusId: 1, deleted: false, id: { not: 50 } },
+      });
+    });
+
+    it('throws NotFoundException for an order of another establishment', async () => {
+      prismaMock.order.findFirst.mockResolvedValue(null);
+
+      await expect(service.acceptImpact(30, 50)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('answers ORDER_NOT_PENDING for an order that is not pending', async () => {
+      prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 3 });
+
+      expect(await conflictCode(service.acceptImpact(30, 50))).toBe('ORDER_NOT_PENDING');
+    });
+
+    it('answers INSUFFICIENT_FOOD_QUANTITY when the stock does not cover the order', async () => {
+      foodsServiceMock.findAvailableById.mockResolvedValue({
+        ...foodRow,
+        quantity: new Prisma.Decimal(3),
+      });
+
+      expect(await conflictCode(service.acceptImpact(30, 50))).toBe('INSUFFICIENT_FOOD_QUANTITY');
+    });
+  });
+
   describe('reject', () => {
     beforeEach(() => {
       prismaMock.order.findUniqueOrThrow.mockResolvedValue(rejectedOrderRow);
@@ -507,10 +745,10 @@ describe('OrdersService', () => {
       expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     });
 
-    it('throws ConflictException when the order is not pending', async () => {
+    it('throws ConflictException with ORDER_NOT_PENDING when the order is not pending', async () => {
       prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 2 });
 
-      await expect(service.reject(30, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(await conflictCode(service.reject(30, 50))).toBe('ORDER_NOT_PENDING');
       expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     });
 
@@ -528,7 +766,7 @@ describe('OrdersService', () => {
       prismaMock.order.findUniqueOrThrow.mockResolvedValue(donatedOrderRow);
     });
 
-    it('moves an in-progress order to "Doado" without touching the food', async () => {
+    it('moves an in-progress order to "Doado" under the food lock, keeping the stock', async () => {
       const result = await service.receive(20, 50);
 
       expect(prismaMock.beneficiaryEntity.findUnique).toHaveBeenCalledWith({
@@ -537,13 +775,58 @@ describe('OrdersService', () => {
       expect(prismaMock.order.findFirst).toHaveBeenCalledWith({
         where: { id: 50, beneficiaryEntityId: 7, deleted: false },
       });
+      expect(prismaMock.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        prismaMock.order.updateMany.mock.invocationCallOrder[0],
+      );
       expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
-        where: { id: 50, statusId: 2 },
+        where: { id: 50, statusId: 2, deleted: false },
         data: { statusId: 4 },
       });
       expect(result.status.name).toBe(ORDER_STATUS.DONATED);
       expect(prismaMock.food.updateMany).not.toHaveBeenCalled();
-      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('keeps the food when stock remains', async () => {
+      await service.receive(20, 50);
+
+      expect(prismaMock.food.update).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('inactivates the food and rejects its pending orders after the last confirmation with zero stock', async () => {
+      prismaMock.food.findUniqueOrThrow.mockResolvedValue({
+        id: 5,
+        quantity: new Prisma.Decimal(0),
+        deleted: false,
+      });
+
+      await service.receive(20, 50);
+
+      expect(prismaMock.order.count).toHaveBeenCalledWith({
+        where: { foodId: 5, statusId: 2, deleted: false },
+      });
+      expect(prismaMock.food.update).toHaveBeenCalledWith({
+        where: { id: 5 },
+        data: { statusId: 30 },
+      });
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+        where: { foodId: 5, statusId: 1, deleted: false },
+        data: { statusId: 3 },
+      });
+    });
+
+    it('keeps the food "Reservado" while another order is in progress', async () => {
+      prismaMock.food.findUniqueOrThrow.mockResolvedValue({
+        id: 5,
+        quantity: new Prisma.Decimal(0),
+        deleted: false,
+      });
+      prismaMock.order.count.mockResolvedValue(1);
+
+      await service.receive(20, 50);
+
+      expect(prismaMock.food.update).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).toHaveBeenCalledTimes(1);
     });
 
     it('throws NotFoundException when the user has no beneficiary entity', async () => {
@@ -560,10 +843,10 @@ describe('OrdersService', () => {
       expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     });
 
-    it('throws ConflictException when the order is not in progress', async () => {
+    it('throws ConflictException with ORDER_NOT_IN_PROGRESS when the order is not in progress', async () => {
       prismaMock.order.findFirst.mockResolvedValue({ ...pendingOrderRow, statusId: 1 });
 
-      await expect(service.receive(20, 50)).rejects.toBeInstanceOf(ConflictException);
+      expect(await conflictCode(service.receive(20, 50))).toBe('ORDER_NOT_IN_PROGRESS');
       expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     });
 

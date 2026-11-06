@@ -40,7 +40,7 @@ export function useOrderAction(order: OrderDetail) {
     }
 
     await queryClient.invalidateQueries({ queryKey: ['orders'] });
-    if (action === 'accept') {
+    if (action === 'accept' || action === 'receive') {
       void queryClient.invalidateQueries({ queryKey: ['foods'] });
       void queryClient.invalidateQueries({ queryKey: ['food'] });
     }

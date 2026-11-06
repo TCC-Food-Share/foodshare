@@ -144,8 +144,13 @@ tarefa de expiração (RF72).
 Aplicado na 2.2 (`meus_alimentos`): `type`, `quantityUpdatedAt` e o índice
 `(foodId, statusId)`. A migration preenche `type` nos pedidos que já existem:
 pedido `Pendente` com a quantidade igual ao estoque, em alimento que não é
-`Somente parcial`, vira total; o resto vira parcial. `acceptedAt` e os outros
-dois índices continuam para a 3.1 e a 6.1.
+`Somente parcial`, vira total; o resto vira parcial.
+
+Aplicado na 3.1 (`pedido_tipo_e_reserva`): `acceptedAt` e o índice
+`(beneficiaryEntityId, statusId)`. A migration preenche `acceptedAt` com o
+`updatedAt` dos pedidos `Em andamento` que já existem, porque nada altera um
+pedido depois do aceite. Os pedidos `Doado` antigos ficam com `null`. O índice
+`(statusId, orderDate)` continua para a 6.1.
 
 ## Listas padronizadas: regras comuns
 

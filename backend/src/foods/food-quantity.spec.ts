@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { FoodRequestType } from '../../generated/prisma/client';
-import { checkFoodQuantity } from './food-quantity';
+import { allowsPartialOrder, checkFoodQuantity } from './food-quantity';
 import { FRACTION_NOT_ALLOWED, PARTIAL_ONLY_QUANTITY_TOO_LOW } from './foods.constants';
 
 const { TOTAL_ONLY, PARTIAL_ONLY, TOTAL_OR_PARTIAL } = FoodRequestType;
@@ -33,5 +33,17 @@ describe('checkFoodQuantity', () => {
 
   it('accepts partial-only with two hundredths', () => {
     expect(checkFoodQuantity(0.02, true, PARTIAL_ONLY)).toBeNull();
+  });
+});
+
+describe('allowsPartialOrder', () => {
+  it('needs more than one whole unit when the unit has no fraction', () => {
+    expect(allowsPartialOrder(1, false)).toBe(false);
+    expect(allowsPartialOrder(2, false)).toBe(true);
+  });
+
+  it('needs more than one hundredth when the unit allows fraction', () => {
+    expect(allowsPartialOrder(0.01, true)).toBe(false);
+    expect(allowsPartialOrder(0.02, true)).toBe(true);
   });
 });

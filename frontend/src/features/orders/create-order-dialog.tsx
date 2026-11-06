@@ -30,10 +30,11 @@ import type { FoodListItem } from '@/features/foods/foods-api';
 import {
   type CreateOrderInput,
   createOrderSchema,
-  DEFAULT_VALUES,
+  defaultValues,
 } from '@/features/orders/create-order-schema';
 import { DuplicateOrderNotice } from '@/features/orders/duplicate-order-notice';
 import { OrderLimitNotice } from '@/features/orders/order-limit-notice';
+import { type OrderMode, orderModes } from '@/features/orders/order-quantity';
 import { conflictCode, createOrder, ORDER_CONFLICT_CODES } from '@/features/orders/orders-api';
 import { ApiError } from '@/lib/api';
 import { formatQuantity } from '@/lib/format';
@@ -59,6 +60,14 @@ function bannerText(error: ServerError): string {
     ? 'Não foi possível enviar: a quantidade pode ter mudado. Confira o valor e tente novamente.'
     : 'Não foi possível enviar a solicitação. Tente novamente em instantes.';
 }
+
+const MODES_HINT: Record<string, string> = {
+  'total,partial': 'Selecione se deseja solicitar todo o alimento disponível ou apenas uma parte.',
+  total: 'Este alimento só pode ser solicitado por inteiro.',
+  partial: 'Este alimento só aceita pedido parcial: informe uma quantidade menor que a disponível.',
+  remainder:
+    'Este alimento só aceita pedido parcial, mas o que sobrou já não pode ser dividido. Você pode solicitar a quantidade restante.',
+};
 
 function HowItWorks() {
   return (
@@ -88,7 +97,7 @@ function QuantityOption({
   description,
 }: {
   id: string;
-  value: CreateOrderInput['mode'];
+  value: OrderMode;
   title: string;
   description: string;
 }) {
@@ -123,24 +132,36 @@ export function CreateOrderDialog({
 
   const available = Number(food.quantity);
   const availableLabel = `${formatQuantity(food.quantity)} ${food.measurementUnit.abbreviation}`;
-  const schema = useMemo(() => createOrderSchema(available), [available]);
+  const { allowsFraction } = food.measurementUnit;
+  const rules = useMemo(
+    () => ({ available, allowsFraction, requestType: food.requestType }),
+    [available, allowsFraction, food.requestType],
+  );
+  const schema = useMemo(() => createOrderSchema(rules), [rules]);
+  const modes = orderModes(rules);
 
   const form = useForm<CreateOrderInput>({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: defaultValues(rules),
   });
 
-  // Every reopen starts from a clean form — adjusting state during render
-  // (not an effect) to avoid a cascading setState-in-effect render.
+  // Every reopen starts from a clean form, and so does a stock refetch that changes
+  // the allowed options — adjusting state during render (not an effect) to avoid a
+  // cascading setState-in-effect render.
   const [wasOpen, setWasOpen] = useState(open);
+  const [lastModes, setLastModes] = useState(modes.join());
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      form.reset(DEFAULT_VALUES);
+      form.reset(defaultValues(rules));
       setServerError(null);
       setBlocked(null);
     }
+  }
+  if (modes.join() !== lastModes) {
+    setLastModes(modes.join());
+    form.reset(defaultValues(rules));
   }
 
   const mutation = useMutation({ mutationFn: createOrder });
@@ -148,7 +169,7 @@ export function CreateOrderDialog({
 
   async function onSubmit(values: CreateOrderInput) {
     setServerError(null);
-    const quantity = values.mode === 'total' ? available : Number(values.quantity);
+    const quantity = values.mode === 'partial' ? Number(values.quantity) : available;
     try {
       await mutation.mutateAsync({ foodId: food.id, quantity });
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -217,9 +238,7 @@ export function CreateOrderDialog({
 
                 <div className="flex flex-col gap-1">
                   <h3 className="text-foreground text-sm font-semibold">Quantidade desejada</h3>
-                  <p className="text-muted-foreground text-[13px]">
-                    Selecione se deseja solicitar todo o alimento disponível ou apenas uma parte.
-                  </p>
+                  <p className="text-muted-foreground text-[13px]">{MODES_HINT[modes.join()]}</p>
                 </div>
 
                 <FormField
@@ -231,22 +250,34 @@ export function CreateOrderDialog({
                         value={field.value}
                         onValueChange={(value) => {
                           field.onChange(value);
-                          if (value === 'total') form.clearErrors('quantity');
+                          if (value !== 'partial') form.clearErrors('quantity');
                         }}
                         aria-label="Quantidade desejada"
                       >
-                        <QuantityOption
-                          id="order-mode-total"
-                          value="total"
-                          title="Quantidade total"
-                          description={`Solicitar todas as ${availableLabel} disponíveis`}
-                        />
-                        <QuantityOption
-                          id="order-mode-partial"
-                          value="partial"
-                          title="Quantidade parcial"
-                          description="Informe a quantidade que deseja solicitar"
-                        />
+                        {modes.includes('total') && (
+                          <QuantityOption
+                            id="order-mode-total"
+                            value="total"
+                            title="Quantidade total"
+                            description={`Solicitar toda a quantidade disponível (${availableLabel})`}
+                          />
+                        )}
+                        {modes.includes('partial') && (
+                          <QuantityOption
+                            id="order-mode-partial"
+                            value="partial"
+                            title="Quantidade parcial"
+                            description="Informe a quantidade que deseja solicitar"
+                          />
+                        )}
+                        {modes.includes('remainder') && (
+                          <QuantityOption
+                            id="order-mode-remainder"
+                            value="remainder"
+                            title="Quantidade restante"
+                            description={`Solicitar o que restou deste alimento (${availableLabel})`}
+                          />
+                        )}
                       </RadioGroup>
                     </FormItem>
                   )}
@@ -264,14 +295,16 @@ export function CreateOrderDialog({
                             <Input
                               type="number"
                               inputMode="decimal"
-                              step="0.01"
+                              step={allowsFraction ? '0.01' : '1'}
                               min="0"
                               max={available}
                               placeholder="Ex: 20"
                               className="pr-20"
-                              disabled={mode === 'total'}
+                              disabled={mode !== 'partial'}
                               {...field}
-                              value={mode === 'total' ? formatQuantity(food.quantity) : field.value}
+                              value={
+                                mode !== 'partial' ? formatQuantity(food.quantity) : field.value
+                              }
                             />
                           </FormControl>
                           <span className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm">
@@ -279,7 +312,9 @@ export function CreateOrderDialog({
                           </span>
                         </div>
                         <span className="text-muted-foreground shrink-0 text-xs">
-                          máx. {availableLabel}
+                          {food.requestType === 'PARTIAL_ONLY' && mode === 'partial'
+                            ? `menos que ${availableLabel}`
+                            : `máx. ${availableLabel}`}
                         </span>
                       </div>
                       <FormMessage />

@@ -24,8 +24,11 @@ import {
 import { PaginatedFoodsResponseDto } from './dto/paginated-foods-response.dto';
 import { ReactivateFoodDto, UpdateFoodDto } from './dto/update-food.dto';
 import {
+  applyNewQuantityToPendingOrders,
   lockFood,
+  orderStatusId,
   partialOrdersToRejectWhere,
+  rejectAllPendingOrders,
   totalOrdersToUpdateWhere,
 } from './food-order-effects';
 import { checkFoodQuantity } from './food-quantity';
@@ -242,7 +245,7 @@ export class FoodsService {
       return { totalOrdersToUpdate: 0, partialOrdersToReject: 0 };
     }
 
-    const pendingId = await this.orderStatusId(this.prisma, ORDER_STATUS.PENDING);
+    const pendingId = await orderStatusId(this.prisma, ORDER_STATUS.PENDING);
     const [totalOrdersToUpdate, partialOrdersToReject] = await Promise.all([
       this.prisma.order.count({ where: totalOrdersToUpdateWhere(id, pendingId, quantity) }),
       this.prisma.order.count({ where: partialOrdersToRejectWhere(id, pendingId, quantity) }),
@@ -274,7 +277,7 @@ export class FoodsService {
       });
 
       if (dto.quantity !== undefined && !food.quantity.equals(dto.quantity)) {
-        await this.applyNewQuantityToPendingOrders(tx, id, dto.quantity);
+        await applyNewQuantityToPendingOrders(tx, id, dto.quantity);
       }
     });
 
@@ -293,7 +296,7 @@ export class FoodsService {
         where: { name: FOOD_STATUS.INACTIVE },
       });
       await tx.food.update({ where: { id }, data: { statusId: inactive.id } });
-      await this.rejectPendingOrders(tx, id);
+      await rejectAllPendingOrders(tx, id);
     });
 
     return this.getMine(id);
@@ -330,18 +333,18 @@ export class FoodsService {
     await this.prisma.$transaction(async (tx) => {
       await this.lockOwnedFood(tx, establishmentId, id);
 
-      const inProgressId = await this.orderStatusId(tx, ORDER_STATUS.IN_PROGRESS);
+      const inProgressId = await orderStatusId(tx, ORDER_STATUS.IN_PROGRESS);
       const inProgressWhere = { foodId: id, statusId: inProgressId, deleted: false };
       if ((await tx.order.count({ where: inProgressWhere })) > 0) {
         await this.assertSelectableReason(tx, cancellationReasonId);
-        const cancelledId = await this.orderStatusId(tx, ORDER_STATUS.CANCELLED);
+        const cancelledId = await orderStatusId(tx, ORDER_STATUS.CANCELLED);
         await tx.order.updateMany({
           where: inProgressWhere,
           data: { statusId: cancelledId, cancellationReasonId },
         });
       }
 
-      await this.rejectPendingOrders(tx, id);
+      await rejectAllPendingOrders(tx, id);
       await tx.food.update({ where: { id }, data: { deleted: true } });
     });
   }
@@ -430,40 +433,6 @@ export class FoodsService {
     }
   }
 
-  private async orderStatusId(
-    client: Prisma.TransactionClient,
-    name: (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS],
-  ): Promise<number> {
-    const status = await client.orderStatus.findUniqueOrThrow({ where: { name } });
-    return status.id;
-  }
-
-  private async applyNewQuantityToPendingOrders(
-    tx: Prisma.TransactionClient,
-    foodId: number,
-    quantity: number,
-  ): Promise<void> {
-    const pendingId = await this.orderStatusId(tx, ORDER_STATUS.PENDING);
-    const rejectedId = await this.orderStatusId(tx, ORDER_STATUS.REJECTED);
-    await tx.order.updateMany({
-      where: totalOrdersToUpdateWhere(foodId, pendingId, quantity),
-      data: { quantity, quantityUpdatedAt: new Date() },
-    });
-    await tx.order.updateMany({
-      where: partialOrdersToRejectWhere(foodId, pendingId, quantity),
-      data: { statusId: rejectedId },
-    });
-  }
-
-  private async rejectPendingOrders(tx: Prisma.TransactionClient, foodId: number): Promise<void> {
-    const pendingId = await this.orderStatusId(tx, ORDER_STATUS.PENDING);
-    const rejectedId = await this.orderStatusId(tx, ORDER_STATUS.REJECTED);
-    await tx.order.updateMany({
-      where: { foodId, statusId: pendingId, deleted: false },
-      data: { statusId: rejectedId },
-    });
-  }
-
   private buildMyFoodsWhere(establishmentId: number, query: ListMyFoodsQueryDto): Prisma.Sql {
     const conditions: Prisma.Sql[] = [
       Prisma.sql`f.deleted = false`,
@@ -497,8 +466,8 @@ export class FoodsService {
 
     const [foods, pendingId, inProgressId] = await Promise.all([
       this.hydrate(ids),
-      this.orderStatusId(this.prisma, ORDER_STATUS.PENDING),
-      this.orderStatusId(this.prisma, ORDER_STATUS.IN_PROGRESS),
+      orderStatusId(this.prisma, ORDER_STATUS.PENDING),
+      orderStatusId(this.prisma, ORDER_STATUS.IN_PROGRESS),
     ]);
     const groups = await this.prisma.order.groupBy({
       by: ['foodId', 'statusId'],

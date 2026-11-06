@@ -5,17 +5,27 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { FoodRequestType, OrderType, Prisma } from '../../generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { ImageStorageService } from '../files/image-storage.service';
-import { lockFood } from '../foods/food-order-effects';
+import {
+  applyNewQuantityToPendingOrders,
+  lockFood,
+  orderStatusId,
+  partialOrdersToRejectWhere,
+  rejectAllPendingOrders,
+  totalOrdersToUpdateWhere,
+} from '../foods/food-order-effects';
+import { FOOD_STATUS } from '../foods/foods.constants';
 import { FoodsService } from '../foods/foods.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AcceptImpactResponseDto } from './dto/accept-impact-response.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { PaginatedOrdersResponseDto } from './dto/paginated-orders-response.dto';
+import { checkOrderQuantity, orderTypeFor } from './order-quantity';
 import {
   DEFAULT_PAGE,
   OPEN_ORDER_STATUSES,
@@ -32,12 +42,17 @@ const ORDER_INCLUDE = {
   beneficiaryEntity: true,
 } as const satisfies Prisma.OrderInclude;
 
-function orderTypeFor(
-  quantity: number,
-  food: { quantity: Prisma.Decimal; requestType: FoodRequestType },
-): OrderType {
-  if (food.requestType === FoodRequestType.PARTIAL_ONLY) return OrderType.PARTIAL;
-  return food.quantity.equals(quantity) ? OrderType.TOTAL : OrderType.PARTIAL;
+type OrderConflictCode = (typeof ORDER_CONFLICT_CODES)[keyof typeof ORDER_CONFLICT_CODES];
+
+function orderConflict(code: OrderConflictCode, message: string): ConflictException {
+  return new ConflictException({ statusCode: 409, error: 'Conflict', message, code });
+}
+
+interface AcceptEvaluation {
+  orderId: number;
+  foodId: number;
+  quantity: Prisma.Decimal;
+  newQuantity: number;
 }
 
 @Injectable()
@@ -87,8 +102,19 @@ export class OrdersService {
         });
       }
 
-      if (new Prisma.Decimal(dto.quantity).greaterThan(food.quantity)) {
-        throw new BadRequestException('Requested quantity exceeds the available amount.');
+      const quantityError = checkOrderQuantity(
+        dto.quantity,
+        food.quantity,
+        food.measurementUnit.allowsFraction,
+        food.requestType,
+      );
+      if (quantityError) {
+        throw new BadRequestException({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Requested quantity is not allowed for this food.',
+          code: quantityError,
+        });
       }
 
       const status = await tx.orderStatus.findUniqueOrThrow({
@@ -98,7 +124,7 @@ export class OrdersService {
       return tx.order.create({
         data: {
           quantity: dto.quantity,
-          type: orderTypeFor(dto.quantity, food),
+          type: orderTypeFor(dto.quantity, food.quantity, food.requestType),
           foodId: food.id,
           statusId: status.id,
           establishmentId: food.establishmentId,
@@ -111,22 +137,43 @@ export class OrdersService {
     return this.toResponse(order);
   }
 
+  async acceptImpact(userId: number, orderId: number): Promise<AcceptImpactResponseDto> {
+    const establishmentId = await this.requireEstablishmentId(userId);
+    const found = await this.findOwnOrder(orderId, { establishmentId });
+    const { foodId, newQuantity } = await this.evaluateAccept(this.prisma, found.id);
+    const pendingId = await orderStatusId(this.prisma, ORDER_STATUS.PENDING);
+
+    if (newQuantity === 0) {
+      const pendingOrdersToReject = await this.prisma.order.count({
+        where: { foodId, statusId: pendingId, deleted: false, id: { not: found.id } },
+      });
+      return { pendingOrdersToReject, totalOrdersToUpdate: 0, foodWillBeReserved: true };
+    }
+
+    const [pendingOrdersToReject, totalOrdersToUpdate] = await Promise.all([
+      this.prisma.order.count({
+        where: {
+          ...partialOrdersToRejectWhere(foodId, pendingId, newQuantity),
+          id: { not: found.id },
+        },
+      }),
+      this.prisma.order.count({
+        where: {
+          ...totalOrdersToUpdateWhere(foodId, pendingId, newQuantity),
+          id: { not: found.id },
+        },
+      }),
+    ]);
+    return { pendingOrdersToReject, totalOrdersToUpdate, foodWillBeReserved: false };
+  }
+
   async accept(userId: number, orderId: number): Promise<OrderResponseDto> {
-    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
-    if (!establishment) {
-      throw new NotFoundException('Establishment not found.');
-    }
+    const establishmentId = await this.requireEstablishmentId(userId);
+    const found = await this.findOwnOrder(orderId, { establishmentId });
 
-    const found = await this.prisma.order.findFirst({
-      where: { id: orderId, establishmentId: establishment.id, deleted: false },
-    });
-    if (!found) {
-      throw new NotFoundException('Order not found.');
-    }
-
-    const [pending, inProgress] = await Promise.all([
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.PENDING } }),
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.IN_PROGRESS } }),
+    const [pendingId, inProgressId] = await Promise.all([
+      orderStatusId(this.prisma, ORDER_STATUS.PENDING),
+      orderStatusId(this.prisma, ORDER_STATUS.IN_PROGRESS),
     ]);
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -134,69 +181,67 @@ export class OrdersService {
       // so an accept and a stock edit cannot deadlock. Order and stock are read after the lock.
       await lockFood(tx, found.foodId);
 
-      const order = await tx.order.findFirst({ where: { id: found.id, deleted: false } });
-      if (order?.statusId !== pending.id) {
-        throw new ConflictException('Order is not pending.');
-      }
-
-      const food = await this.foodsService.findAvailableById(order.foodId, tx);
-      if (!food) {
-        throw new ConflictException('Linked food is no longer available.');
-      }
+      const {
+        orderId: id,
+        foodId,
+        quantity,
+        newQuantity,
+      } = await this.evaluateAccept(tx, found.id);
 
       const moved = await tx.order.updateMany({
-        where: { id: order.id, statusId: pending.id },
-        data: { statusId: inProgress.id },
+        where: { id, statusId: pendingId },
+        data: { statusId: inProgressId, acceptedAt: new Date() },
       });
       if (moved.count === 0) {
-        throw new ConflictException('Order is not pending.');
+        throw orderConflict(ORDER_CONFLICT_CODES.notPending, 'Order is not pending.');
       }
 
       const reserved = await tx.food.updateMany({
-        where: { id: order.foodId, quantity: { gte: order.quantity } },
-        data: { quantity: { decrement: order.quantity } },
+        where: { id: foodId, quantity: { gte: quantity } },
+        data: { quantity: { decrement: quantity } },
       });
       if (reserved.count === 0) {
-        throw new ConflictException('Insufficient food quantity to accept this order.');
+        throw orderConflict(
+          ORDER_CONFLICT_CODES.insufficientQuantity,
+          'Insufficient food quantity to accept this order.',
+        );
       }
 
-      return tx.order.findUniqueOrThrow({
-        where: { id: order.id },
-        include: ORDER_INCLUDE,
-      });
+      if (newQuantity === 0) {
+        const reservedStatus = await tx.foodStatus.findUniqueOrThrow({
+          where: { name: FOOD_STATUS.RESERVED },
+        });
+        await tx.food.update({ where: { id: foodId }, data: { statusId: reservedStatus.id } });
+        await rejectAllPendingOrders(tx, foodId);
+      } else {
+        await applyNewQuantityToPendingOrders(tx, foodId, newQuantity);
+      }
+
+      return tx.order.findUniqueOrThrow({ where: { id }, include: ORDER_INCLUDE });
     });
 
     return this.toResponse(updated);
   }
 
   async reject(userId: number, orderId: number): Promise<OrderResponseDto> {
-    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
-    if (!establishment) {
-      throw new NotFoundException('Establishment not found.');
-    }
+    const establishmentId = await this.requireEstablishmentId(userId);
+    const order = await this.findOwnOrder(orderId, { establishmentId });
 
-    const order = await this.prisma.order.findFirst({
-      where: { id: orderId, establishmentId: establishment.id, deleted: false },
-    });
-    if (!order) {
-      throw new NotFoundException('Order not found.');
-    }
-
-    const [pending, rejected] = await Promise.all([
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.PENDING } }),
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.REJECTED } }),
+    const [pendingId, rejectedId] = await Promise.all([
+      orderStatusId(this.prisma, ORDER_STATUS.PENDING),
+      orderStatusId(this.prisma, ORDER_STATUS.REJECTED),
     ]);
-    if (order.statusId !== pending.id) {
-      throw new ConflictException('Order is not pending.');
+    if (order.statusId !== pendingId) {
+      throw orderConflict(ORDER_CONFLICT_CODES.notPending, 'Order is not pending.');
     }
 
     // Conditional update as a compare-and-swap: a concurrent accept/reject sees count 0 here.
     const moved = await this.prisma.order.updateMany({
-      where: { id: order.id, statusId: pending.id },
-      data: { statusId: rejected.id },
+      where: { id: order.id, statusId: pendingId },
+      data: { statusId: rejectedId },
     });
     if (moved.count === 0) {
-      throw new ConflictException('Order is not pending.');
+      throw orderConflict(ORDER_CONFLICT_CODES.notPending, 'Order is not pending.');
     }
 
     const updated = await this.prisma.order.findUniqueOrThrow({
@@ -212,34 +257,42 @@ export class OrdersService {
     if (!beneficiaryEntity) {
       throw new NotFoundException('Beneficiary entity not found.');
     }
+    const found = await this.findOwnOrder(orderId, { beneficiaryEntityId: beneficiaryEntity.id });
 
-    const order = await this.prisma.order.findFirst({
-      where: { id: orderId, beneficiaryEntityId: beneficiaryEntity.id, deleted: false },
-    });
-    if (!order) {
-      throw new NotFoundException('Order not found.');
-    }
-
-    const [inProgress, donated] = await Promise.all([
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.IN_PROGRESS } }),
-      this.prisma.orderStatus.findUniqueOrThrow({ where: { name: ORDER_STATUS.DONATED } }),
+    const [inProgressId, donatedId] = await Promise.all([
+      orderStatusId(this.prisma, ORDER_STATUS.IN_PROGRESS),
+      orderStatusId(this.prisma, ORDER_STATUS.DONATED),
     ]);
-    if (order.statusId !== inProgress.id) {
-      throw new ConflictException('Order is not in progress.');
+    if (found.statusId !== inProgressId) {
+      throw orderConflict(ORDER_CONFLICT_CODES.notInProgress, 'Order is not in progress.');
     }
 
-    // Conditional update as a compare-and-swap: a concurrent confirmation sees count 0 here.
-    const moved = await this.prisma.order.updateMany({
-      where: { id: order.id, statusId: inProgress.id },
-      data: { statusId: donated.id },
-    });
-    if (moved.count === 0) {
-      throw new ConflictException('Order is not in progress.');
-    }
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Locking the food serializes the last confirmations of the same food: the second one
+      // waits, then counts the first as already donated, so the food cannot stay reserved.
+      await lockFood(tx, found.foodId);
 
-    const updated = await this.prisma.order.findUniqueOrThrow({
-      where: { id: order.id },
-      include: ORDER_INCLUDE,
+      const moved = await tx.order.updateMany({
+        where: { id: found.id, statusId: inProgressId, deleted: false },
+        data: { statusId: donatedId },
+      });
+      if (moved.count === 0) {
+        throw orderConflict(ORDER_CONFLICT_CODES.notInProgress, 'Order is not in progress.');
+      }
+
+      const food = await tx.food.findUniqueOrThrow({ where: { id: found.foodId } });
+      const othersInProgress = await tx.order.count({
+        where: { foodId: found.foodId, statusId: inProgressId, deleted: false },
+      });
+      if (!food.deleted && food.quantity.isZero() && othersInProgress === 0) {
+        const inactive = await tx.foodStatus.findUniqueOrThrow({
+          where: { name: FOOD_STATUS.INACTIVE },
+        });
+        await tx.food.update({ where: { id: food.id }, data: { statusId: inactive.id } });
+        await rejectAllPendingOrders(tx, food.id);
+      }
+
+      return tx.order.findUniqueOrThrow({ where: { id: found.id }, include: ORDER_INCLUDE });
     });
 
     return this.toResponse(updated);
@@ -316,6 +369,62 @@ export class OrdersService {
     }
 
     return this.toDetailResponse(order);
+  }
+
+  private async requireEstablishmentId(userId: number): Promise<number> {
+    const establishment = await this.prisma.establishment.findUnique({ where: { userId } });
+    if (!establishment) {
+      throw new NotFoundException('Establishment not found.');
+    }
+    return establishment.id;
+  }
+
+  private async findOwnOrder(
+    orderId: number,
+    owner: { establishmentId: number } | { beneficiaryEntityId: number },
+  ) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, deleted: false, ...owner },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+    return order;
+  }
+
+  private async evaluateAccept(
+    client: Prisma.TransactionClient,
+    orderId: number,
+  ): Promise<AcceptEvaluation> {
+    const pendingId = await orderStatusId(client, ORDER_STATUS.PENDING);
+    const order = await client.order.findFirst({ where: { id: orderId, deleted: false } });
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+    if (order.statusId !== pendingId) {
+      throw orderConflict(ORDER_CONFLICT_CODES.notPending, 'Order is not pending.');
+    }
+
+    const food = await this.foodsService.findAvailableById(order.foodId, client);
+    if (!food) {
+      throw orderConflict(
+        ORDER_CONFLICT_CODES.foodNotAvailable,
+        'Linked food is no longer available.',
+      );
+    }
+    if (food.quantity.lessThan(order.quantity)) {
+      throw orderConflict(
+        ORDER_CONFLICT_CODES.insufficientQuantity,
+        'Insufficient food quantity to accept this order.',
+      );
+    }
+
+    return {
+      orderId: order.id,
+      foodId: food.id,
+      quantity: order.quantity,
+      newQuantity: food.quantity.minus(order.quantity).toNumber(),
+    };
   }
 
   private openOrdersWhere(beneficiaryEntityId: number): Prisma.OrderWhereInput {

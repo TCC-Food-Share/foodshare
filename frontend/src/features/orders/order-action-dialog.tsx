@@ -1,4 +1,12 @@
-import { CheckIcon, CircleAlertIcon, Loader2Icon, PackageCheckIcon, XIcon } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  CheckIcon,
+  CircleAlertIcon,
+  InfoIcon,
+  Loader2Icon,
+  PackageCheckIcon,
+  XIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -11,10 +19,62 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { dialogCopy, ORDER_ACTIONS, type OrderAction } from '@/features/orders/order-actions';
-import type { OrderDetail } from '@/features/orders/orders-api';
+import {
+  acceptImpactProblem,
+  dialogCopy,
+  ORDER_ACTIONS,
+  type OrderAction,
+} from '@/features/orders/order-actions';
+import {
+  type AcceptImpact,
+  acceptImpactKey,
+  conflictCode,
+  getAcceptImpact,
+  type OrderDetail,
+} from '@/features/orders/orders-api';
 import { type ActionOutcome, useOrderAction } from '@/features/orders/use-order-action';
 import { cn } from '@/lib/cn';
+
+const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
+
+function AcceptEffect({ impact, remaining }: { impact: AcceptImpact; remaining?: string }) {
+  const lines: string[] = [];
+  if (impact.pendingOrdersToReject > 0) {
+    lines.push(
+      `${impact.pendingOrdersToReject} ${plural(
+        impact.pendingOrdersToReject,
+        'pedido pendente deste alimento será rejeitado',
+        'pedidos pendentes deste alimento serão rejeitados',
+      )}.`,
+    );
+  }
+  if (impact.totalOrdersToUpdate > 0) {
+    lines.push(
+      `${impact.totalOrdersToUpdate} ${plural(
+        impact.totalOrdersToUpdate,
+        'pedido total pendente passará',
+        'pedidos totais pendentes passarão',
+      )} a pedir ${remaining}.`,
+    );
+  }
+  if (impact.foodWillBeReserved) {
+    lines.push('O alimento ficará Reservado e sairá do feed.');
+  }
+  if (lines.length === 0) return null;
+
+  return (
+    <Alert>
+      <InfoIcon />
+      <AlertDescription>
+        <ul className="flex flex-col gap-1">
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </AlertDescription>
+    </Alert>
+  );
+}
 
 const ACTION_ICONS = {
   accept: CheckIcon,
@@ -39,6 +99,7 @@ export function OrderActionDialog({
   onFinished,
   onCloseAutoFocus,
 }: OrderActionDialogProps) {
+  const queryClient = useQueryClient();
   const { execute, isPending } = useOrderAction(order);
   const [failed, setFailed] = useState(false);
   const [copy, setCopy] = useState(() => dialogCopy(action, order));
@@ -55,6 +116,25 @@ export function OrderActionDialog({
       setCopy(dialogCopy(action, order));
     }
   }
+
+  // Keyed outside ['orders'] so the invalidation after a successful accept does not
+  // refetch the preview of an order that is no longer pending.
+  const impactQuery = useQuery({
+    queryKey: acceptImpactKey(order.id),
+    queryFn: async () => {
+      try {
+        return await getAcceptImpact(order.id);
+      } catch (error) {
+        if (conflictCode(error)) void queryClient.invalidateQueries({ queryKey: ['orders'] });
+        throw error;
+      }
+    },
+    enabled: open && action === 'accept' && !isPending,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+  const awaitingImpact = action === 'accept' && (!impactQuery.data || impactQuery.isFetching);
 
   const config = ORDER_ACTIONS[action];
   const Icon = ACTION_ICONS[action];
@@ -86,6 +166,19 @@ export function OrderActionDialog({
           </div>
         </DialogHeader>
 
+        {action === 'accept' && impactQuery.data && !impactQuery.isFetching && (
+          <AcceptEffect impact={impactQuery.data} remaining={copy.remaining} />
+        )}
+
+        {action === 'accept' && impactQuery.isError && (
+          <Alert variant="destructive">
+            <CircleAlertIcon />
+            <AlertDescription>
+              {acceptImpactProblem(conflictCode(impactQuery.error))}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {failed && (
           <Alert variant="destructive">
             <CircleAlertIcon />
@@ -102,9 +195,9 @@ export function OrderActionDialog({
           <Button
             variant={config.destructive ? 'destructive' : 'default'}
             onClick={() => void confirm()}
-            disabled={isPending}
+            disabled={isPending || awaitingImpact}
           >
-            {isPending && <Loader2Icon className="animate-spin" />}
+            {(isPending || impactQuery.isFetching) && <Loader2Icon className="animate-spin" />}
             {config.label}
           </Button>
         </DialogFooter>
