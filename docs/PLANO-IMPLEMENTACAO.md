@@ -45,7 +45,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | 1.4 | `termos-proibidos-validacao`    | RNF07                                       | 1.1            | 14/10 | ✅     |
 | 1.5 | `sugestoes`                     | RF49, RF71, RN39                            | 1.3            | 16/10 | ✅     |
 | 2.1 | `cadastro-alimento-padronizado` | RF14, RF20, RF21, RN15–RN17, RN25           | 0.3, 1.2       | 19/10 | ✅     |
-| 2.2 | `meus-alimentos`                | RF15–RF19, RN20–RN24                        | 2.1            | 22/10 | ⬜     |
+| 2.2 | `meus-alimentos`                | RF15–RF19, RN20–RN24                        | 2.1            | 22/10 | ✅     |
 | 3.1 | `pedido-tipo-e-reserva`         | RF22, RF23, RF25, RN03, RN07, RN08          | 2.1            | 24/10 | ⬜     |
 | 3.2 | `cancelar-pedido`               | RF26, RN09                                  | 3.1            | 26/10 | ⬜     |
 | 3.3 | `pedidos-busca-e-contato`       | RF27 (busca), RF28, RF09, RN12              | 3.1            | 28/10 | ⬜     |
@@ -183,6 +183,9 @@ o cronograma da disciplina pedir.
   - `GET /foods/mine`, com status, busca e ordenação (RF19).
   - Editar validade e quantidade (RF15, com os efeitos da RN20 sobre pedidos pendentes totais e parciais e o registro de `quantityUpdatedAt`).
   - Desativar (RF18), reativar (RF17) e excluir logicamente (RF16, motivo obrigatório se houver pedido em andamento).
+  - `Order.type` e `quantityUpdatedAt`, antecipados da 3.1 porque a RN20 precisa deles (DT28). O tipo é derivado na criação do pedido.
+  - Criação e aceite de pedido passam a travar a linha do alimento, para não haver impasse com as ações acima.
+  - O dono vê o detalhe do próprio alimento em qualquer status (DT29).
 - **Frontend**
   - Tela "Meus Alimentos" do protótipo, com abas Ativo/Reservado/Inativo e ações por linha, respeitando cada estado.
   - Diálogos de confirmação dizem quantos pedidos serão afetados.
@@ -193,8 +196,8 @@ o cronograma da disciplina pedir.
 ### 3.1 `pedido-tipo-e-reserva`
 
 - **Backend**
-  - `Order.type` e `acceptedAt`.
-  - A criação valida a quantidade pelo `requestType` (RN03).
+  - `Order.acceptedAt`. `Order.type` já existe desde a 2.2 (DT28).
+  - A criação valida a quantidade pelo `requestType` (RN03) e revê a derivação do tipo.
   - Aceite conforme RN07: desconto com trava, `Reservado` ao zerar e rejeição automática dos pendentes que não cabem.
   - Confirmação conforme RN08.
 - **Frontend**
