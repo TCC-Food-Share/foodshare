@@ -12,6 +12,8 @@ import {
   type OrderAction,
   situationText,
 } from '@/features/orders/order-actions';
+import { OrderCancelDialog } from '@/features/orders/order-cancel-dialog';
+import { OPEN_ORDER_STATUSES, ORDER_STATUS } from '@/features/orders/order-status';
 import type { OrderDetail } from '@/features/orders/orders-api';
 import type { ActionOutcome } from '@/features/orders/use-order-action';
 import { formatQuantity } from '@/lib/format';
@@ -26,11 +28,17 @@ export function OrderActionsCard({ order, role, onNotFound }: OrderActionsCardPr
   const actions = availableActions(role, order.status.name);
   const [action, setAction] = useState<OrderAction>('accept');
   const [open, setOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const cardRef = useRef<HTMLElement>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
   const focusCardOnClose = useRef(false);
 
   const lowStock = actions.includes('accept') && insufficientStock(order);
+  // RF26: both parties may cancel while the order is open.
+  const canCancel =
+    (role === 'establishment' || role === 'beneficiary') &&
+    OPEN_ORDER_STATUSES.includes(order.status.name);
+  const hasActions = actions.length > 0 || canCancel;
   const unit = order.food.quantityUnit;
 
   function openDialog(next: OrderAction, opener: HTMLButtonElement) {
@@ -39,9 +47,15 @@ export function OrderActionsCard({ order, role, onNotFound }: OrderActionsCardPr
     setOpen(true);
   }
 
+  function openCancelDialog(opener: HTMLButtonElement) {
+    openerRef.current = opener;
+    setCancelOpen(true);
+  }
+
   function handleFinished(outcome: Exclude<ActionOutcome, 'retry'>) {
     focusCardOnClose.current = outcome !== 'not-found';
     setOpen(false);
+    setCancelOpen(false);
     if (outcome === 'not-found') onNotFound();
   }
 
@@ -60,11 +74,16 @@ export function OrderActionsCard({ order, role, onNotFound }: OrderActionsCardPr
       className="border-border bg-card focus-visible:ring-ring/50 flex flex-col gap-4 rounded-lg border p-6 outline-none focus-visible:ring-[3px]"
     >
       <h2 className="text-foreground text-lg font-semibold">
-        {actions.length > 0 ? 'Ações do pedido' : 'Situação do pedido'}
+        {hasActions ? 'Ações do pedido' : 'Situação do pedido'}
       </h2>
-      <p className="text-muted-foreground text-sm leading-relaxed">
-        {situationText(role, order.status.name)}
-      </p>
+      <p className="text-muted-foreground text-sm leading-relaxed">{situationText(role, order)}</p>
+
+      {order.status.name === ORDER_STATUS.CANCELLED && order.cancellationReason && (
+        <p className="text-sm">
+          <span className="text-muted-foreground">Motivo: </span>
+          <span className="text-foreground font-medium">{order.cancellationReason.name}</span>
+        </p>
+      )}
 
       {lowStock && (
         <Alert variant="warning">
@@ -79,7 +98,7 @@ export function OrderActionsCard({ order, role, onNotFound }: OrderActionsCardPr
         </Alert>
       )}
 
-      {actions.length > 0 && (
+      {hasActions && (
         <div className="flex flex-col gap-2">
           {actions.map((item) => (
             <Button
@@ -96,6 +115,15 @@ export function OrderActionsCard({ order, role, onNotFound }: OrderActionsCardPr
               {ORDER_ACTIONS[item].label}
             </Button>
           ))}
+          {canCancel && (
+            <Button
+              variant="ghost"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={(event) => openCancelDialog(event.currentTarget)}
+            >
+              Cancelar pedido
+            </Button>
+          )}
         </div>
       )}
 
@@ -104,6 +132,14 @@ export function OrderActionsCard({ order, role, onNotFound }: OrderActionsCardPr
         action={action}
         open={open}
         onOpenChange={setOpen}
+        onFinished={handleFinished}
+        onCloseAutoFocus={handleCloseAutoFocus}
+      />
+
+      <OrderCancelDialog
+        order={order}
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
         onFinished={handleFinished}
         onCloseAutoFocus={handleCloseAutoFocus}
       />

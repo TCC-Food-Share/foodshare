@@ -3,6 +3,11 @@ import { Link } from 'react-router-dom';
 
 import type { Role } from '@/features/auth/auth-context';
 import { counterpartLabel, counterpartName } from '@/features/orders/order-counterpart';
+import {
+  cancelledByLabel,
+  ORDER_STATUS,
+  type OrderStatusName,
+} from '@/features/orders/order-status';
 import { OrderStatusBadge } from '@/features/orders/order-status-badge';
 import type { Order } from '@/features/orders/orders-api';
 import { formatLocalDate, formatQuantity } from '@/lib/format';
@@ -10,9 +15,11 @@ import { formatLocalDate, formatQuantity } from '@/lib/format';
 interface OrderCardsProps {
   orders: Order[];
   role: Role | null;
+  status: OrderStatusName;
 }
 
-export function OrderCards({ orders, role }: OrderCardsProps) {
+export function OrderCards({ orders, role, status }: OrderCardsProps) {
+  const cancelledTab = status === ORDER_STATUS.CANCELLED;
   return (
     <ul className="flex flex-col gap-3 md:hidden">
       {orders.map((order) => (
@@ -38,6 +45,19 @@ export function OrderCards({ orders, role }: OrderCardsProps) {
                 <span className="text-muted-foreground truncate text-xs">
                   {counterpartLabel(role)}: {counterpartName(order, role)}
                 </span>
+                {cancelledTab && (
+                  <>
+                    <span className="text-muted-foreground text-xs">
+                      Motivo:{' '}
+                      <span className="text-foreground">
+                        {order.cancellationReason?.name ?? '—'}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      Cancelado por: {cancelledByLabel(order.cancelledBy, role)}
+                    </span>
+                  </>
+                )}
               </div>
               <ChevronRightIcon className="text-muted-foreground size-4 shrink-0" />
             </div>

@@ -1,5 +1,9 @@
 import type { InstitutionRole, Role } from '@/features/auth/auth-context';
-import { ORDER_STATUS, type OrderStatusName } from '@/features/orders/order-status';
+import {
+  cancelledBySentence,
+  ORDER_STATUS,
+  type OrderStatusName,
+} from '@/features/orders/order-status';
 import {
   acceptOrder,
   type Order,
@@ -48,7 +52,7 @@ export const ORDER_ACTIONS: Record<OrderAction, OrderActionConfig> = {
   },
 };
 
-const ALREADY_UPDATED = 'Este pedido já foi atualizado. Confira a situação atual.';
+export const ALREADY_UPDATED = 'Este pedido já foi atualizado. Confira a situação atual.';
 const FOOD_UNAVAILABLE =
   'O alimento deste pedido não está mais disponível (vencido, inativo ou removido). Você ainda pode rejeitar o pedido.';
 const NOT_CONCLUDED = 'Não foi possível concluir a ação. O pedido pode ter sido atualizado.';
@@ -59,7 +63,10 @@ export function availableActions(role: Role | null, status: OrderStatusName): Or
   return [];
 }
 
-const SITUATION: Record<InstitutionRole, Record<OrderStatusName, string>> = {
+const SITUATION: Record<
+  InstitutionRole,
+  Record<Exclude<OrderStatusName, typeof ORDER_STATUS.CANCELLED>, string>
+> = {
   establishment: {
     [ORDER_STATUS.PENDING]:
       'Este pedido aguarda a sua decisão. Ao aceitar, a quantidade solicitada fica reservada para a entidade.',
@@ -67,7 +74,6 @@ const SITUATION: Record<InstitutionRole, Record<OrderStatusName, string>> = {
       'Você aceitou este pedido. Aguardando a entidade confirmar o recebimento.',
     [ORDER_STATUS.REJECTED]: 'Você rejeitou este pedido.',
     [ORDER_STATUS.DONATED]: 'A entidade confirmou o recebimento. Pedido encerrado.',
-    [ORDER_STATUS.CANCELLED]: 'Este pedido foi cancelado.',
   },
   beneficiary: {
     [ORDER_STATUS.PENDING]: 'Aguardando a resposta do estabelecimento.',
@@ -75,11 +81,12 @@ const SITUATION: Record<InstitutionRole, Record<OrderStatusName, string>> = {
       'Pedido em andamento: a quantidade está reservada para a sua entidade. Quando receber o alimento, confirme o recebimento.',
     [ORDER_STATUS.REJECTED]: 'O estabelecimento rejeitou este pedido.',
     [ORDER_STATUS.DONATED]: 'Você confirmou o recebimento. Pedido encerrado.',
-    [ORDER_STATUS.CANCELLED]: 'Este pedido foi cancelado.',
   },
 };
 
-export function situationText(role: Role | null, status: OrderStatusName): string {
+export function situationText(role: Role | null, order: OrderDetail): string {
+  const status = order.status.name;
+  if (status === ORDER_STATUS.CANCELLED) return cancelledBySentence(order.cancelledBy, role);
   return SITUATION[role === 'establishment' ? 'establishment' : 'beneficiary'][status];
 }
 

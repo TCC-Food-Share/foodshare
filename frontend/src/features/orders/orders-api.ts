@@ -1,7 +1,15 @@
 import type { OrderStatusName } from '@/features/orders/order-status';
 import { api, ApiError } from '@/lib/api';
 
-export interface Order {
+// Mirrors the OrderCancelledBy enum of backend/prisma/schema.prisma — keep in sync.
+export type OrderCancelledBy = 'ESTABLISHMENT' | 'BENEFICIARY_ENTITY' | 'ADMINISTRATOR' | 'SYSTEM';
+
+export interface OrderCancellation {
+  cancellationReason: { id: number; name: string } | null;
+  cancelledBy: OrderCancelledBy | null;
+}
+
+export interface Order extends OrderCancellation {
   id: number;
   quantity: string;
   orderDate: string;
@@ -27,7 +35,7 @@ export interface OrderInstitution {
   state: string;
 }
 
-export interface OrderDetail {
+export interface OrderDetail extends OrderCancellation {
   id: number;
   quantity: string;
   orderDate: string;
@@ -88,6 +96,9 @@ export const rejectOrder = (id: number) => api.patch<Order>(`/orders/${id}/rejec
 
 export const receiveOrder = (id: number) => api.patch<Order>(`/orders/${id}/receive`);
 
+export const cancelOrder = (id: number, cancellationReasonId: number) =>
+  api.patch<Order>(`/orders/${id}/cancel`, { cancellationReasonId });
+
 // Mirrors ORDER_CONFLICT_CODES in backend/src/orders/orders.constants.ts — keep in sync.
 export const ORDER_CONFLICT_CODES = {
   limitReached: 'ORDERS_IN_PROGRESS_LIMIT_REACHED',
@@ -96,6 +107,7 @@ export const ORDER_CONFLICT_CODES = {
   notInProgress: 'ORDER_NOT_IN_PROGRESS',
   foodNotAvailable: 'FOOD_NOT_AVAILABLE',
   insufficientQuantity: 'INSUFFICIENT_FOOD_QUANTITY',
+  notOpen: 'ORDER_NOT_OPEN',
 } as const;
 
 export function conflictCode(error: unknown): string | undefined {

@@ -1,3 +1,6 @@
+import type { Role } from '@/features/auth/auth-context';
+import type { OrderCancelledBy } from '@/features/orders/orders-api';
+
 // Mirrors ORDER_STATUS in backend/src/orders/orders.constants.ts — keep in sync.
 export const ORDER_STATUS = {
   PENDING: 'Pendente',
@@ -48,3 +51,41 @@ export const ORDER_STATUS_STYLES: Record<OrderStatusName, { badge: string; dot: 
     dot: 'bg-muted-foreground',
   },
 };
+
+// Who cancelled, seen by the institution that is looking. Institution screens never say
+// "administrador" (it is "nossa equipe").
+function cancelledBySelf(cancelledBy: OrderCancelledBy, role: Role | null): boolean {
+  return (
+    (cancelledBy === 'ESTABLISHMENT' && role === 'establishment') ||
+    (cancelledBy === 'BENEFICIARY_ENTITY' && role === 'beneficiary')
+  );
+}
+
+const CANCELLED_BY_LABELS: Record<OrderCancelledBy, string> = {
+  ESTABLISHMENT: 'Estabelecimento',
+  BENEFICIARY_ENTITY: 'Entidade',
+  ADMINISTRATOR: 'Nossa equipe',
+  SYSTEM: 'Automático',
+};
+
+const CANCELLED_BY_SENTENCES: Record<OrderCancelledBy, string> = {
+  ESTABLISHMENT: 'O estabelecimento cancelou este pedido.',
+  BENEFICIARY_ENTITY: 'A entidade cancelou este pedido.',
+  ADMINISTRATOR: 'Nossa equipe cancelou este pedido.',
+  SYSTEM: 'Este pedido foi cancelado automaticamente.',
+};
+
+export function cancelledByLabel(cancelledBy: OrderCancelledBy | null, role: Role | null): string {
+  if (!cancelledBy) return '—';
+  return cancelledBySelf(cancelledBy, role) ? 'Você' : CANCELLED_BY_LABELS[cancelledBy];
+}
+
+export function cancelledBySentence(
+  cancelledBy: OrderCancelledBy | null,
+  role: Role | null,
+): string {
+  if (!cancelledBy) return 'Este pedido foi cancelado.';
+  return cancelledBySelf(cancelledBy, role)
+    ? 'Você cancelou este pedido.'
+    : CANCELLED_BY_SENTENCES[cancelledBy];
+}

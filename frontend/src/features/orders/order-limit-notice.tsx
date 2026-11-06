@@ -11,7 +11,7 @@ export function OrderLimitNotice({ className }: { className?: string }) {
       <AlertDescription>
         Sua entidade já tem {ORDERS_IN_PROGRESS_LIMIT} pedidos em aberto (pendentes ou em andamento)
         e não pode fazer novas solicitações por enquanto. Para liberar espaço, confirme o
-        recebimento dos pedidos em andamento ou aguarde a resposta dos pendentes.
+        recebimento dos pedidos em andamento, cancele um pedido ou aguarde a resposta dos pendentes.
       </AlertDescription>
     </Alert>
   );
