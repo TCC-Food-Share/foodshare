@@ -72,6 +72,16 @@ export const orderDetailKey = (id: number) => ['orders', 'detail', id] as const;
 
 export const ORDERS_REFETCH_INTERVAL = 30_000;
 
+export interface AcceptImpact {
+  pendingOrdersToReject: number;
+  totalOrdersToUpdate: number;
+  foodWillBeReserved: boolean;
+}
+
+export const getAcceptImpact = (id: number) => api.get<AcceptImpact>(`/orders/${id}/accept-impact`);
+
+export const acceptImpactKey = (id: number) => ['order-accept-impact', id] as const;
+
 export const acceptOrder = (id: number) => api.patch<Order>(`/orders/${id}/accept`);
 
 export const rejectOrder = (id: number) => api.patch<Order>(`/orders/${id}/reject`);
@@ -82,6 +92,10 @@ export const receiveOrder = (id: number) => api.patch<Order>(`/orders/${id}/rece
 export const ORDER_CONFLICT_CODES = {
   limitReached: 'ORDERS_IN_PROGRESS_LIMIT_REACHED',
   duplicateInProgress: 'DUPLICATE_ORDER_IN_PROGRESS',
+  notPending: 'ORDER_NOT_PENDING',
+  notInProgress: 'ORDER_NOT_IN_PROGRESS',
+  foodNotAvailable: 'FOOD_NOT_AVAILABLE',
+  insufficientQuantity: 'INSUFFICIENT_FOOD_QUANTITY',
 } as const;
 
 export function conflictCode(error: unknown): string | undefined {

@@ -3,6 +3,14 @@ import type { FoodRequestType } from '@/features/foods/food-request-type';
 export type FoodQuantityError = 'FRACTION_NOT_ALLOWED' | 'PARTIAL_ONLY_QUANTITY_TOO_LOW';
 
 // Mirrors backend/src/foods/food-quantity.ts — keep in sync.
+export function quantityStep(allowsFraction: boolean): number {
+  return allowsFraction ? 0.01 : 1;
+}
+
+export function allowsPartialOrder(available: number, allowsFraction: boolean): boolean {
+  return available > quantityStep(allowsFraction);
+}
+
 export function checkFoodQuantity(
   quantity: number,
   allowsFraction: boolean,
@@ -10,8 +18,9 @@ export function checkFoodQuantity(
 ): FoodQuantityError | null {
   if (!allowsFraction && !Number.isInteger(quantity)) return 'FRACTION_NOT_ALLOWED';
 
-  const step = allowsFraction ? 0.01 : 1;
-  if (requestType === 'PARTIAL_ONLY' && quantity <= step) return 'PARTIAL_ONLY_QUANTITY_TOO_LOW';
+  if (requestType === 'PARTIAL_ONLY' && !allowsPartialOrder(quantity, allowsFraction)) {
+    return 'PARTIAL_ONLY_QUANTITY_TOO_LOW';
+  }
   return null;
 }
 

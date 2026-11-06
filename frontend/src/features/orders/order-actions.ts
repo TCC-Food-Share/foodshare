@@ -3,6 +3,7 @@ import { ORDER_STATUS, type OrderStatusName } from '@/features/orders/order-stat
 import {
   acceptOrder,
   type Order,
+  ORDER_CONFLICT_CODES,
   type OrderDetail,
   receiveOrder,
   rejectOrder,
@@ -48,6 +49,8 @@ export const ORDER_ACTIONS: Record<OrderAction, OrderActionConfig> = {
 };
 
 const ALREADY_UPDATED = 'Este pedido já foi atualizado. Confira a situação atual.';
+const FOOD_UNAVAILABLE =
+  'O alimento deste pedido não está mais disponível (vencido, inativo ou removido). Você ainda pode rejeitar o pedido.';
 const NOT_CONCLUDED = 'Não foi possível concluir a ação. O pedido pode ter sido atualizado.';
 
 export function availableActions(role: Role | null, status: OrderStatusName): OrderAction[] {
@@ -88,10 +91,13 @@ function withUnit(quantity: string, order: OrderDetail): string {
   return `${formatQuantity(quantity)} ${order.food.quantityUnit}`;
 }
 
-export function dialogCopy(
-  action: OrderAction,
-  order: OrderDetail,
-): { title: string; description: string } {
+export interface DialogCopy {
+  title: string;
+  description: string;
+  remaining?: string;
+}
+
+export function dialogCopy(action: OrderAction, order: OrderDetail): DialogCopy {
   const requested = withUnit(order.quantity, order);
 
   if (action === 'accept') {
@@ -100,6 +106,7 @@ export function dialogCopy(
     return {
       title: `Aceitar o pedido #${order.id}?`,
       description: `${requested} de ${order.food.name} ficam reservados para ${order.beneficiaryEntity.companyName}. O estoque disponível passa de ${withUnit(order.food.quantity, order)} para ${withUnit(String(remaining), order)}. Esta ação não pode ser desfeita.`,
+      remaining: withUnit(String(remaining), order),
     };
   }
 
@@ -124,5 +131,14 @@ export function conflictMessage(action: OrderAction, fresh: OrderDetail | null):
   if (action !== 'accept') return NOT_CONCLUDED;
   return insufficientStock(fresh)
     ? 'Estoque insuficiente para aceitar este pedido.'
-    : 'O alimento deste pedido não está mais disponível (vencido, inativo ou removido). Você ainda pode rejeitar o pedido.';
+    : FOOD_UNAVAILABLE;
+}
+
+export function acceptImpactProblem(code: string | undefined): string {
+  if (code === ORDER_CONFLICT_CODES.notPending) return ALREADY_UPDATED;
+  if (code === ORDER_CONFLICT_CODES.insufficientQuantity) {
+    return 'Estoque insuficiente para aceitar este pedido.';
+  }
+  if (code === ORDER_CONFLICT_CODES.foodNotAvailable) return FOOD_UNAVAILABLE;
+  return 'Não foi possível calcular o efeito do aceite. Tente novamente em instantes.';
 }
