@@ -6,6 +6,8 @@ import {
   checkFoodQuantity,
   FOOD_QUANTITY_MESSAGES,
   type FoodQuantityError,
+  MAX_FOOD_QUANTITY,
+  QUANTITY_TOO_LARGE_MESSAGE,
 } from '@/features/foods/food-quantity';
 import { FOOD_REQUEST_TYPES } from '@/features/foods/food-request-type';
 import { QUANTITY_REGEX } from '@/lib/validation';
@@ -19,6 +21,7 @@ const baseSchema = z.object({
     .string()
     .min(1, 'Informe a quantidade.')
     .refine((v) => Number(v) > 0, 'A quantidade deve ser maior que zero.')
+    .refine((v) => Number(v) <= MAX_FOOD_QUANTITY, QUANTITY_TOO_LARGE_MESSAGE)
     .refine((v) => QUANTITY_REGEX.test(v), 'No máximo 2 casas decimais.'),
   measurementUnitId: z.string().min(1, 'Selecione a unidade de medida.'),
   requestType: z.enum(FOOD_REQUEST_TYPES, { error: 'Escolha o tipo de solicitação.' }),
