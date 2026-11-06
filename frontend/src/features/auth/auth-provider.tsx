@@ -14,7 +14,8 @@ import {
   type AuthStatus,
   type Role,
 } from '@/features/auth/auth-context';
-import { ApiError } from '@/lib/api';
+import { SessionErrorScreen } from '@/features/auth/session-error-screen';
+import { ApiError, isTooManyRequests } from '@/lib/api';
 import { setUnauthorizedHandler } from '@/lib/query-client';
 
 const ROLE_MAP: Record<BackendRole, Role> = {
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<SessionUser | null>(null);
   const [role, setRole] = useState<Role | null>(null);
+  const [tooManyRequests, setTooManyRequests] = useState(false);
 
   const loadSession = useCallback(async () => {
     try {
@@ -46,6 +48,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const startSession = useCallback(async () => {
+    try {
+      await loadSession();
+    } catch (error) {
+      setTooManyRequests(isTooManyRequests(error));
+      setStatus('error');
+    }
+  }, [loadSession]);
+
+  const retrySession = useCallback(() => {
+    setStatus('loading');
+    void startSession();
+  }, [startSession]);
+
   const reset = useCallback(() => {
     setUser(null);
     setRole(null);
@@ -61,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // loadSession's setState calls happen async, not in the effect body itself.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadSession();
-  }, [loadSession]);
+    void startSession();
+  }, [startSession]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -81,9 +97,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [reset]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, role, signIn, signOut, refreshSession: loadSession }),
-    [status, user, role, signIn, signOut, loadSession],
+    () => ({ status, user, role, signIn, signOut, refreshSession: loadSession, retrySession }),
+    [status, user, role, signIn, signOut, loadSession, retrySession],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {status === 'error' ? (
+        <SessionErrorScreen tooManyRequests={tooManyRequests} onRetry={retrySession} />
+      ) : (
+        children
+      )}
+    </AuthContext.Provider>
+  );
 }

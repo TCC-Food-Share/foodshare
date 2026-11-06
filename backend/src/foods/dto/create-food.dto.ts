@@ -9,11 +9,13 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Max,
   MaxLength,
 } from 'class-validator';
 
 import { FoodRequestType } from '../../../generated/prisma/client';
 import { NoProhibitedContent } from '../../content-moderation/no-prohibited-content.validator';
+import { MAX_FOOD_QUANTITY } from '../foods.constants';
 
 const trimToUndefined = ({ value }: { value: unknown }): unknown => {
   if (typeof value !== 'string') return value;
@@ -31,10 +33,12 @@ export class CreateFoodDto {
   @ApiProperty({
     example: 5,
     description: 'Quantidade disponível. Fracionada (até 2 casas) só se a unidade aceitar fração',
+    maximum: MAX_FOOD_QUANTITY,
   })
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
+  @Max(MAX_FOOD_QUANTITY)
   quantity!: number;
 
   @ApiProperty({ example: 1, description: 'Id da unidade de medida' })

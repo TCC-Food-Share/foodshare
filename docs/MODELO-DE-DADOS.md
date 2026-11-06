@@ -141,6 +141,12 @@ duplicidade (RN04, RN05); `@@index([foodId, statusId])` para as rejeições
 automáticas (RN07, RN08, RN20); `@@index([statusId, orderDate])` para a
 tarefa de expiração (RF72).
 
+Aplicado na 2.2 (`meus_alimentos`): `type`, `quantityUpdatedAt` e o índice
+`(foodId, statusId)`. A migration preenche `type` nos pedidos que já existem:
+pedido `Pendente` com a quantidade igual ao estoque, em alimento que não é
+`Somente parcial`, vira total; o resto vira parcial. `acceptedAt` e os outros
+dois índices continuam para a 3.1 e a 6.1.
+
 ## Listas padronizadas: regras comuns
 
 - **Nome único sem maiúsculas e sem acentos (RN37):** além do `@unique`

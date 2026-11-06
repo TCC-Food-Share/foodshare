@@ -201,12 +201,14 @@ model CancellationReason {
 }
 
 model Order {
-  id        Int      @id @default(autoincrement())
-  orderDate DateTime @default(now())
-  quantity  Decimal  @db.Decimal(10, 2)
-  deleted   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                Int       @id @default(autoincrement())
+  orderDate         DateTime  @default(now())
+  quantity          Decimal   @db.Decimal(10, 2)
+  type              OrderType
+  quantityUpdatedAt DateTime?
+  deleted           Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   foodId Int
   food   Food @relation(fields: [foodId], references: [id])
@@ -223,7 +225,13 @@ model Order {
   cancellationReasonId Int?
   cancellationReason   CancellationReason? @relation(fields: [cancellationReasonId], references: [id])
 
+  @@index([foodId, statusId])
   @@map("order")
+}
+
+enum OrderType {
+  TOTAL
+  PARTIAL
 }
 
 model FoodCatalogItem {

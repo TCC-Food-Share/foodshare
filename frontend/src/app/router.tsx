@@ -20,6 +20,7 @@ import { RoleRoute } from '@/features/auth/role-route';
 import { SignUpPage } from '@/features/auth/sign-up/sign-up-page';
 import { FeedPage } from '@/features/foods/feed-page';
 import { FoodDetailPage } from '@/features/foods/food-detail-page';
+import { MyFoodsPage } from '@/features/foods/my-foods-page';
 import { OrderDetailPage } from '@/features/orders/order-detail-page';
 import { OrdersPage } from '@/features/orders/orders-page';
 import { ProfilePage } from '@/features/profile/profile-page';
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
               { path: '/pedidos', element: <OrdersPage /> },
               { path: '/pedidos/:id', element: <OrderDetailPage /> },
               { path: '/perfil', element: <ProfilePage /> },
+              {
+                element: <RoleRoute roles={['establishment']} />,
+                children: [{ path: '/meus-alimentos', element: <MyFoodsPage /> }],
+              },
             ],
           },
         ],
