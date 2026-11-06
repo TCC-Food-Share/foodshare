@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/use-auth';
 import { FOOD_REQUEST_TYPE_LABELS } from '@/features/foods/food-request-type';
+import { FoodStatusBadge } from '@/features/foods/food-status-badge';
 import { establishmentDisplayName, getFood } from '@/features/foods/foods-api';
 import { RequestDonationCard } from '@/features/orders/request-donation-card';
 import { ApiError } from '@/lib/api';
@@ -120,10 +121,7 @@ export function FoodDetailPage() {
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-foreground text-2xl font-bold">{food.name}</h1>
-            <Badge className="gap-1.5 rounded-full border-transparent bg-green-100 text-green-700 hover:bg-green-100">
-              <span className="size-2 rounded-full bg-green-600" />
-              {food.status.name}
-            </Badge>
+            <FoodStatusBadge status={food.status.name} />
           </div>
 
           <Badge variant="secondary" className="w-fit rounded-full">

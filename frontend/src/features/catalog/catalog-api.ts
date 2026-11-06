@@ -15,11 +15,19 @@ export interface MeasurementUnit {
   allowsFraction: boolean;
 }
 
+export interface CancellationReason {
+  id: number;
+  name: string;
+}
+
 const CATALOG_STALE_TIME = 30 * 60_000;
 
 export const listFoodItems = () => api.get<CatalogFoodItem[]>('/catalog/food-items');
 
 export const listMeasurementUnits = () => api.get<MeasurementUnit[]>('/catalog/measurement-units');
+
+export const listCancellationReasons = () =>
+  api.get<CancellationReason[]>('/catalog/cancellation-reasons');
 
 export const useFoodItems = () =>
   useQuery({
@@ -32,5 +40,12 @@ export const useMeasurementUnits = () =>
   useQuery({
     queryKey: ['catalog', 'measurement-units'],
     queryFn: listMeasurementUnits,
+    staleTime: CATALOG_STALE_TIME,
+  });
+
+export const useCancellationReasons = () =>
+  useQuery({
+    queryKey: ['catalog', 'cancellation-reasons'],
+    queryFn: listCancellationReasons,
     staleTime: CATALOG_STALE_TIME,
   });
