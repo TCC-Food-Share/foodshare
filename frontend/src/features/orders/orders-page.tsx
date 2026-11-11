@@ -3,6 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 
 import { PageSizeSelect } from '@/components/page-size-select';
 import { PaginationBar } from '@/components/pagination-bar';
+import { SearchInput } from '@/components/search-input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,6 +23,8 @@ import { useOrderCounts } from '@/features/orders/use-order-counts';
 import { cn } from '@/lib/cn';
 import { DEFAULT_PAGE_SIZE, parsePageSize } from '@/lib/pagination';
 
+const SEARCH_MAX_LENGTH = 100;
+
 const DEFAULT_STATUS: OrderStatusName = ORDER_STATUS.PENDING;
 
 const PAGE_COPY = {
@@ -35,9 +38,10 @@ const PAGE_COPY = {
   },
 };
 
-function ordersParams(status: OrderStatusName, page: number, pageSize: number) {
+function ordersParams(status: OrderStatusName, page: number, pageSize: number, search: string) {
   return {
     status,
+    ...(search && { search }),
     ...(page > 1 && { page: String(page) }),
     ...(pageSize !== DEFAULT_PAGE_SIZE && { pageSize: String(pageSize) }),
   };
@@ -46,34 +50,39 @@ function ordersParams(status: OrderStatusName, page: number, pageSize: number) {
 export function OrdersPage() {
   const { role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const counts = useOrderCounts();
 
   const statusParam = searchParams.get('status');
   const status = isOrderStatus(statusParam) ? statusParam : DEFAULT_STATUS;
   const pageParam = Number(searchParams.get('page'));
   const page = Number.isInteger(pageParam) && pageParam > 1 ? pageParam : 1;
   const pageSize = parsePageSize(searchParams.get('pageSize'));
+  const search = (searchParams.get('search') ?? '').slice(0, SEARCH_MAX_LENGTH).trim();
+  const counts = useOrderCounts(search);
 
   const query = useQuery({
-    queryKey: ['orders', 'list', { status, page, pageSize }],
-    queryFn: () => listOrders({ status, page, pageSize }),
+    queryKey: ['orders', 'list', { status, page, pageSize, search }],
+    queryFn: () => listOrders({ status, page, pageSize, search }),
     refetchInterval: ORDERS_REFETCH_INTERVAL,
   });
 
   const copy = PAGE_COPY[role === 'establishment' ? 'establishment' : 'beneficiary'];
 
   function changeStatus(next: string) {
-    if (isOrderStatus(next)) setSearchParams(ordersParams(next, 1, pageSize));
+    if (isOrderStatus(next)) setSearchParams(ordersParams(next, 1, pageSize, search));
   }
 
   function goToPage(nextPage: number) {
-    setSearchParams(ordersParams(status, nextPage, pageSize));
+    setSearchParams(ordersParams(status, nextPage, pageSize, search));
   }
 
   if (query.data && query.data.data.length === 0 && query.data.total > 0 && page > 1) {
     const lastPage = Math.ceil(query.data.total / pageSize);
-    const params = new URLSearchParams(ordersParams(status, lastPage, pageSize));
+    const params = new URLSearchParams(ordersParams(status, lastPage, pageSize, search));
     return <Navigate replace to={`/pedidos?${params.toString()}`} />;
+  }
+
+  function changeSearch(next: string) {
+    setSearchParams(ordersParams(status, 1, pageSize, next));
   }
 
   return (
@@ -82,6 +91,17 @@ export function OrdersPage() {
         <h1 className="text-foreground text-2xl font-bold">{copy.title}</h1>
         <p className="text-muted-foreground text-sm">{copy.subtitle}</p>
       </div>
+
+      <SearchInput
+        value={search}
+        onSearch={changeSearch}
+        placeholder={
+          role === 'establishment'
+            ? 'Buscar por alimento ou data do pedido...'
+            : 'Buscar por alimento, estabelecimento ou data do pedido...'
+        }
+        className="sm:max-w-md"
+      />
 
       <Tabs value={status} onValueChange={changeStatus} className="gap-4">
         <TabsList variant="line" aria-label="Pedidos por status">
@@ -125,7 +145,12 @@ export function OrdersPage() {
           )}
 
           {query.data && query.data.data.length === 0 && (
-            <OrdersEmptyState status={status} role={role} />
+            <OrdersEmptyState
+              status={status}
+              role={role}
+              search={search}
+              onClearSearch={() => changeSearch('')}
+            />
           )}
 
           {query.data && query.data.data.length > 0 && (
@@ -137,7 +162,7 @@ export function OrdersPage() {
               role={role}
               status={status}
               onPageChange={goToPage}
-              onPageSizeChange={(next) => setSearchParams(ordersParams(status, 1, next))}
+              onPageSizeChange={(next) => setSearchParams(ordersParams(status, 1, next, search))}
             />
           )}
         </TabsContent>

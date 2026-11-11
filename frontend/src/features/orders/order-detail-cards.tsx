@@ -2,16 +2,23 @@ import {
   CalendarIcon,
   HeartHandshakeIcon,
   ImageOffIcon,
+  MailIcon,
+  MapPinIcon,
+  MessageCircleIcon,
   PackageIcon,
+  PhoneIcon,
   StoreIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { Role } from '@/features/auth/auth-context';
+import { counterpartOf } from '@/features/orders/order-contact';
 import { OrderStatusBadge } from '@/features/orders/order-status-badge';
 import type { OrderDetail, OrderInstitution } from '@/features/orders/orders-api';
 import { formatDate, formatLocalDate, formatQuantity } from '@/lib/format';
+import { whatsappUrl } from '@/lib/whatsapp';
 
 function InfoItem({
   icon: Icon,
@@ -87,6 +94,11 @@ export function OrderSummaryCard({ order }: { order: OrderDetail }) {
             {order.food.quantityUnit}
           </span>
         </span>
+        {order.quantityUpdatedAt && (
+          <span className="text-muted-foreground text-xs">
+            Quantidade atualizada pelo estabelecimento em {formatLocalDate(order.quantityUpdatedAt)}
+          </span>
+        )}
       </div>
       <dl className="border-border flex flex-col gap-3 border-t pt-4 text-sm">
         <div className="flex items-center justify-between gap-3">
@@ -134,6 +146,65 @@ export function CounterpartCard({ order, role }: { order: OrderDetail; role: Rol
         </div>
       </div>
       <p className="text-muted-foreground text-sm leading-relaxed">{institution.description}</p>
+    </section>
+  );
+}
+
+export function CounterpartContactCard({ order, role }: { order: OrderDetail; role: Role | null }) {
+  const { institutionalEmail, institutionalPhone, address } = counterpartOf(order, role);
+  if (!institutionalEmail || !institutionalPhone || !address) return null;
+
+  const whatsapp = whatsappUrl(institutionalPhone);
+  const street = `${address.street}, ${address.number}${address.complement ? ` - ${address.complement}` : ''}`;
+
+  return (
+    <section className="border-border bg-card flex flex-col gap-4 rounded-lg border p-6">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-foreground text-lg font-semibold">Contato para a retirada</h2>
+        <p className="text-muted-foreground text-xs">
+          Combinem a retirada diretamente. Estes dados aparecem só enquanto o pedido está em
+          andamento.
+        </p>
+      </div>
+      <dl className="flex flex-col gap-3 text-sm">
+        <div className="flex items-start gap-3">
+          <MailIcon className="text-primary mt-0.5 size-4 shrink-0" />
+          <div className="flex min-w-0 flex-col">
+            <dt className="text-muted-foreground text-xs">E-mail</dt>
+            <dd className="text-foreground font-medium break-words">
+              <a href={`mailto:${institutionalEmail}`} className="hover:underline">
+                {institutionalEmail}
+              </a>
+            </dd>
+          </div>
+        </div>
+        <div className="flex items-start gap-3">
+          <PhoneIcon className="text-primary mt-0.5 size-4 shrink-0" />
+          <div className="flex min-w-0 flex-col">
+            <dt className="text-muted-foreground text-xs">Celular</dt>
+            <dd className="text-foreground font-medium">{institutionalPhone}</dd>
+          </div>
+        </div>
+        <div className="flex items-start gap-3">
+          <MapPinIcon className="text-primary mt-0.5 size-4 shrink-0" />
+          <div className="flex min-w-0 flex-col">
+            <dt className="text-muted-foreground text-xs">Endereço</dt>
+            <dd className="text-foreground font-medium">
+              {street}
+              <br />
+              {address.city}, {address.state} - CEP {address.postalCode}
+            </dd>
+          </div>
+        </div>
+      </dl>
+      {whatsapp && (
+        <Button asChild variant="outline" className="w-full">
+          <a href={whatsapp} target="_blank" rel="noopener noreferrer">
+            <MessageCircleIcon />
+            Conversar no WhatsApp
+          </a>
+        </Button>
+      )}
     </section>
   );
 }
