@@ -355,12 +355,15 @@ export class OrdersService {
       throw new NotFoundException('No establishment or beneficiary entity linked to this account.');
     }
 
+    const owner = establishment
+      ? { establishmentId: establishment.id }
+      : { beneficiaryEntityId: beneficiaryEntity!.id };
+
     const where: Prisma.OrderWhereInput = {
       deleted: false,
-      ...(establishment
-        ? { establishmentId: establishment.id }
-        : { beneficiaryEntityId: beneficiaryEntity!.id }),
+      ...owner,
       ...(query.status ? { status: { name: query.status } } : {}),
+      ...(query.search ? { id: { in: await this.searchOrderIds(owner, query.search) } } : {}),
     };
 
     const page = query.page ?? DEFAULT_PAGE;
@@ -378,6 +381,39 @@ export class OrdersService {
     ]);
 
     return { data: rows.map((row) => this.toResponse(row)), total, page, pageSize };
+  }
+
+  /**
+   * Ids dos pedidos do dono que casam com a busca (RF27). `unaccent` não existe no Prisma Client,
+   * então a busca é SQL cru; o recorte de dono e a exclusão lógica ficam no mesmo WHERE.
+   * `orderDate` é `timestamp` sem fuso, gravado em UTC: converte para Brasília antes de formatar.
+   */
+  private async searchOrderIds(
+    owner: { establishmentId: number } | { beneficiaryEntityId: number },
+    term: string,
+  ): Promise<number[]> {
+    const ownerSql =
+      'establishmentId' in owner
+        ? Prisma.sql`o."establishmentId" = ${owner.establishmentId}`
+        : Prisma.sql`o."beneficiaryEntityId" = ${owner.beneficiaryEntityId}`;
+
+    const rows = await this.prisma.$queryRaw<{ id: number }[]>(Prisma.sql`
+      SELECT o.id
+      FROM "order" o
+      JOIN food f ON f.id = o."foodId"
+      JOIN food_catalog_item ci ON ci.id = f."catalogItemId"
+      JOIN establishment e ON e.id = o."establishmentId"
+      WHERE o.deleted = false AND ${ownerSql} AND (
+        unaccent(ci.name) ILIKE '%' || unaccent(${term}) || '%'
+        OR unaccent(e."companyName") ILIKE '%' || unaccent(${term}) || '%'
+        OR unaccent(COALESCE(e."tradeName", '')) ILIKE '%' || unaccent(${term}) || '%'
+        OR to_char(
+          o."orderDate" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo',
+          'DD/MM/YYYY'
+        ) ILIKE '%' || ${term} || '%'
+      )
+    `);
+    return rows.map((row) => row.id);
   }
 
   async getById(userId: number, orderId: number): Promise<OrderDetailResponseDto> {
@@ -416,7 +452,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found.');
     }
 
-    return this.toDetailResponse(order);
+    return this.toDetailResponse(order, establishment ? 'establishment' : 'beneficiaryEntity');
   }
 
   private async requireEstablishmentId(userId: number): Promise<number> {
@@ -516,13 +552,25 @@ export class OrdersService {
     };
   }
 
-  private mapInstitution(inst: {
-    id: number;
-    companyName: string;
-    tradeName: string | null;
-    description: string;
-    address: { city: string; state: string };
-  }) {
+  private mapInstitution(
+    inst: {
+      id: number;
+      companyName: string;
+      tradeName: string | null;
+      description: string;
+      institutionalEmail: string;
+      institutionalPhone: string;
+      address: {
+        postalCode: string;
+        street: string;
+        number: string;
+        complement: string | null;
+        city: string;
+        state: string;
+      };
+    },
+    showContact: boolean,
+  ) {
     return {
       id: inst.id,
       companyName: inst.companyName,
@@ -530,6 +578,18 @@ export class OrdersService {
       description: inst.description,
       city: inst.address.city,
       state: inst.address.state,
+      institutionalEmail: showContact ? inst.institutionalEmail : null,
+      institutionalPhone: showContact ? inst.institutionalPhone : null,
+      address: showContact
+        ? {
+            postalCode: inst.address.postalCode,
+            street: inst.address.street,
+            number: inst.address.number,
+            complement: inst.address.complement,
+            city: inst.address.city,
+            state: inst.address.state,
+          }
+        : null,
     };
   }
 
@@ -549,11 +609,15 @@ export class OrdersService {
         cancellationReason: true;
       };
     }>,
+    viewer: 'establishment' | 'beneficiaryEntity',
   ): OrderDetailResponseDto {
+    // RN12: contato e endereço só da outra parte e só enquanto o pedido está "Em andamento".
+    const contactVisible = order.status.name === ORDER_STATUS.IN_PROGRESS;
     return {
       id: order.id,
       quantity: order.quantity.toString(),
       orderDate: order.orderDate,
+      quantityUpdatedAt: order.quantityUpdatedAt,
       status: { id: order.status.id, name: order.status.name },
       food: {
         id: order.food.id,
@@ -569,8 +633,14 @@ export class OrdersService {
         },
         status: { id: order.food.status.id, name: order.food.status.name },
       },
-      establishment: this.mapInstitution(order.establishment),
-      beneficiaryEntity: this.mapInstitution(order.beneficiaryEntity),
+      establishment: this.mapInstitution(
+        order.establishment,
+        contactVisible && viewer === 'beneficiaryEntity',
+      ),
+      beneficiaryEntity: this.mapInstitution(
+        order.beneficiaryEntity,
+        contactVisible && viewer === 'establishment',
+      ),
       ...this.mapCancellation(order),
     };
   }

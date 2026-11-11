@@ -80,6 +80,9 @@ export class OrdersController {
       'estabelecimento vê os pedidos feitos aos alimentos dele, uma entidade beneficiária vê ' +
       'os pedidos que criou (RF27). Filtro opcional `status` (`Pendente` | `Em andamento` | ' +
       '`Rejeitado` | `Doado` | `Cancelado`) para separar por status; ausente traz todos. ' +
+      'Busca opcional `search` (até 100 caracteres) por trecho do nome do alimento, do nome do ' +
+      'estabelecimento (razão social ou nome fantasia) ou da data do pedido em dd/mm/aaaa ' +
+      '(fuso de Brasília), sem diferenciar maiúsculas nem acentos; combina com `status`. ' +
       'Paginação por ' +
       '`page` (default 1) e `pageSize` (10, 20, 50 ou 100; default 10). Ordenado do pedido mais ' +
       'recente para o mais antigo.',
@@ -88,7 +91,10 @@ export class OrdersController {
     description: 'Página de pedidos do solicitante.',
     type: PaginatedOrdersResponseDto,
   })
-  @ApiBadRequestResponse({ description: 'Parâmetro `status`, `page` ou `pageSize` inválido.' })
+  @ApiBadRequestResponse({
+    description:
+      'Parâmetro `status`, `search` (mais de 100 caracteres), `page` ou `pageSize` inválido.',
+  })
   @ApiNotFoundResponse({
     description: 'Nenhum estabelecimento nem entidade beneficiária vinculada ao usuário.',
   })
@@ -108,7 +114,12 @@ export class OrdersController {
       'estabelecimento de origem do alimento ou a entidade beneficiária que criou o pedido ' +
       '(RF28). Inclui o alimento por completo (mantido como registro histórico mesmo se ' +
       'depois ficou indisponível) e a identificação e cidade/UF das duas instituições. ' +
-      'Pedido inexistente, excluído, ou em que o solicitante não é parte responde 404.',
+      'Somente enquanto o pedido está "Em andamento", a instituição da outra parte traz também ' +
+      'e-mail institucional, celular institucional e endereço completo (RN12); nos demais ' +
+      'status, e na própria instituição, esses campos vêm null. O detalhe segue acessível às ' +
+      'partes mesmo após a exclusão lógica de qualquer instituição. Traz `quantityUpdatedAt` ' +
+      '(data do último ajuste da quantidade pelo estabelecimento, ou null). Pedido inexistente, ' +
+      'excluído, ou em que o solicitante não é parte responde 404.',
   })
   @ApiOkResponse({ description: 'Detalhes completos do pedido.', type: OrderDetailResponseDto })
   @ApiBadRequestResponse({ description: 'Id em formato inválido.' })

@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../common/pagination';
+import { trimToUndefined } from '../../common/trim-to-undefined';
 import { ORDER_STATUS_NAMES } from '../orders.constants';
 
 export class ListOrdersQueryDto {
@@ -36,4 +37,18 @@ export class ListOrdersQueryDto {
   @IsOptional()
   @IsIn(ORDER_STATUS_NAMES)
   status?: string;
+
+  @ApiPropertyOptional({
+    example: 'arroz',
+    description:
+      'Trecho do nome do alimento ou do nome do estabelecimento (razão social ou nome ' +
+      'fantasia), sem diferenciar maiúsculas nem acentos, ou da data do pedido em ' +
+      'dd/mm/aaaa (fuso de Brasília)',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @Transform(trimToUndefined)
+  @IsString()
+  @MaxLength(100)
+  search?: string;
 }

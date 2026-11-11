@@ -55,6 +55,26 @@ class OrderFoodDetailDto {
   status!: OrderStatusDetailDto;
 }
 
+class OrderAddressDto {
+  @ApiProperty({ example: '16200-000' })
+  postalCode!: string;
+
+  @ApiProperty({ example: 'Rua das Flores' })
+  street!: string;
+
+  @ApiProperty({ example: '123' })
+  number!: string;
+
+  @ApiProperty({ example: 'Sala 2', nullable: true })
+  complement!: string | null;
+
+  @ApiProperty({ example: 'Birigui' })
+  city!: string;
+
+  @ApiProperty({ example: 'SP' })
+  state!: string;
+}
+
 class OrderInstitutionDetailDto {
   @ApiProperty({ example: 1 })
   id!: number;
@@ -73,6 +93,29 @@ class OrderInstitutionDetailDto {
 
   @ApiProperty({ example: 'SP' })
   state!: string;
+
+  @ApiProperty({
+    example: 'contato@goodtaste.com',
+    nullable: true,
+    description:
+      'E-mail institucional. Só vem preenchido na instituição da outra parte e só enquanto o ' +
+      'pedido está "Em andamento" (RN12); nos demais casos é null.',
+  })
+  institutionalEmail!: string | null;
+
+  @ApiProperty({
+    example: '(18) 99123-4567',
+    nullable: true,
+    description: 'Celular institucional, com a mesma regra de visibilidade do e-mail.',
+  })
+  institutionalPhone!: string | null;
+
+  @ApiProperty({
+    type: () => OrderAddressDto,
+    nullable: true,
+    description: 'Endereço completo, com a mesma regra de visibilidade do e-mail.',
+  })
+  address!: OrderAddressDto | null;
 }
 
 export class OrderDetailResponseDto {
@@ -87,6 +130,14 @@ export class OrderDetailResponseDto {
 
   @ApiProperty({ example: '2026-09-03T12:00:00.000Z' })
   orderDate!: Date;
+
+  @ApiProperty({
+    example: '2026-09-05T12:00:00.000Z',
+    nullable: true,
+    description:
+      'Data em que o estabelecimento ajustou a quantidade do pedido (RN20, DT31, DT32); null se nunca foi ajustada.',
+  })
+  quantityUpdatedAt!: Date | null;
 
   @ApiProperty({ type: () => OrderStatusDetailDto })
   status!: OrderStatusDetailDto;

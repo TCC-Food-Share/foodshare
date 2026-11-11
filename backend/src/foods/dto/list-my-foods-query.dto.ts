@@ -3,13 +3,8 @@ import { Transform, Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../common/pagination';
+import { trimToUndefined } from '../../common/trim-to-undefined';
 import { FOOD_STATUS_NAMES, MY_FOODS_SORT_FIELDS, type MyFoodsSortField } from '../foods.constants';
-
-const trimToUndefined = ({ value }: { value: unknown }): unknown => {
-  if (typeof value !== 'string') return value;
-  const trimmed = value.trim();
-  return trimmed === '' ? undefined : trimmed;
-};
 
 export class ListMyFoodsQueryDto {
   @ApiPropertyOptional({ example: 1, minimum: 1, default: 1 })

@@ -63,6 +63,7 @@ describe('OrdersService', () => {
     id: 50,
     quantity: new Prisma.Decimal(4),
     orderDate: new Date('2026-09-03T12:00:00.000Z'),
+    quantityUpdatedAt: null,
     status: { id: 2, name: ORDER_STATUS.IN_PROGRESS },
     food: {
       id: 5,
@@ -86,6 +87,7 @@ describe('OrdersService', () => {
         postalCode: '16200-000',
         street: 'Rua A',
         number: '1',
+        complement: null,
         city: 'Birigui',
         state: 'SP',
       },
@@ -102,6 +104,7 @@ describe('OrdersService', () => {
         postalCode: '16201-000',
         street: 'Rua B',
         number: '2',
+        complement: 'Sala 3',
         city: 'Araçatuba',
         state: 'SP',
       },
@@ -1207,6 +1210,89 @@ describe('OrdersService', () => {
     });
   });
 
+  describe('list search (RF27)', () => {
+    const sqlOf = (): { sql: string; values: unknown[] } => {
+      const sql = prismaMock.$queryRaw.mock.calls[0][0] as { sql: string; values: unknown[] };
+      return { sql: sql.sql, values: sql.values };
+    };
+
+    beforeEach(() => {
+      prismaMock.order.count.mockResolvedValue(1);
+      prismaMock.$queryRaw.mockResolvedValue([{ id: 50 }, { id: 51 }]);
+    });
+
+    it('does not run the search query when there is no search term', async () => {
+      await service.list(30, {});
+
+      expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
+    });
+
+    it('restricts findMany and count to the ids found, combined with status', async () => {
+      await service.list(30, { search: 'arroz', status: ORDER_STATUS.DONATED, page: 2 });
+
+      const where = {
+        deleted: false,
+        establishmentId: 3,
+        status: { name: ORDER_STATUS.DONATED },
+        id: { in: [50, 51] },
+      };
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where, skip: 10 }),
+      );
+      expect(prismaMock.order.count).toHaveBeenCalledWith({ where });
+    });
+
+    it('scopes the search to the session owner and ignores deleted orders', async () => {
+      await service.list(30, { search: 'arroz' });
+
+      const { sql, values } = sqlOf();
+      expect(sql).toContain('o.deleted = false');
+      expect(sql).toContain('o."establishmentId" =');
+      expect(values).toContain(3);
+
+      prismaMock.$queryRaw.mockClear();
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+      await service.list(20, { search: 'arroz' });
+
+      const entity = sqlOf();
+      expect(entity.sql).toContain('o."beneficiaryEntityId" =');
+      expect(entity.values).toContain(7);
+    });
+
+    it('searches food name, establishment names and the date in Brasília time, ignoring accents', async () => {
+      await service.list(30, { search: 'feijao' });
+
+      const { sql, values } = sqlOf();
+      expect(sql).toContain('unaccent(ci.name)');
+      expect(sql).toContain('unaccent(e."companyName")');
+      expect(sql).toContain(`unaccent(COALESCE(e."tradeName", ''))`);
+      expect(sql).toContain("AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo'");
+      expect(sql).toContain("'DD/MM/YYYY'");
+      expect(values.filter((value) => value === 'feijao')).toHaveLength(4);
+    });
+
+    it('passes the term as a parameter, never concatenated into the SQL', async () => {
+      await service.list(30, { search: 'x\'; DROP TABLE "order"; --' });
+
+      const { sql, values } = sqlOf();
+      expect(sql).not.toContain('DROP TABLE');
+      expect(values).toContain('x\'; DROP TABLE "order"; --');
+    });
+
+    it('returns an empty page when nothing matches', async () => {
+      prismaMock.$queryRaw.mockResolvedValue([]);
+      prismaMock.order.findMany.mockResolvedValue([]);
+      prismaMock.order.count.mockResolvedValue(0);
+
+      const result = await service.list(30, { search: 'nada' });
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ id: { in: [] } }) }),
+      );
+      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
+    });
+  });
+
   describe('getById', () => {
     beforeEach(() => {
       prismaMock.order.findFirst.mockResolvedValue(orderDetailRow);
@@ -1236,6 +1322,9 @@ describe('OrdersService', () => {
         description: 'Restaurante.',
         city: 'Birigui',
         state: 'SP',
+        institutionalEmail: null,
+        institutionalPhone: null,
+        address: null,
       });
       expect(result.beneficiaryEntity.city).toBe('Araçatuba');
     });
@@ -1290,12 +1379,108 @@ describe('OrdersService', () => {
       expect(prismaMock.order.findFirst).not.toHaveBeenCalled();
     });
 
-    it('does not expose institutional contact, street address or user data of the parties', async () => {
-      const result = await service.getById(30, 50);
+    describe('contact (RN12)', () => {
+      const establishmentContact = {
+        institutionalEmail: 'contato@goodtaste.com',
+        institutionalPhone: '(11) 3456-7890',
+        address: {
+          postalCode: '16200-000',
+          street: 'Rua A',
+          number: '1',
+          complement: null,
+          city: 'Birigui',
+          state: 'SP',
+        },
+      };
+      const entityContact = {
+        institutionalEmail: 'contato@helpinghands.org',
+        institutionalPhone: '(11) 2222-3333',
+        address: {
+          postalCode: '16201-000',
+          street: 'Rua B',
+          number: '2',
+          complement: 'Sala 3',
+          city: 'Araçatuba',
+          state: 'SP',
+        },
+      };
+      const noContact = { institutionalEmail: null, institutionalPhone: null, address: null };
 
-      const keys = Object.keys(result.establishment).sort();
-      expect(keys).toEqual(['city', 'companyName', 'description', 'id', 'state', 'tradeName']);
-      expect(Object.keys(result.beneficiaryEntity).sort()).toEqual(keys);
+      it('brings the establishment contact to the entity while the order is in progress', async () => {
+        prismaMock.establishment.findUnique.mockResolvedValue(null);
+
+        const result = await service.getById(20, 50);
+
+        expect(result.establishment).toEqual(expect.objectContaining(establishmentContact));
+        expect(result.beneficiaryEntity).toEqual(expect.objectContaining(noContact));
+      });
+
+      it('brings the entity contact to the establishment while the order is in progress', async () => {
+        const result = await service.getById(30, 50);
+
+        expect(result.beneficiaryEntity).toEqual(expect.objectContaining(entityContact));
+        expect(result.establishment).toEqual(expect.objectContaining(noContact));
+      });
+
+      it.each([
+        ['Pendente', 1],
+        ['Rejeitado', 3],
+        ['Doado', 4],
+        ['Cancelado', 5],
+      ])('brings no contact from either party when the order is "%s"', async (name, id) => {
+        prismaMock.order.findFirst.mockResolvedValue({
+          ...orderDetailRow,
+          status: { id, name },
+        });
+
+        for (const userId of [30, 20]) {
+          prismaMock.establishment.findUnique.mockResolvedValue(
+            userId === 30 ? { id: 3, userId: 30 } : null,
+          );
+          const result = await service.getById(userId, 50);
+
+          expect(result.establishment).toEqual(expect.objectContaining(noContact));
+          expect(result.beneficiaryEntity).toEqual(expect.objectContaining(noContact));
+        }
+      });
+
+      it('never exposes personal data of the users linked to the parties', async () => {
+        prismaMock.order.findFirst.mockResolvedValue({
+          ...orderDetailRow,
+          establishment: {
+            ...orderDetailRow.establishment,
+            user: { personalEmail: 'dono@example.com', personalPhone: '(11) 90000-0000' },
+          },
+        });
+
+        const json = JSON.stringify(await service.getById(30, 50));
+
+        expect(json).not.toContain('dono@example.com');
+        expect(json).not.toContain('90000-0000');
+      });
+
+      it('does not filter the detail by the deletion of the institutions', async () => {
+        await service.getById(30, 50);
+
+        const args = prismaMock.order.findFirst.mock.calls[0][0] as {
+          where: Record<string, unknown>;
+        };
+        expect(args.where).toEqual({ id: 50, deleted: false, establishmentId: 3 });
+      });
+    });
+
+    it('brings quantityUpdatedAt when the quantity was adjusted, null otherwise', async () => {
+      const adjustedAt = new Date('2026-09-05T12:00:00.000Z');
+      prismaMock.order.findFirst.mockResolvedValue({
+        ...orderDetailRow,
+        quantityUpdatedAt: adjustedAt,
+      });
+
+      expect((await service.getById(30, 50)).quantityUpdatedAt).toEqual(adjustedAt);
+
+      prismaMock.order.findFirst.mockResolvedValue(orderDetailRow);
+
+      expect((await service.getById(30, 50)).quantityUpdatedAt).toBeNull();
     });
   });
 });
