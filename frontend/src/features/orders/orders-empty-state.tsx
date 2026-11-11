@@ -1,4 +1,4 @@
-import { InboxIcon } from 'lucide-react';
+import { InboxIcon, SearchXIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -60,9 +60,28 @@ const EMPTY_COPY: Record<InstitutionRole, Record<OrderStatusName, EmptyCopy>> = 
 interface OrdersEmptyStateProps {
   status: OrderStatusName;
   role: Role | null;
+  search?: string;
+  onClearSearch?: () => void;
 }
 
-export function OrdersEmptyState({ status, role }: OrdersEmptyStateProps) {
+export function OrdersEmptyState({ status, role, search, onClearSearch }: OrdersEmptyStateProps) {
+  if (search) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-16 text-center">
+        <SearchXIcon className="text-muted-foreground size-10" />
+        <div className="flex flex-col gap-1">
+          <p className="text-foreground font-medium">Nenhum pedido corresponde à busca</p>
+          <p className="text-muted-foreground text-sm">
+            Nada na aba “{status}” para “{search}”. Veja se o pedido está em outra aba.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={onClearSearch}>
+          Limpar busca
+        </Button>
+      </div>
+    );
+  }
+
   const copy = EMPTY_COPY[role === 'establishment' ? 'establishment' : 'beneficiary'][status];
   const showFeedShortcut = role === 'beneficiary' && status === ORDER_STATUS.PENDING;
 

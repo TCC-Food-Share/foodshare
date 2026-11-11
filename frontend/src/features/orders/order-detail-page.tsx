@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/use-auth';
 import { OrderActionsCard } from '@/features/orders/order-actions-card';
+import { hasCounterpartContact } from '@/features/orders/order-contact';
 import {
   CounterpartCard,
+  CounterpartContactCard,
   OrderFoodCard,
   OrderSummaryCard,
 } from '@/features/orders/order-detail-cards';
@@ -107,6 +109,9 @@ export function OrderDetailPage() {
           />
           <OrderSummaryCard order={order} />
           <CounterpartCard order={order} role={role} />
+          {hasCounterpartContact(order, role) && (
+            <CounterpartContactCard order={order} role={role} />
+          )}
         </div>
       </div>
     </div>

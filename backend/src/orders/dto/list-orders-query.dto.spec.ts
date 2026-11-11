@@ -21,4 +21,31 @@ describe('ListOrdersQueryDto', () => {
       expect(await statusErrors(status)).toHaveLength(1);
     },
   );
+
+  describe('search', () => {
+    const searchOf = async (search: unknown) => {
+      const dto = plainToInstance(ListOrdersQueryDto, { search });
+      const errors = (await validate(dto)).filter((error) => error.property === 'search');
+      return { dto, errors };
+    };
+
+    it('trims the term', async () => {
+      const { dto, errors } = await searchOf('  arroz  ');
+
+      expect(errors).toHaveLength(0);
+      expect(dto.search).toBe('arroz');
+    });
+
+    it('treats a blank term as absent', async () => {
+      const { dto, errors } = await searchOf('   ');
+
+      expect(errors).toHaveLength(0);
+      expect(dto.search).toBeUndefined();
+    });
+
+    it('accepts 100 characters and rejects 101', async () => {
+      expect((await searchOf('a'.repeat(100))).errors).toHaveLength(0);
+      expect((await searchOf('a'.repeat(101))).errors).toHaveLength(1);
+    });
+  });
 });
