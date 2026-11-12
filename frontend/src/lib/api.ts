@@ -3,13 +3,32 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 export class ApiError extends Error {
   readonly status: number;
   readonly body: unknown;
+  /** Segundos até poder repetir, vindos do `X-Retry-After` de uma resposta 429. */
+  readonly retryAfter?: number;
 
-  constructor(status: number, body: unknown, message: string) {
+  constructor(status: number, body: unknown, message: string, retryAfter?: number) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
+    this.retryAfter = retryAfter;
   }
+}
+
+/** `code` do corpo de erro (ex.: `INVALID_OTP` do better-auth). */
+export function errorCode(error: unknown): string | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  const body = error.body;
+  if (body && typeof body === 'object' && 'code' in body && typeof body.code === 'string') {
+    return body.code;
+  }
+  return undefined;
+}
+
+function parseRetryAfter(res: Response): number | undefined {
+  if (res.status !== 429) return undefined;
+  const value = Number(res.headers.get('X-Retry-After'));
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 export function isTooManyRequests(error: unknown): boolean {
@@ -64,7 +83,12 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, parsed, extractMessage(parsed) ?? res.statusText);
+    throw new ApiError(
+      res.status,
+      parsed,
+      extractMessage(parsed) ?? res.statusText,
+      parseRetryAfter(res),
+    );
   }
 
   return parsed as T;

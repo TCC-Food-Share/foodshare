@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CircleAlertIcon, Loader2Icon } from 'lucide-react';
+import { CircleAlertIcon, CircleCheckIcon, Loader2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -16,28 +16,43 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/features/auth/auth-layout';
+import type { ConfirmEmailState } from '@/features/auth/confirm-email/confirm-email-page';
 import { homePathFor, isPathOfRoleArea } from '@/features/auth/home-path';
 import { type LoginInput, loginSchema } from '@/features/auth/login-schema';
 import { FullPageSpinner } from '@/features/auth/protected-route';
 import { useAuth } from '@/features/auth/use-auth';
-import { ApiError } from '@/lib/api';
+import { ApiError, errorCode } from '@/lib/api';
 
-interface LoginLocationState {
+/** Aviso mostrado no login depois da recuperação de senha ou da confirmação de e-mail. */
+export interface LoginNotice {
+  notice: 'password-reset' | 'email-verified';
+  email: string;
+}
+
+interface LoginLocationState extends Partial<LoginNotice> {
   from?: { pathname?: string };
 }
+
+const NOTICE_MESSAGES: Record<LoginNotice['notice'], string> = {
+  'password-reset': 'Senha redefinida. Entre com a nova senha.',
+  'email-verified': 'E-mail confirmado. Entre com sua senha.',
+};
 
 export function LoginPage() {
   const { status, role, signIn } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
+  const locationState = location.state as LoginLocationState | null;
+  const notice = locationState?.notice ? NOTICE_MESSAGES[locationState.notice] : null;
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     mode: 'onTouched',
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: locationState?.email ?? '', password: '' },
   });
 
-  const from = (location.state as LoginLocationState | null)?.from?.pathname;
+  const from = locationState?.from?.pathname;
 
   if (status === 'loading') return <FullPageSpinner />;
   if (status === 'authenticated') {
@@ -50,6 +65,12 @@ export function LoginPage() {
     try {
       await signIn(values.email, values.password);
     } catch (error) {
+      // RN47: conta com e-mail não confirmado vai para a tela de confirmação.
+      if (errorCode(error) === 'EMAIL_NOT_VERIFIED') {
+        const state: ConfirmEmailState = { email: values.email, from: 'sign-in' };
+        void navigate('/confirmar-email', { state });
+        return;
+      }
       setFormError(
         error instanceof ApiError && error.status === 401
           ? 'E-mail ou senha inválidos.'
@@ -68,6 +89,13 @@ export function LoginPage() {
           Entre com suas credenciais para acessar a plataforma.
         </p>
       </div>
+
+      {notice && !formError && (
+        <Alert className="mb-6">
+          <CircleCheckIcon />
+          <AlertDescription>{notice}</AlertDescription>
+        </Alert>
+      )}
 
       {formError && (
         <Alert variant="destructive" className="mb-6">
@@ -97,7 +125,15 @@ export function LoginPage() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Senha</FormLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <FormLabel>Senha</FormLabel>
+                  <Link
+                    to="/esqueci-senha"
+                    className="text-primary text-sm font-medium hover:underline"
+                  >
+                    Esqueci minha senha
+                  </Link>
+                </div>
                 <FormControl>
                   <Input
                     type="password"
