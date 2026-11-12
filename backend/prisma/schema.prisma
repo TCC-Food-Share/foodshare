@@ -22,7 +22,7 @@ model User {
   id            Int      @id @default(autoincrement())
   name          String   @db.VarChar(200)
   email         String   @unique @db.VarChar(200)
-  emailVerified Boolean  @default(true)
+  emailVerified Boolean  @default(false)
   personalPhone String?  @unique @db.VarChar(20)
   image         String?  @db.VarChar(500)
   createdAt     DateTime @default(now())
@@ -393,7 +393,7 @@ model Account {
 }
 
 model Verification {
-  id         String   @id @default(uuid())
+  id         Int      @id @default(autoincrement())
   identifier String
   value      String
   expiresAt  DateTime
