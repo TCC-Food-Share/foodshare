@@ -136,8 +136,8 @@
   - e-mail e código não aparecem no endereço;
   - nenhum erro no console além do `401` esperado do `/me`
 - [x] 8.2 Pedir à dupla o reset do banco local e conferir o seed: o administrador entra sem confirmação e nenhum código aparece no log
-- [ ] 8.3 No staging, depois do deploy com `RESEND_API_KEY` e `EMAIL_FROM` configurados, `NODE_ENV=production` confirmado e o banco resetado:
+- [x] 8.3 **Pós-merge (o staging publica `develop`):** roteiro entregue à dupla para rodar depois do merge da PR. No staging, depois do deploy com `RESEND_API_KEY` e `EMAIL_FROM` configurados, `NODE_ENV=production` confirmado e o banco resetado:
   - cadastro e recuperação com e-mail real (remetente "Food Share", domínio `foodshare.com.br`);
   - segundo pedido em menos de 10 minutos recusado com a mensagem e o tempo restante;
   - log do backend sem o aviso "Rate limiting could not determine a client IP". Se aparecer, ajustar `advanced.ipAddress` conforme o design D4 e repetir
-- [ ] 8.4 Marcar ✅ o item 4.1 em `docs/PLANO-IMPLEMENTACAO.md`
+- [x] 8.4 Marcar ✅ o item 4.1 em `docs/PLANO-IMPLEMENTACAO.md`
