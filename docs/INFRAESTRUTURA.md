@@ -93,11 +93,23 @@ O front e a API ficam em subdomínios distintos do mesmo site
 ## E-mail (Resend)
 
 - O domínio `foodshare.com.br` já está verificado no Resend.
-- **Uso único:** o código de recuperação de senha (RF08). O plano gratuito
-  tem limite baixo, então nenhum outro e-mail sai do sistema (RN45).
-- Remetente: `EMAIL_FROM`, ex.: `Food Share <nao-responda@foodshare.com.br>`.
+- **Dois usos:** o código de recuperação de senha (RF08) e o código de
+  confirmação de e-mail do cadastro (RF75). O plano gratuito tem limite
+  baixo, então nenhum outro e-mail sai do sistema (RN45). Cada cadastro gasta
+  um e-mail.
+- Remetente: `EMAIL_FROM` guarda **só o endereço**
+  (`nao-responda@foodshare.com.br`); o nome "Food Share" vem do código.
 - O envio é disparado sem `await` dentro do `sendVerificationOTP` do
-  better-auth. Falha de envio gera log de erro.
+  better-auth (`backend/src/mail/verification-code.ts`). Falha de envio gera
+  log de erro, sem o código.
+- **Dev sem `RESEND_API_KEY`:** fora de produção, o código aparece no log do
+  backend (`warn`) e nada é enviado. Em produção sem chave, só log de erro.
+- **IP atrás do Traefik:** o limite de 1 pedido de código a cada 10 minutos
+  é por IP, e o better-auth só aceita `x-forwarded-for` com um único IP. Sem
+  IP, todo mundo cai num balde só. Depois de cada mudança de proxy, conferir
+  que o log do backend **não** mostra "Rate limiting could not determine a
+  client IP"; se mostrar, configurar `advanced.ipAddress.ipAddressHeaders` ou
+  `trustedProxies` em `auth.instance.ts`.
 - O mesmo Resend já é usado como SMTP dos alertas do Gatus. Isso consome a
   mesma cota.
 
@@ -137,7 +149,11 @@ O front e a API ficam em subdomínios distintos do mesmo site
 
 ## Tarefas agendadas
 
-- `@nestjs/schedule`, num módulo próprio (`jobs/`).
+- `@nestjs/schedule` 6.x (a 12 é só ESM e não roda no Nest 11 em CommonJS),
+  com `ScheduleModule.forRoot()` uma única vez no `AppModule`; as tarefas
+  ficam no módulo `jobs/`.
+- **De hora em hora:** limpeza das contas não confirmadas há mais de 24
+  horas (RN48), tarefa `unverified-accounts-cleanup`.
 - **Uma tarefa diária às 08:00 (`America/Sao_Paulo`)**, nesta ordem:
   1. Expiração de pedidos `Pendente` (RF72).
   2. Lembrete do estabelecimento, 5º dia (RF74).
@@ -157,22 +173,22 @@ O front e a API ficam em subdomínios distintos do mesmo site
 
 ### Backend
 
-| Variável                                                       | Dev                                          | Staging / Produção                                                                                               | Uso                             |
-| -------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `DATABASE_URL`                                                 | Postgres local                               | Postgres do Coolify                                                                                              | Prisma                          |
-| `BETTER_AUTH_URL`                                              | `http://localhost:3000`                      | `https://api.staging.foodshare.com.br` / `https://api.foodshare.com.br`                                          | better-auth                     |
-| `JWT_SECRET`                                                   | qualquer                                     | segredo forte, diferente por ambiente                                                                            | better-auth                     |
-| `TRUSTED_ORIGINS`                                              | `http://localhost:5173`                      | `https://app.staging.foodshare.com.br` / `https://app.foodshare.com.br`                                          | originCheck + CORS              |
-| `COOKIE_DOMAIN`                                                | _(vazio)_                                    | `.staging.foodshare.com.br` / `.foodshare.com.br`                                                                | cookie entre subdomínios        |
-| `FRONTEND_URL`                                                 | `http://localhost:5173`                      | URL do app no ambiente                                                                                           | links nas mensagens de WhatsApp |
-| `MINIO_ENDPOINT`                                               | `http://localhost:9000`                      | URL interna da API S3 na rede Docker, com protocolo e porta, pelo nome do container (`http://minio-<uuid>:9000`) | upload/leitura                  |
-| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`                        | do container local                           | do recurso no Coolify, diferente por ambiente                                                                    | upload/leitura                  |
-| `MINIO_BUCKET`                                                 | `foodshare-dev`                              | `foodshare-staging` / `foodshare`                                                                                | upload/leitura                  |
-| `RESEND_API_KEY`                                               | chave de teste                               | chave do Resend                                                                                                  | e-mail                          |
-| `EMAIL_FROM`                                                   | `Food Share <nao-responda@foodshare.com.br>` | idem                                                                                                             | e-mail                          |
-| `N8N_WEBHOOK_URL`                                              | _(vazio ou fluxo de teste)_                  | _(vazio até P01)_                                                                                                | lembretes                       |
-| `N8N_WEBHOOK_SECRET`                                           | qualquer                                     | segredo forte                                                                                                    | lembretes                       |
-| `SEED_ADMIN_NAME` / `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | dev                                          | definidos no Coolify                                                                                             | primeiro administrador (seed)   |
+| Variável                                                       | Dev                                      | Staging / Produção                                                                                               | Uso                             |
+| -------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `DATABASE_URL`                                                 | Postgres local                           | Postgres do Coolify                                                                                              | Prisma                          |
+| `BETTER_AUTH_URL`                                              | `http://localhost:3000`                  | `https://api.staging.foodshare.com.br` / `https://api.foodshare.com.br`                                          | better-auth                     |
+| `JWT_SECRET`                                                   | qualquer                                 | segredo forte, diferente por ambiente                                                                            | better-auth                     |
+| `TRUSTED_ORIGINS`                                              | `http://localhost:5173`                  | `https://app.staging.foodshare.com.br` / `https://app.foodshare.com.br`                                          | originCheck + CORS              |
+| `COOKIE_DOMAIN`                                                | _(vazio)_                                | `.staging.foodshare.com.br` / `.foodshare.com.br`                                                                | cookie entre subdomínios        |
+| `FRONTEND_URL`                                                 | `http://localhost:5173`                  | URL do app no ambiente                                                                                           | links nas mensagens de WhatsApp |
+| `MINIO_ENDPOINT`                                               | `http://localhost:9000`                  | URL interna da API S3 na rede Docker, com protocolo e porta, pelo nome do container (`http://minio-<uuid>:9000`) | upload/leitura                  |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`                        | do container local                       | do recurso no Coolify, diferente por ambiente                                                                    | upload/leitura                  |
+| `MINIO_BUCKET`                                                 | `foodshare-dev`                          | `foodshare-staging` / `foodshare`                                                                                | upload/leitura                  |
+| `RESEND_API_KEY`                                               | vazia (código no log) ou chave do Resend | chave do Resend                                                                                                  | e-mail                          |
+| `EMAIL_FROM`                                                   | `nao-responda@foodshare.com.br`          | idem                                                                                                             | e-mail                          |
+| `N8N_WEBHOOK_URL`                                              | _(vazio ou fluxo de teste)_              | _(vazio até P01)_                                                                                                | lembretes                       |
+| `N8N_WEBHOOK_SECRET`                                           | qualquer                                 | segredo forte                                                                                                    | lembretes                       |
+| `SEED_ADMIN_NAME` / `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | dev                                      | definidos no Coolify                                                                                             | primeiro administrador (seed)   |
 
 Toda variável nova entra no `backend/.env.example`, com comentário curto
 dizendo para que serve. Nenhum segredo vai para o repositório.
