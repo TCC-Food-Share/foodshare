@@ -19,7 +19,8 @@ decisão já foi tomada. As exceções aprovadas são o **Resend** (e-mail) e o
 
 - Deploy automático por push. O `prisma migrate deploy` roda como comando de
   pré-deploy, e o seed roda depois dele (é idempotente).
-- Nixpacks fixado em Node 22.13.1.
+- Nixpacks fixado em Node 22.13.1, que traz o **npm 10.9.2**. O `package-lock.json`
+  precisa passar no `npm ci` dessa versão (ver "Dependências e package-lock").
 - O monitoramento é feito pelo Gatus (API, App e Landing Page), com alertas por
   e-mail (Resend) e WhatsApp (n8n). Endpoint novo que precise de
   monitoramento: avisar, para ser incluído no Gatus.
@@ -213,3 +214,22 @@ antes validar o build ARM64 no Coolify.
 
 O mesmo cuidado vale para qualquer dependência nova com binário nativo:
 confirme que ela tem build para `linux-arm64` antes de adicionar.
+
+## Dependências e package-lock
+
+O build do Coolify roda `npm ci` com o **npm 10.9.2** (Node 22.13.1 do Nixpacks).
+Uma máquina local com npm 11 pode gerar um `package-lock.json` que o npm 10
+recusa: ao instalar um pacote, o npm 11 tira do lock dependências opcionais
+(ex.: `@emnapi/core` e `@emnapi/runtime`, peers do `@napi-rs/wasm-runtime`), e o
+deploy falha com `Missing: <pacote> from lock file`. Lint, testes e build locais
+passam, então o erro só aparece no deploy.
+
+Depois de qualquer `npm install`, `npm uninstall` ou atualização de dependência,
+em `backend/` ou `frontend/`, antes do commit:
+
+```bash
+npx -y npm@10.9.2 install --package-lock-only   # regera o lock como o deploy espera
+npx -y npm@10.9.2 ci --dry-run                  # deve terminar sem "Missing" nem EUSAGE
+```
+
+Se a versão de Node do Nixpacks mudar, atualizar a versão do npm nestes comandos.
