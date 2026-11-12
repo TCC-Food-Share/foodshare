@@ -32,6 +32,8 @@ async function bootstrap() {
     origin: trustedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    // Tempo restante do limite de pedidos de código (429 do better-auth).
+    exposedHeaders: ['X-Retry-After'],
   });
   app.useStaticAssets(join(process.cwd(), 'public'));
   app.use(express.json());
@@ -58,11 +60,46 @@ async function bootstrap() {
   const authOperationOverrides: Record<string, { summary: string; description: string }> = {
     '/sign-in/email': {
       summary: 'Login',
-      description: 'Autentica com e-mail e senha e, em caso de sucesso, emite uma sessão (cookie).',
+      description:
+        'Autentica com e-mail e senha e, em caso de sucesso, emite uma sessão (cookie). ' +
+        'Conta com e-mail ainda não confirmado responde 403 com code EMAIL_NOT_VERIFIED ' +
+        '(senha errada continua 401 genérico).',
     },
     '/sign-out': {
       summary: 'Logout',
       description: 'Encerra a sessão atual, invalidando o cookie de sessão.',
+    },
+    '/email-otp/request-password-reset': {
+      summary: 'Pedir código de recuperação de senha',
+      description:
+        'Envia um código de 6 dígitos, válido por 10 minutos, ao e-mail informado. A resposta é ' +
+        'a mesma para e-mail não cadastrado ou de conta excluída, e nesses casos nada é enviado. ' +
+        'Limite de 1 pedido a cada 10 minutos por IP: acima disso, 429 com o header X-Retry-After.',
+    },
+    '/email-otp/check-verification-otp': {
+      summary: 'Conferir código',
+      description:
+        'Confere o código sem consumi-lo (use type forget-password na recuperação de senha). ' +
+        'Cada código errado conta uma tentativa; na 3ª o código é invalidado.',
+    },
+    '/email-otp/reset-password': {
+      summary: 'Redefinir senha com o código',
+      description:
+        'Troca a senha (8 a 72 caracteres) com o código de recuperação, descarta o código, ' +
+        'confirma o e-mail e encerra todas as sessões da conta.',
+    },
+    '/email-otp/verify-email': {
+      summary: 'Confirmar e-mail com o código',
+      description:
+        'Confirma o e-mail da conta com o código enviado no cadastro. Não abre sessão: ' +
+        'depois de confirmar, a pessoa faz login normalmente.',
+    },
+    '/send-verification-email': {
+      summary: 'Reenviar código de confirmação de e-mail',
+      description:
+        'Gera um novo código de confirmação e o envia ao e-mail, substituindo o anterior. ' +
+        'A resposta é a mesma para e-mail não cadastrado, já confirmado ou de conta excluída. ' +
+        'Limite de 1 pedido a cada 10 minutos por IP: acima disso, 429 com o header X-Retry-After.',
     },
   };
   const authPaths = Object.fromEntries(
@@ -82,7 +119,10 @@ async function bootstrap() {
     ...document,
     tags: [
       ...(document.tags ?? []),
-      { name: 'Autenticação', description: 'Login, logout e sessão.' },
+      {
+        name: 'Autenticação',
+        description: 'Login, logout, sessão, recuperação de senha e confirmação de e-mail.',
+      },
     ],
     paths: { ...document.paths, ...authPaths },
     components: {

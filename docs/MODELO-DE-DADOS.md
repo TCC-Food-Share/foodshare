@@ -13,27 +13,27 @@ que muda em relação ao schema do MVP.
 
 ## Visão geral
 
-| Model                                | Tabela                               | Situação | Resumo                                                                            |
-| ------------------------------------ | ------------------------------------ | -------- | --------------------------------------------------------------------------------- |
-| `Role`                               | `role`                               | 🟡 dados | Entra o papel `Administrator` no seed                                             |
-| `User`                               | `user`                               | 🟡 muda  | `personalPhone` passa a opcional (administrador não tem celular)                  |
-| `Address`                            | `address`                            | ✅ igual |                                                                                   |
-| `Establishment`                      | `establishment`                      | ✅ igual |                                                                                   |
-| `BeneficiaryEntity`                  | `beneficiary_entity`                 | ✅ igual |                                                                                   |
-| `Category`                           | `category`                           | 🟡 muda  | Entra `administratorId` e `catalogItems`; `foods` saiu (2.1)                      |
-| `FoodStatus`                         | `food_status`                        | 🟡 dados | Seed: `Ativo`, `Reservado`, `Inativo` (sem `Revisar`, DT16)                       |
-| `OrderStatus`                        | `order_status`                       | 🟡 dados | Seed: `Pendente`, `Em andamento`, `Rejeitado`, `Doado`, `Cancelado`               |
-| `Food`                               | `food`                               | 🟡 muda  | Nome/categoria vêm do catálogo; unidade vira FK; tipo de solicitação; observações |
-| `CancellationReason`                 | `cancellation_reason`                | 🟡 muda  | Entra `isSystem`; `administratorId` opcional                                      |
-| `Order`                              | `order`                              | 🟡 muda  | Entram `type`, `acceptedAt`, `quantityUpdatedAt`, `cancelledBy`                   |
-| `FoodCatalogItem`                    | `food_catalog_item`                  | 🆕       | Catálogo de alimentos (DT12)                                                      |
-| `MeasurementUnit`                    | `measurement_unit`                   | 🆕       | Unidades de medida (RF59–RF62)                                                    |
-| `ProhibitedTerm`                     | `prohibited_term`                    | 🆕       | Termos proibidos (RNF07, RF67–RF70)                                               |
-| `Suggestion`                         | `suggestion`                         | 🆕       | Sugestões de novas opções (RF49, RF71)                                            |
-| `OrderReminder`                      | `order_reminder`                     | 🆕       | Lembretes já enviados (RF73, RF74)                                                |
-| `AuditLog`                           | `audit_log`                          | 🆕       | Auditoria das ações do administrador (RNF14)                                      |
-| `AccessLog`                          | `access_log`                         | 🆕       | Registro de toda requisição à API, com usuário e IP (RNF13, DT19)                 |
-| `Session`, `Account`, `Verification` | `session`, `account`, `verification` | ✅ igual | Tabelas do better-auth. Os códigos do `emailOTP` ficam em `verification` (DT03)   |
+| Model                                | Tabela                               | Situação                               | Resumo                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------ | ------------------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Role`                               | `role`                               | 🟡 dados                               | Entra o papel `Administrator` no seed                                                                                                                                                                                                                                                                                                                                                      |
+| `User`                               | `user`                               | 🟡 muda                                | `personalPhone` passa a opcional (administrador não tem celular)                                                                                                                                                                                                                                                                                                                           |
+| `Address`                            | `address`                            | ✅ igual                               |                                                                                                                                                                                                                                                                                                                                                                                            |
+| `Establishment`                      | `establishment`                      | ✅ igual                               |                                                                                                                                                                                                                                                                                                                                                                                            |
+| `BeneficiaryEntity`                  | `beneficiary_entity`                 | ✅ igual                               |                                                                                                                                                                                                                                                                                                                                                                                            |
+| `Category`                           | `category`                           | 🟡 muda                                | Entra `administratorId` e `catalogItems`; `foods` saiu (2.1)                                                                                                                                                                                                                                                                                                                               |
+| `FoodStatus`                         | `food_status`                        | 🟡 dados                               | Seed: `Ativo`, `Reservado`, `Inativo` (sem `Revisar`, DT16)                                                                                                                                                                                                                                                                                                                                |
+| `OrderStatus`                        | `order_status`                       | 🟡 dados                               | Seed: `Pendente`, `Em andamento`, `Rejeitado`, `Doado`, `Cancelado`                                                                                                                                                                                                                                                                                                                        |
+| `Food`                               | `food`                               | 🟡 muda                                | Nome/categoria vêm do catálogo; unidade vira FK; tipo de solicitação; observações                                                                                                                                                                                                                                                                                                          |
+| `CancellationReason`                 | `cancellation_reason`                | 🟡 muda                                | Entra `isSystem`; `administratorId` opcional                                                                                                                                                                                                                                                                                                                                               |
+| `Order`                              | `order`                              | 🟡 muda                                | Entram `type`, `acceptedAt`, `quantityUpdatedAt`, `cancelledBy`                                                                                                                                                                                                                                                                                                                            |
+| `FoodCatalogItem`                    | `food_catalog_item`                  | 🆕                                     | Catálogo de alimentos (DT12)                                                                                                                                                                                                                                                                                                                                                               |
+| `MeasurementUnit`                    | `measurement_unit`                   | 🆕                                     | Unidades de medida (RF59–RF62)                                                                                                                                                                                                                                                                                                                                                             |
+| `ProhibitedTerm`                     | `prohibited_term`                    | 🆕                                     | Termos proibidos (RNF07, RF67–RF70)                                                                                                                                                                                                                                                                                                                                                        |
+| `Suggestion`                         | `suggestion`                         | 🆕                                     | Sugestões de novas opções (RF49, RF71)                                                                                                                                                                                                                                                                                                                                                     |
+| `OrderReminder`                      | `order_reminder`                     | 🆕                                     | Lembretes já enviados (RF73, RF74)                                                                                                                                                                                                                                                                                                                                                         |
+| `AuditLog`                           | `audit_log`                          | 🆕                                     | Auditoria das ações do administrador (RNF14)                                                                                                                                                                                                                                                                                                                                               |
+| `AccessLog`                          | `access_log`                         | 🆕                                     | Registro de toda requisição à API, com usuário e IP (RNF13, DT19)                                                                                                                                                                                                                                                                                                                          |
+| `Session`, `Account`, `Verification` | `session`, `account`, `verification` | 🟡 `Verification.id` vira `Int` serial | Tabelas do better-auth. Os códigos do `emailOTP` (recuperação e confirmação) ficam em `verification` (DT03). O better-auth roda com `generateId: 'serial'` e converte o `id` para número; com `id` em UUID, consumir o código falhava. `Session.id` e `Account.id` continuam UUID: nenhum fluxo usado os apaga ou altera pelo `id`, mas um fluxo novo que faça isso precisa da mesma troca |
 
 `CodigoVerificacao`, do modelo do TCC, **não existe** (DT03).
 
@@ -64,10 +64,11 @@ fica no frontend, não no banco.
 
 ### `User`
 
-| Campo           | Mudança                                                                                                                                                                                                           | Motivo                                                                                                                                          |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `personalPhone` | `String` → `String?` (continua `@unique`)                                                                                                                                                                         | O administrador (RF29) não informa celular. O Postgres aceita vários `NULL` numa coluna única. A obrigatoriedade para instituições fica no DTO. |
-| relações        | `+ categories`, `+ catalogItems`, `+ measurementUnits`, `+ prohibitedTerms` (como `administrator`); `+ suggestions` (como `requester`) e `+ reviewedSuggestions` (como `reviewer`); `+ auditLogs`; `+ accessLogs` | Relações nomeadas de cada tabela nova                                                                                                           |
+| Campo           | Mudança                                                                                                                                                                                                           | Motivo                                                                                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `personalPhone` | `String` → `String?` (continua `@unique`)                                                                                                                                                                         | O administrador (RF29) não informa celular. O Postgres aceita vários `NULL` numa coluna única. A obrigatoriedade para instituições fica no DTO.      |
+| `emailVerified` | `@default(true)` → `@default(false)`                                                                                                                                                                              | RN47: toda conta nasce não confirmada. O better-auth já gravava `false` no cadastro; o padrão evita conta confirmada sem querer num `create` direto. |
+| relações        | `+ categories`, `+ catalogItems`, `+ measurementUnits`, `+ prohibitedTerms` (como `administrator`); `+ suggestions` (como `requester`) e `+ reviewedSuggestions` (como `reviewer`); `+ auditLogs`; `+ accessLogs` | Relações nomeadas de cada tabela nova                                                                                                                |
 
 A imagem continua opcional no banco. A obrigatoriedade (RF01, RF02, RF29)
 fica no DTO.
@@ -316,10 +317,14 @@ Decisão DT19. Uma linha por requisição atendida pela API (RNF13).
   RF46, RF51) apaga também o objeto no MinIO, **depois** do commit da
   transação no banco.
 
-## Recuperação de senha (DT03, DT17)
+## Recuperação de senha e confirmação de e-mail (DT03, DT17, DT39)
 
-- **Sem tabela nova.** O plugin `emailOTP` grava o código em `verification`.
-- Configuração do plugin: `otpLength: 6`, `expiresIn: 600` (RN33).
+- **Sem tabela nova.** O plugin `emailOTP` grava o código em `verification`,
+  com o identificador `forget-password-otp-<email>` (recuperação) ou
+  `email-verification-otp-<email>` (confirmação, RF75).
+- Configuração do plugin: `otpLength: 6`, `expiresIn: 600`, `allowedAttempts: 3`
+  (RN33, DT37), `overrideDefaultEmailVerification: true` (a confirmação usa
+  código, não link).
 - **Limite de solicitações (RNF11):** só configuração nativa do better-auth,
   sem código em volta da rota:
 
@@ -327,17 +332,23 @@ Decisão DT19. Uma linha por requisição atendida pela API (RNF13).
   rateLimit: {
     customRules: {
       '/email-otp/request-password-reset': { window: 600, max: 1 },
+      '/send-verification-email': { window: 600, max: 1 },
     },
   },
   ```
+
+  A segunda regra limita o reenvio do código de confirmação (RN47).
 
   - O rate limit do better-auth vem desligado fora de produção. Para testar
     em dev, ligar com `rateLimit.enabled: true`.
   - O armazenamento padrão é em memória e zera a cada redeploy. Para este
     caso, isso é aceitável.
-  - O plugin ainda tem a rota antiga `/forget-password/email-otp`
-    (deprecada). Ou ela recebe a mesma regra, ou fica desabilitada. O
-    frontend usa só a rota nova.
+  - Ficam desabilitadas (`disabledPaths`) as rotas do plugin que não são
+    usadas: `/forget-password/email-otp` (deprecada), `/sign-in/email-otp`,
+    `/email-otp/send-verification-otp` (geraria código de recuperação fora
+    do limite), `/email-otp/request-email-change` e `/email-otp/change-email`.
+    O `disabledPaths` só vale para HTTP: a chamada interna que o cadastro e o
+    reenvio fazem continua funcionando.
 
 - O envio usa o Resend (DT04), e o `sendVerificationOTP` não fica esperando o
   envio terminar (recomendação da doc do plugin contra timing attack).
@@ -362,6 +373,11 @@ transação, nesta ordem:
   Nas regras de estoque, um pedido `Em andamento` apagado **não** devolve
   quantidade: o estoque já saiu do alimento.
 - **Alimento:** pedidos → alimento.
+- **Conta não confirmada (RN48, tarefa de hora em hora):** trava a linha do
+  usuário com `emailVerified = false` (`FOR UPDATE`) → instituição →
+  endereço → códigos em `verification` → usuário (sessões e contas em
+  cascata) → imagem no MinIO depois do commit. Se a conta foi confirmada no
+  meio, nada é apagado.
 
 ## Seed
 
@@ -388,9 +404,11 @@ nesta ordem:
      `catalogo_taco_refeicao_pronta` move "Refeição pronta", do catálogo
      provisório da 1.1, de "Outros" para "Perecíveis".
 8. **Primeiro administrador**, a partir de `SEED_ADMIN_NAME`,
-   `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD`. É criado pela API do
-   better-auth (para o hash da senha sair igual ao do login), só se ainda
-   não existe nenhum usuário com papel `Administrator`. Sem as variáveis,
+   `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD`. É criado pelo contexto
+   interno do better-auth (`internalAdapter` + `password.hash`, para o hash
+   sair igual ao do login), já com `emailVerified = true` e sem enviar o
+   código de confirmação (DT39), só se ainda não existe nenhum usuário com
+   papel `Administrator`. Sem as variáveis,
    este passo é pulado com um aviso.
 
 ## Migração a partir do MVP

@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+import {
+  passwordConfirmationField,
+  passwordField,
+  PASSWORDS_MISMATCH,
+  passwordsMatch,
+} from '@/features/auth/password-schema';
 import { imageFileSchema } from '@/features/files/image-rules';
 import { PHONE_REGEX, POSTAL_CODE_REGEX, UF_REGEX, UFS } from '@/lib/validation';
 
@@ -34,8 +40,8 @@ export const signUpSchema = z
     name: z.string().min(1, 'Informe o nome do responsável.').max(200),
     email: emailField('Informe o e-mail de acesso.'),
     personalPhone: phoneField('Informe o celular pessoal.'),
-    password: z.string().min(8, 'Mínimo de 8 caracteres.').max(72, 'Máximo de 72 caracteres.'),
-    passwordConfirmation: z.string().min(1, 'Confirme a senha.'),
+    password: passwordField,
+    passwordConfirmation: passwordConfirmationField,
 
     postalCode: z.string().min(1, 'Informe o CEP.').regex(POSTAL_CODE_RE, 'CEP inválido.'),
     street: z.string().min(1, 'Informe o logradouro.').max(300),
@@ -46,10 +52,7 @@ export const signUpSchema = z
 
     image: imageFileSchema,
   })
-  .refine((v) => v.password === v.passwordConfirmation, {
-    path: ['passwordConfirmation'],
-    error: 'As senhas não conferem.',
-  });
+  .refine(passwordsMatch, PASSWORDS_MISMATCH);
 
 export type SignUpInput = z.infer<typeof signUpSchema>;
 

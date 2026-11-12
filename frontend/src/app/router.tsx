@@ -12,6 +12,8 @@ import { AdminFoodItemsPage } from '@/features/admin/lists/admin-food-items-page
 import { AdminMeasurementUnitsPage } from '@/features/admin/lists/admin-measurement-units-page';
 import { AdminProhibitedTermsPage } from '@/features/admin/lists/admin-prohibited-terms-page';
 import { AdminSuggestionsPage } from '@/features/admin/suggestions/admin-suggestions-page';
+import { ConfirmEmailPage } from '@/features/auth/confirm-email/confirm-email-page';
+import { ForgotPasswordPage } from '@/features/auth/forgot-password/forgot-password-page';
 import { ADMIN_HOME, INSTITUTION_ROLES } from '@/features/auth/home-path';
 import { HomeRedirect } from '@/features/auth/home-redirect';
 import { LoginPage } from '@/features/auth/login-page';
@@ -42,6 +44,14 @@ export const router = createBrowserRouter([
   {
     path: '/cadastro',
     element: <SignUpPage />,
+  },
+  {
+    path: '/esqueci-senha',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/confirmar-email',
+    element: <ConfirmEmailPage />,
   },
   {
     element: <ProtectedRoute />,

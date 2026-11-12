@@ -49,7 +49,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | 3.1 | `pedido-tipo-e-reserva`         | RF22, RF23, RF25, RN03, RN07, RN08          | 2.1            | 24/10 | ✅     |
 | 3.2 | `cancelar-pedido`               | RF26, RN09                                  | 3.1            | 26/10 | ✅     |
 | 3.3 | `pedidos-busca-e-contato`       | RF27 (busca), RF28, RF09, RN12              | 3.1            | 28/10 | ✅     |
-| 4.1 | `recuperar-senha`               | RF08, RNF11, RNF12, RN33                    | 0.1            | 29/10 | ⬜     |
+| 4.1 | `recuperar-senha`               | RF08, RF75, RNF11, RNF12, RN33, RN47, RN48  | 0.1            | 29/10 | ✅     |
 | 4.2 | `perfil-completo`               | RF03, RF11 (ajustes)                        | 0.3            | 30/10 | ⬜     |
 | 4.3 | `instituicoes-e-perfil-publico` | RF10, RF12, RF13, RN35, RN36                | 4.2            | 01/11 | ⬜     |
 | 4.4 | `exclusao-propria-conta`        | RF04, RF05, RN28–RN30                       | 3.2            | 03/11 | ⬜     |
@@ -227,9 +227,10 @@ o cronograma da disciplina pedir.
 
 ### 4.1 `recuperar-senha`
 
-- **Backend:** plugin `emailOTP` + Resend + `rateLimit.customRules` (`docs/MODELO-DE-DADOS.md`, "Recuperação de senha"). Sem wrapper.
-- **Frontend:** as três telas do protótipo "Esqueci minha senha" (e-mail → código → nova senha) e o link na tela de login.
-- **Pronto quando:** o fluxo completo funciona no staging com e-mail real, e uma segunda solicitação em menos de 10 minutos é recusada com mensagem clara.
+- **Backend:** plugin `emailOTP` + Resend + `rateLimit.customRules` (`docs/MODELO-DE-DADOS.md`, "Recuperação de senha e confirmação de e-mail"). Sem wrapper.
+- **Confirmação de e-mail (RF75, incluída pela dupla nesta change):** código enviado no cadastro, login bloqueado até confirmar (RN47), reenvio com o mesmo limite e limpeza de hora em hora das contas não confirmadas há mais de 24 horas (RN48).
+- **Frontend:** as três telas do protótipo "Esqueci minha senha" (e-mail → código → nova senha), o link na tela de login e a tela "Confirme seu e-mail" (fim do cadastro e login de conta não confirmada).
+- **Pronto quando:** os dois fluxos funcionam no staging com e-mail real, e uma segunda solicitação em menos de 10 minutos é recusada com mensagem clara.
 
 ### 4.2 `perfil-completo`
 
@@ -261,10 +262,11 @@ auditoria.
 
 - Cadastrar, editar, excluir e listar administradores (RF29–RF32). A exclusão do último administrador é recusada (RN34).
 - A imagem do administrador segue o padrão da 0.3 (`@ImageUpload()`, pasta `users`).
+- O administrador criado pelo painel também precisa confirmar o e-mail antes do primeiro login (DT39). Criar pelo `signUpEmail` já envia o código; a tela avisa isso a quem cadastrou.
 
 ### 5.2 `admin-instituicoes`
 
-- Cadastrar uma instituição de qualquer tipo pelo painel (RF41, reaproveitando o service do cadastro).
+- Cadastrar uma instituição de qualquer tipo pelo painel (RF41, reaproveitando o service do cadastro). A conta criada também precisa confirmar o e-mail antes do primeiro login (DT39), e é apagada se não confirmar em 24 horas (RN48).
 - Editar, incluindo o campo deletado (RF44).
 - Descrição e nome fantasia usam `@NoProhibitedContent()` no cadastro e na edição (DT24).
 - Imagem no cadastro e na edição pelo padrão da 0.3 (`@ImageUpload()`, pasta `users`), com a troca apagando a anterior depois do commit.

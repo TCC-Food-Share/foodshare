@@ -3,12 +3,12 @@ import { CircleAlertIcon, Loader2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { AuthLayout } from '@/features/auth/auth-layout';
+import type { ConfirmEmailState } from '@/features/auth/confirm-email/confirm-email-page';
 import { FullPageSpinner } from '@/features/auth/protected-route';
 import { AddressStep } from '@/features/auth/sign-up/address-step';
 import { InstitutionalStep } from '@/features/auth/sign-up/institutional-step';
@@ -187,8 +187,9 @@ export function SignUpPage() {
       values.profileType === 'establishment' ? createEstablishment : createBeneficiaryEntity;
     try {
       await create(toSignUpPayload(values), values.image);
-      toast.success('Conta criada! Entre com seu e-mail e senha.');
-      void navigate('/login', { replace: true });
+      // RF75: a conta nasce não confirmada; o código já foi enviado.
+      const state: ConfirmEmailState = { email: values.email, from: 'sign-up' };
+      void navigate('/confirmar-email', { replace: true, state });
     } catch (error) {
       handleSubmitError(error);
     }

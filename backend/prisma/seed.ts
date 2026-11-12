@@ -106,8 +106,23 @@ async function seedFirstAdministrator() {
 
   const role = await prisma.role.findUniqueOrThrow({ where: { name: ROLE.ADMINISTRATOR } });
 
+  // DT39: o administrador do seed é a única conta que nasce com o e-mail
+  // confirmado. Não usa signUpEmail porque ele enviaria o código de
+  // confirmação; o hash sai do próprio better-auth, igual ao do login.
+  const ctx = await auth.$context;
   try {
-    await auth.api.signUpEmail({ body: { name, email, password, roleId: role.id } });
+    const user = await ctx.internalAdapter.createUser({
+      name,
+      email,
+      emailVerified: true,
+      roleId: role.id,
+    });
+    await ctx.internalAdapter.linkAccount({
+      userId: user.id,
+      providerId: 'credential',
+      accountId: user.id,
+      password: await ctx.password.hash(password),
+    });
   } catch (error) {
     throw new Error(
       `Could not create the first administrator (${email}). Is this email already in use?`,

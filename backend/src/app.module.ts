@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { AccessLogModule } from './access-log/access-log.module';
 import { AdminModule } from './admin/admin.module';
@@ -20,6 +21,8 @@ import { SuggestionsModule } from './suggestions/suggestions.module';
 
 @Module({
   imports: [
+    // Uma única vez na aplicação (docs do @nestjs/schedule).
+    ScheduleModule.forRoot(),
     RateLimitModule,
     AccessLogModule,
     AuthModule,
