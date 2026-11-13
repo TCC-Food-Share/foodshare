@@ -29,6 +29,8 @@ export interface ProfileResponse {
 }
 
 export interface UpdateProfilePayload {
+  tradeName: string;
+  name: string;
   personalPhone: string;
   institutionalPhone: string;
   institutionalEmail: string;
@@ -58,6 +60,6 @@ export function updateMyProfile(
 ): Promise<ProfileResponse> {
   return api.patch<ProfileResponse>(
     profilePath(role),
-    image ? toFormData(payload, { image }) : payload,
+    image ? toFormData(payload, { image }, { keepEmpty: ['tradeName'] }) : payload,
   );
 }

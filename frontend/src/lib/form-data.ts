@@ -14,9 +14,17 @@ function append(formData: FormData, key: string, value: FormValue) {
   formData.append(key, String(value));
 }
 
-export function toFormData(values: object, files: Record<string, File | null | undefined> = {}) {
+export function toFormData(
+  values: object,
+  files: Record<string, File | null | undefined> = {},
+  options: { keepEmpty?: readonly string[] } = {},
+) {
   const formData = new FormData();
   for (const [key, value] of Object.entries(values as FormValues)) {
+    if (value === '' && options.keepEmpty?.includes(key)) {
+      formData.append(key, '');
+      continue;
+    }
     append(formData, key, value);
   }
   for (const [key, file] of Object.entries(files)) {

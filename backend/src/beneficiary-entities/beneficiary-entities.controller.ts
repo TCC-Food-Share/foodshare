@@ -78,8 +78,10 @@ export class BeneficiaryEntitiesController {
   @ApiOperation({
     summary: 'Edição do próprio cadastro',
     description:
-      'Edita contato, imagem, descrição e endereço da entidade beneficiária autenticada (RF03). ' +
-      'CNPJ, razão social e e-mail pessoal não são editáveis por este endpoint. ' +
+      'Edita nome fantasia, e-mail e celular institucionais, celular pessoal, nome do responsável, ' +
+      'imagem, descrição e endereço da entidade beneficiária autenticada (RF03). ' +
+      'Nome fantasia enviado vazio apaga o valor. ' +
+      'CNPJ, razão social e e-mail pessoal não são editáveis (RN27) e são recusados com `400`. ' +
       'A imagem nova, opcional, vai como arquivo no mesmo formulário; sem ela, o corpo pode ser JSON.',
   })
   @ImageUpload({ body: UpdateBeneficiaryEntityDto, required: false })

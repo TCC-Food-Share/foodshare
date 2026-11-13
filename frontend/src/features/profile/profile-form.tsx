@@ -126,13 +126,26 @@ export function ProfileForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
             <div className="flex-1">
               <LockedField label="Razão social" value={data.companyName} />
             </div>
-            <div className="flex-1">
-              <LockedField label="Nome fantasia" value={data.tradeName ?? ''} />
-            </div>
+            <FormField
+              control={control}
+              name="tradeName"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    Nome fantasia{' '}
+                    <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input autoComplete="organization" maxLength={200} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
           <FormField
             control={control}
@@ -219,7 +232,19 @@ export function ProfileForm({
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <LockedField label="Nome" value={data.user.name} />
+            <FormField
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="name" maxLength={200} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <LockedField label="E-mail" value={data.user.email} />
             <FormField
               control={control}

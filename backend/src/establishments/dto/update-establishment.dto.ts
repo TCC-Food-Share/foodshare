@@ -1,11 +1,46 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsEmail, IsOptional, IsString, Matches, MaxLength, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
 
+import { trim, trimToNull } from '../../common/trim-to-null';
 import { NoProhibitedContent } from '../../content-moderation/no-prohibited-content.validator';
 import { AddressDto } from './address.dto';
 
 export class UpdateEstablishmentDto {
+  @ApiPropertyOptional({
+    example: 'Good Taste',
+    description:
+      'Nome fantasia. Enviado vazio (ou só com espaços), apaga o nome fantasia, que volta a `null`.',
+    maxLength: 200,
+    nullable: true,
+  })
+  @Transform(trimToNull)
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  @NoProhibitedContent()
+  tradeName?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'Maria Silva',
+    description: 'Nome do responsável. Não pode ser vazio.',
+    maxLength: 200,
+  })
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  name?: string;
+
   @ApiPropertyOptional({
     example: '(11) 91234-5678',
     description: 'Celular pessoal do responsável',

@@ -14,6 +14,12 @@ const phoneField = (required: string) =>
   z.string().min(1, required).regex(PHONE_REGEX, 'Telefone inválido.');
 
 export const profileSchema = z.object({
+  tradeName: z.string().max(200, 'Use no máximo 200 caracteres.'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Informe o nome do responsável.')
+    .max(200, 'Use no máximo 200 caracteres.'),
   personalPhone: phoneField('Informe o celular pessoal.'),
   institutionalPhone: phoneField('Informe o celular institucional.'),
   institutionalEmail: emailField('Informe o e-mail institucional.'),
@@ -32,6 +38,8 @@ export type ProfileFormInput = z.infer<typeof profileSchema>;
 
 export function mapResponseToFormValues(data: ProfileResponse): ProfileFormInput {
   return {
+    tradeName: data.tradeName ?? '',
+    name: data.user.name,
     personalPhone: data.user.personalPhone,
     institutionalPhone: data.institutionalPhone,
     institutionalEmail: data.institutionalEmail,

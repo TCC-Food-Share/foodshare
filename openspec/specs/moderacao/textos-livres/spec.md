@@ -8,7 +8,7 @@ Bloquear termos proibidos e links nos textos livres enviados pelas instituiçõe
 
 ### Requirement: Campos de texto livre validados
 
-O sistema SHALL validar o conteúdo dos seguintes campos, sempre que enviados: descrição e nome fantasia no cadastro de estabelecimento e de entidade beneficiária; descrição na edição de estabelecimento e de entidade beneficiária; descrição e observações no cadastro de alimento; texto da sugestão de nova opção. Campo opcional não enviado ou vazio SHALL ser aceito. Razão social, nome do responsável e endereço SHALL NOT passar por esta validação.
+O sistema SHALL validar o conteúdo dos seguintes campos, sempre que enviados: descrição e nome fantasia no cadastro de estabelecimento e de entidade beneficiária; descrição e nome fantasia na edição de estabelecimento e de entidade beneficiária; descrição e observações no cadastro de alimento; texto da sugestão de nova opção. Campo opcional não enviado ou vazio SHALL ser aceito. Razão social, nome do responsável e endereço SHALL NOT passar por esta validação.
 
 #### Scenario: Cadastro de instituição com termo proibido na descrição
 
@@ -24,6 +24,26 @@ O sistema SHALL validar o conteúdo dos seguintes campos, sempre que enviados: d
 
 - **WHEN** uma instituição autenticada envia uma edição com termo proibido na descrição, junto de outros campos válidos
 - **THEN** o sistema recusa a edição inteira com `400` e `code` `PROHIBITED_CONTENT` e não altera nenhum dado, nem a imagem
+
+#### Scenario: Edição de instituição com termo proibido no nome fantasia
+
+- **WHEN** uma instituição autenticada envia uma edição com termo proibido no nome fantasia, junto de uma imagem válida
+- **THEN** o sistema recusa a edição inteira com `400` e `code` `PROHIBITED_CONTENT`, informando o campo `tradeName`, e não altera nenhum dado, nem a imagem
+
+#### Scenario: Edição de instituição com link no nome fantasia
+
+- **WHEN** uma instituição autenticada envia uma edição com um domínio (ex: `meusite.com.br`) no nome fantasia
+- **THEN** o sistema recusa a edição inteira com `400` e `code` `PROHIBITED_CONTENT`, informando o campo `tradeName`
+
+#### Scenario: Nome fantasia apagado na edição
+
+- **WHEN** uma instituição autenticada envia uma edição com o nome fantasia vazio
+- **THEN** o sistema não recusa a edição por esse campo
+
+#### Scenario: Nome do responsável fora da validação na edição
+
+- **WHEN** uma instituição autenticada envia uma edição com um termo proibido apenas no nome do responsável
+- **THEN** o sistema não recusa a edição por esse motivo
 
 #### Scenario: Cadastro de alimento com termo proibido
 

@@ -77,6 +77,8 @@ export function ProfilePage() {
     resolver: zodResolver(profileSchema),
     mode: 'onTouched',
     defaultValues: {
+      tradeName: '',
+      name: '',
       personalPhone: '',
       institutionalPhone: '',
       institutionalEmail: '',
@@ -112,6 +114,8 @@ export function ProfilePage() {
   async function onSubmit(values: ProfileFormInput) {
     setServerError(null);
     const payload: UpdateProfilePayload = {
+      tradeName: values.tradeName,
+      name: values.name,
       personalPhone: values.personalPhone,
       institutionalPhone: values.institutionalPhone,
       institutionalEmail: values.institutionalEmail,
@@ -129,12 +133,18 @@ export function ProfilePage() {
     try {
       const updated = await mutation.mutateAsync({ payload, image: values.image });
       queryClient.setQueryData(queryKey, updated);
-      if (values.image) void refreshSession();
+      void refreshSession();
       toast.success('Perfil atualizado.');
       setMode('view');
     } catch (error) {
-      if (prohibitedContentFields(error).includes('description')) {
-        form.setError('description', { message: PROHIBITED_CONTENT_MESSAGE });
+      const prohibitedFields = prohibitedContentFields(error).filter(
+        (fieldName): fieldName is 'description' | 'tradeName' =>
+          fieldName === 'description' || fieldName === 'tradeName',
+      );
+      if (prohibitedFields.length > 0) {
+        for (const fieldName of prohibitedFields) {
+          form.setError(fieldName, { message: PROHIBITED_CONTENT_MESSAGE });
+        }
         return;
       }
       const imageMessage = imageErrorMessage(error);
