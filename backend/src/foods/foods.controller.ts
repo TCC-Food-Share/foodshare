@@ -87,8 +87,9 @@ export class FoodsController {
       'Lista, de forma paginada, os alimentos disponíveis na plataforma — status "Ativo", ' +
       'não excluídos e não vencidos — cadastrados por qualquer estabelecimento (RF20). ' +
       'Aceita filtros opcionais de busca: `name` e `city` casam por trecho ignorando ' +
-      'caixa e acento, `categoryId` filtra pela categoria e `state` pela UF do estabelecimento ' +
-      'de origem; filtros informados combinam por E. Requer usuário autenticado.',
+      'caixa e acento, `categoryId` filtra pela categoria, `state` pela UF do estabelecimento ' +
+      'de origem e `establishmentId` pelo estabelecimento (perfil público, RF13); filtros ' +
+      'informados combinam por E. Requer usuário autenticado.',
   })
   @ApiOkResponse({
     description: 'Página de alimentos disponíveis.',

@@ -10,10 +10,12 @@ import {
   StoreIcon,
 } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Role } from '@/features/auth/auth-context';
+import { institutionProfilePath } from '@/features/institutions/institution-kind';
 import { counterpartOf } from '@/features/orders/order-contact';
 import { OrderStatusBadge } from '@/features/orders/order-status-badge';
 import type { OrderDetail, OrderInstitution } from '@/features/orders/orders-api';
@@ -134,7 +136,15 @@ export function CounterpartCard({ order, role }: { order: OrderDetail; role: Rol
           <Icon className="text-primary-foreground size-5" />
         </div>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-foreground text-sm font-semibold">{institution.companyName}</span>
+          <Link
+            to={institutionProfilePath(
+              isEstablishmentView ? 'beneficiary-entity' : 'establishment',
+              institution.id,
+            )}
+            className="text-foreground text-sm font-semibold underline-offset-2 hover:underline"
+          >
+            {institution.companyName}
+          </Link>
           {institution.tradeName && (
             <span className="text-muted-foreground text-xs">
               Nome fantasia: {institution.tradeName}

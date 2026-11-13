@@ -76,7 +76,15 @@ describe('BeneficiaryEntitiesService', () => {
     beneficiaryEntity: {
       findUnique: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
       findFirst: jest.fn<(args: { where: Record<string, unknown> }) => Promise<unknown>>(),
+      findMany:
+        jest.fn<
+          (args: {
+            where: Record<string, unknown>;
+            select: Record<string, unknown>;
+          }) => Promise<unknown>
+        >(),
     },
+    $queryRaw: jest.fn<(sql: Prisma.Sql) => Promise<unknown>>(),
   };
 
   let service: BeneficiaryEntitiesService;
@@ -521,6 +529,147 @@ describe('BeneficiaryEntitiesService', () => {
         service.update(20, { institutionalEmail: 'taken@test.com' }, image),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(storageMock.store).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('public listing and profile (RF10, RF12, RF13, RN35, RN36)', () => {
+    const sqlText = (sql: Prisma.Sql): string => sql.strings.join(' ');
+
+    const publicRow = (overrides: Record<string, unknown> = {}) => ({
+      id: 7,
+      tradeName: 'Good Taste',
+      companyName: 'Good Taste Ltd',
+      description: 'Public description',
+      user: { image: 'users/seven.png' },
+      address: { city: 'Birigui', state: 'SP' },
+      ...overrides,
+    });
+
+    beforeEach(() => {
+      prismaMock.$queryRaw.mockImplementation((sql: Prisma.Sql) =>
+        Promise.resolve(
+          sqlText(sql).includes('count(*)') ? [{ count: BigInt(2) }] : [{ id: 8 }, { id: 7 }],
+        ),
+      );
+      prismaMock.beneficiaryEntity.findMany.mockResolvedValue([
+        publicRow(),
+        publicRow({ id: 8, tradeName: null, companyName: 'Aurora Market Ltd' }),
+      ]);
+    });
+
+    it('returns only the public keys of each item, in the page order', async () => {
+      const result = await service.listPublic({});
+
+      expect(result).toEqual({
+        data: [
+          {
+            id: 8,
+            name: 'Aurora Market Ltd',
+            image: 'https://api.test/files/users/seven.png',
+            city: 'Birigui',
+            state: 'SP',
+          },
+          {
+            id: 7,
+            name: 'Good Taste',
+            image: 'https://api.test/files/users/seven.png',
+            city: 'Birigui',
+            state: 'SP',
+          },
+        ],
+        total: 2,
+        page: 1,
+        pageSize: 10,
+      });
+      for (const item of result.data) {
+        expect(Object.keys(item).sort()).toEqual(['city', 'id', 'image', 'name', 'state']);
+      }
+    });
+
+    it('hydrates with the public select only', async () => {
+      await service.listPublic({});
+
+      const args = prismaMock.beneficiaryEntity.findMany.mock.calls[0][0];
+      expect(Object.keys(args.select).sort()).toEqual(
+        ['address', 'companyName', 'description', 'id', 'tradeName', 'user'].sort(),
+      );
+    });
+
+    it('filters out deleted and unconfirmed institutions in SQL', async () => {
+      await service.listPublic({});
+
+      const text = sqlText(prismaMock.$queryRaw.mock.calls[0][0]);
+      expect(text).toContain('i.deleted = false');
+      expect(text).toContain('u."emailVerified" = true');
+    });
+
+    it('applies the requested page', async () => {
+      const result = await service.listPublic({ page: 3, pageSize: 20 });
+
+      expect(result.page).toBe(3);
+      expect(result.pageSize).toBe(20);
+      const idQuery = prismaMock.$queryRaw.mock.calls
+        .map((call) => call[0])
+        .find((sql) => !sqlText(sql).includes('count(*)'))!;
+      expect(idQuery.values.slice(-2)).toEqual([20, 40]);
+    });
+
+    it('skips hydration when the page is empty', async () => {
+      prismaMock.$queryRaw.mockImplementation((sql: Prisma.Sql) =>
+        Promise.resolve(sqlText(sql).includes('count(*)') ? [{ count: BigInt(0) }] : []),
+      );
+
+      const result = await service.listPublic({ search: 'nothing' });
+
+      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
+      expect(prismaMock.beneficiaryEntity.findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns the public profile with description and nothing else', async () => {
+      prismaMock.beneficiaryEntity.findFirst.mockResolvedValue(publicRow());
+
+      const profile = await service.findPublic(7);
+
+      expect(profile).toEqual({
+        id: 7,
+        name: 'Good Taste',
+        image: 'https://api.test/files/users/seven.png',
+        description: 'Public description',
+        city: 'Birigui',
+        state: 'SP',
+      });
+      expect(Object.keys(profile).sort()).toEqual([
+        'city',
+        'description',
+        'id',
+        'image',
+        'name',
+        'state',
+      ]);
+    });
+
+    it('falls back to the company name without a trade name', async () => {
+      prismaMock.beneficiaryEntity.findFirst.mockResolvedValue(publicRow({ tradeName: null }));
+
+      expect((await service.findPublic(7)).name).toBe('Good Taste Ltd');
+    });
+
+    it('looks the profile up only among public institutions', async () => {
+      prismaMock.beneficiaryEntity.findFirst.mockResolvedValue(publicRow());
+
+      await service.findPublic(7);
+
+      expect(prismaMock.beneficiaryEntity.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 7, deleted: false, user: { emailVerified: true } },
+        }),
+      );
+    });
+
+    it('responds not found for a deleted, unconfirmed or missing institution', async () => {
+      prismaMock.beneficiaryEntity.findFirst.mockResolvedValue(null);
+
+      await expect(service.findPublic(99)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

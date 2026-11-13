@@ -25,10 +25,12 @@ import { formatLocalDate, formatQuantity } from '@/lib/format';
 interface OrdersTableProps {
   orders: Order[];
   role: Role | null;
-  status: OrderStatusName;
+  /** `null` lists every status together. */
+  status: OrderStatusName | null;
+  showCounterpart?: boolean;
 }
 
-export function OrdersTable({ orders, role, status }: OrdersTableProps) {
+export function OrdersTable({ orders, role, status, showCounterpart = true }: OrdersTableProps) {
   const navigate = useNavigate();
   // The "Cancelado" tab swaps the status column (always the same there) for the reason and who
   // cancelled (RF26, DT33).
@@ -51,7 +53,7 @@ export function OrdersTable({ orders, role, status }: OrdersTableProps) {
             ) : (
               <TableHead className="px-4">Status</TableHead>
             )}
-            <TableHead className="px-4">{counterpartLabel(role)}</TableHead>
+            {showCounterpart && <TableHead className="px-4">{counterpartLabel(role)}</TableHead>}
             <TableHead className="px-4 text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -88,9 +90,11 @@ export function OrdersTable({ orders, role, status }: OrdersTableProps) {
                   <OrderStatusBadge status={order.status.name} />
                 </TableCell>
               )}
-              <TableCell className="min-w-40 px-4 py-3 whitespace-normal">
-                {counterpartName(order, role)}
-              </TableCell>
+              {showCounterpart && (
+                <TableCell className="min-w-40 px-4 py-3 whitespace-normal">
+                  {counterpartName(order, role)}
+                </TableCell>
+              )}
               <TableCell className="px-4 py-3 text-right">
                 <Button variant="ghost" size="icon" asChild>
                   <Link

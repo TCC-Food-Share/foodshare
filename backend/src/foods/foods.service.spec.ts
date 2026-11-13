@@ -255,6 +255,17 @@ describe('FoodsService', () => {
       ]);
     });
 
+    it('narrows the available foods to one establishment', async () => {
+      await service.list({ establishmentId: 4 });
+
+      const sql = idQueryCall();
+      expect(sqlText(sql)).toContain('f.quantity > 0');
+      expect(sqlText(sql)).toContain('e.deleted = false');
+      expect(sqlText(sql)).toContain('f."expirationDate" >=');
+      expect(sqlText(sql)).toContain('f."establishmentId" =');
+      expect(sql.values).toEqual([FOOD_STATUS.ACTIVE, expect.any(Date), 4, 10, 0]);
+    });
+
     it('hydrates by id and preserves the SQL result order', async () => {
       idRows = [{ id: 3 }, { id: 1 }, { id: 2 }];
       prismaMock.food.findMany.mockResolvedValue([

@@ -4,6 +4,17 @@ import { Prisma } from '../../generated/prisma/client';
 import type { BetterAuthInstance } from '../auth/better-auth.token';
 import { BETTER_AUTH } from '../auth/better-auth.token';
 import { ROLE } from '../auth/roles.constants';
+import {
+  INSTITUTION_PUBLIC_SELECT,
+  INSTITUTION_PUBLIC_WHERE,
+  listPublicInstitutions,
+  toPublicProfile,
+} from '../common/institution-public';
+import type {
+  InstitutionPublicProfileDto,
+  PaginatedInstitutionsResponseDto,
+} from '../common/institution-public.dto';
+import type { ListInstitutionsQueryDto } from '../common/list-institutions-query.dto';
 import { IMAGE_FOLDER } from '../files/files.constants';
 import type { ValidatedImage } from '../files/image-file.pipe';
 import { ImageStorageService } from '../files/image-storage.service';
@@ -108,6 +119,30 @@ export class BeneficiaryEntitiesService {
     }
   }
 
+  listPublic(query: ListInstitutionsQueryDto): Promise<PaginatedInstitutionsResponseDto> {
+    return listPublicInstitutions(
+      this.prisma,
+      'beneficiary_entity',
+      query,
+      (ids) =>
+        this.prisma.beneficiaryEntity.findMany({
+          where: { id: { in: ids } },
+          select: INSTITUTION_PUBLIC_SELECT,
+        }),
+      (key) => this.storage.toUrl(key),
+    );
+  }
+
+  async findPublic(id: number): Promise<InstitutionPublicProfileDto> {
+    const row = await this.prisma.beneficiaryEntity.findFirst({
+      where: { id, ...INSTITUTION_PUBLIC_WHERE },
+      select: INSTITUTION_PUBLIC_SELECT,
+    });
+    if (!row) {
+      throw new NotFoundException('Institution not found.');
+    }
+    return toPublicProfile(row, (key) => this.storage.toUrl(key));
+  }
   async findMe(userId: number): Promise<BeneficiaryEntityResponseDto> {
     const beneficiaryEntity = await this.prisma.beneficiaryEntity.findUnique({
       where: { userId },

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Patch, Post, UploadedFile } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UploadedFile,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -7,12 +17,18 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 
 import { RequireRoles } from '../auth/require-roles.decorator';
-import { INSTITUTION_ROLES } from '../auth/roles.constants';
+import { INSTITUTION_ROLES, ROLE } from '../auth/roles.constants';
+import {
+  InstitutionPublicProfileDto,
+  PaginatedInstitutionsResponseDto,
+} from '../common/institution-public.dto';
+import { ListInstitutionsQueryDto } from '../common/list-institutions-query.dto';
 import { ImageFilePipe, type ValidatedImage } from '../files/image-file.pipe';
 import { ImageUpload } from '../files/image-upload.decorator';
 import { SignupThrottle } from '../rate-limit/signup-throttle.decorator';
@@ -55,6 +71,27 @@ export class EstablishmentsController {
     @UploadedFile(new ImageFilePipe({ required: true })) image: ValidatedImage,
   ): Promise<EstablishmentResponseDto> {
     return this.establishmentsService.create(dto, image);
+  }
+
+  @Get()
+  @RequireRoles(ROLE.BENEFICIARY_ENTITY)
+  @ApiOperation({
+    summary: 'Listagem pública de estabelecimentos',
+    description:
+      'Lista, de forma paginada e em ordem alfabética do nome público, os estabelecimentos não ' +
+      'excluídos e com e-mail confirmado (RF10, RN35, DT41). Cada item traz só dados públicos ' +
+      '(RN36): nome fantasia ou, sem ele, razão social, imagem, cidade e UF. `search` casa nome ' +
+      'fantasia, razão social e descrição ignorando caixa e acento, e o CNPJ quando o texto tem só ' +
+      'dígitos e pontuação; `city` e `state` filtram pelo endereço. Só a entidade beneficiária acessa.',
+  })
+  @ApiOkResponse({
+    description: 'Página de estabelecimentos.',
+    type: PaginatedInstitutionsResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Parâmetro de busca ou de paginação inválido.' })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  listPublic(@Query() query: ListInstitutionsQueryDto): Promise<PaginatedInstitutionsResponseDto> {
+    return this.establishmentsService.listPublic(query);
   }
 
   @Get('me')
@@ -104,5 +141,26 @@ export class EstablishmentsController {
     @UploadedFile(new ImageFilePipe({ required: false })) image: ValidatedImage | undefined,
   ): Promise<EstablishmentResponseDto> {
     return this.establishmentsService.update(Number(session.user.id), dto, image);
+  }
+
+  @Get(':id')
+  @RequireRoles(ROLE.BENEFICIARY_ENTITY)
+  @ApiOperation({
+    summary: 'Perfil público de estabelecimento',
+    description:
+      'Retorna o perfil público (RF13, RN36): nome fantasia ou, sem ele, razão social, imagem, ' +
+      'descrição, cidade e UF. Nunca traz contato, endereço, CNPJ ou dado do responsável. ' +
+      'Estabelecimento excluído, inexistente ou com e-mail não confirmado responde `404` ' +
+      '(RN35, DT41). Só a entidade beneficiária acessa.',
+  })
+  @ApiOkResponse({
+    description: 'Perfil público.',
+    type: InstitutionPublicProfileDto,
+  })
+  @ApiBadRequestResponse({ description: 'Id em formato inválido.' })
+  @ApiNotFoundResponse({ description: 'Instituição não encontrada.' })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  findPublic(@Param('id', ParseIntPipe) id: number): Promise<InstitutionPublicProfileDto> {
+    return this.establishmentsService.findPublic(id);
   }
 }
