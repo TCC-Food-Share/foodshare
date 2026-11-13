@@ -362,6 +362,9 @@ export class OrdersService {
     const where: Prisma.OrderWhereInput = {
       deleted: false,
       ...owner,
+      ...(query.beneficiaryEntityId !== undefined
+        ? { AND: [{ beneficiaryEntityId: query.beneficiaryEntityId }] }
+        : {}),
       ...(query.status ? { status: { name: query.status } } : {}),
       ...(query.search ? { id: { in: await this.searchOrderIds(owner, query.search) } } : {}),
     };

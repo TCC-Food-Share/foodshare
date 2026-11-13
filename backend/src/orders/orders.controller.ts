@@ -83,6 +83,8 @@ export class OrdersController {
       'Busca opcional `search` (até 100 caracteres) por trecho do nome do alimento, do nome do ' +
       'estabelecimento (razão social ou nome fantasia) ou da data do pedido em dd/mm/aaaa ' +
       '(fuso de Brasília), sem diferenciar maiúsculas nem acentos; combina com `status`. ' +
+      'Filtro opcional `beneficiaryEntityId`, aplicado junto do recorte da sessão: o ' +
+      'estabelecimento vê só os pedidos dele com aquela entidade (RF12). ' +
       'Paginação por ' +
       '`page` (default 1) e `pageSize` (10, 20, 50 ou 100; default 10). Ordenado do pedido mais ' +
       'recente para o mais antigo.',

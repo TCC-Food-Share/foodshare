@@ -1148,6 +1148,36 @@ describe('OrdersService', () => {
       );
     });
 
+    it('narrows the establishment orders to one beneficiary entity, keeping the session scope', async () => {
+      await service.list(30, { beneficiaryEntityId: 7, status: ORDER_STATUS.DONATED });
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            deleted: false,
+            establishmentId: 3,
+            AND: [{ beneficiaryEntityId: 7 }],
+            status: { name: ORDER_STATUS.DONATED },
+          },
+        }),
+      );
+      expect(prismaMock.order.count).toHaveBeenCalledWith({
+        where: expect.objectContaining({ establishmentId: 3, AND: [{ beneficiaryEntityId: 7 }] }),
+      });
+    });
+
+    it('never widens the scope of a beneficiary entity asking for another entity', async () => {
+      prismaMock.establishment.findUnique.mockResolvedValue(null);
+
+      await service.list(20, { beneficiaryEntityId: 8 });
+
+      expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deleted: false, beneficiaryEntityId: 7, AND: [{ beneficiaryEntityId: 8 }] },
+        }),
+      );
+    });
+
     it('brings the reason and the canceller of a cancelled order, and nulls for the others', async () => {
       prismaMock.order.findMany.mockResolvedValue([
         orderRow,

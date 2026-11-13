@@ -80,4 +80,17 @@ export class ListFoodsQueryDto {
   @IsString()
   @Matches(/^[A-Z]{2}$/, { message: 'state must be a 2-letter uppercase state code' })
   state?: string;
+
+  @ApiPropertyOptional({
+    example: 3,
+    description:
+      'Filtra pelo estabelecimento de origem (id). Usado no perfil público do estabelecimento ' +
+      '(RF13); continua valendo o recorte de alimento disponível',
+    minimum: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  establishmentId?: number;
 }

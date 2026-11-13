@@ -51,4 +51,17 @@ export class ListOrdersQueryDto {
   @IsString()
   @MaxLength(100)
   search?: string;
+
+  @ApiPropertyOptional({
+    example: 4,
+    description:
+      'Filtra pela entidade beneficiária (id), sempre dentro dos pedidos do solicitante. ' +
+      'Usado no histórico do perfil público da entidade (RF12)',
+    minimum: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  beneficiaryEntityId?: number;
 }

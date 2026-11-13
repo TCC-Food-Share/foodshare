@@ -503,6 +503,9 @@ export class FoodsService {
     if (query.state) {
       conditions.push(Prisma.sql`a.state = ${query.state}`);
     }
+    if (query.establishmentId !== undefined) {
+      conditions.push(Prisma.sql`f."establishmentId" = ${query.establishmentId}`);
+    }
 
     return Prisma.join(conditions, ' AND ');
   }

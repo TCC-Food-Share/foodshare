@@ -48,4 +48,25 @@ describe('ListOrdersQueryDto', () => {
       expect((await searchOf('a'.repeat(101))).errors).toHaveLength(1);
     });
   });
+
+  describe('beneficiaryEntityId', () => {
+    const idOf = async (beneficiaryEntityId: unknown) => {
+      const dto = plainToInstance(ListOrdersQueryDto, { beneficiaryEntityId });
+      const errors = (await validate(dto)).filter(
+        (error) => error.property === 'beneficiaryEntityId',
+      );
+      return { dto, errors };
+    };
+
+    it('accepts a positive integer from the query string', async () => {
+      const { dto, errors } = await idOf('7');
+
+      expect(errors).toHaveLength(0);
+      expect(dto.beneficiaryEntityId).toBe(7);
+    });
+
+    it.each(['abc', '0', '-1', '1.5'])('rejects "%s"', async (value) => {
+      expect((await idOf(value)).errors).toHaveLength(1);
+    });
+  });
 });
