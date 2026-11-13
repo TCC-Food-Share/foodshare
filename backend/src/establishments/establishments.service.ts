@@ -138,10 +138,15 @@ export class EstablishmentsService {
 
     try {
       const updated = await this.prisma.$transaction(async (tx) => {
-        if (dto.personalPhone !== undefined || newImageKey !== undefined) {
+        if (
+          dto.name !== undefined ||
+          dto.personalPhone !== undefined ||
+          newImageKey !== undefined
+        ) {
           await tx.user.update({
             where: { id: userId },
             data: {
+              ...(dto.name !== undefined && { name: dto.name }),
               ...(dto.personalPhone !== undefined && { personalPhone: dto.personalPhone }),
               ...(newImageKey !== undefined && { image: newImageKey }),
             },
@@ -165,6 +170,7 @@ export class EstablishmentsService {
         return tx.establishment.update({
           where: { id: existing.id },
           data: {
+            ...(dto.tradeName !== undefined && { tradeName: dto.tradeName }),
             ...(dto.institutionalPhone !== undefined && {
               institutionalPhone: dto.institutionalPhone,
             }),

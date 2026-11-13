@@ -352,6 +352,48 @@ describe('BeneficiaryEntitiesService', () => {
       expect(result.description).toBe('New description');
     });
 
+    it('saves the responsible name on the user and the trade name on the institution', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(existingEntity);
+      mockUpdatedResult();
+
+      await service.update(20, { name: 'Ana Lima', tradeName: 'New Trade Name' });
+
+      expect(tx.user.update).toHaveBeenCalledWith({
+        where: { id: 20 },
+        data: { name: 'Ana Lima' },
+      });
+      expect(tx.beneficiaryEntity.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { tradeName: 'New Trade Name' } }),
+      );
+    });
+
+    it('clears the trade name when it comes as null', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(existingEntity);
+      mockUpdatedResult();
+
+      await service.update(20, { tradeName: null });
+
+      expect(tx.user.update).not.toHaveBeenCalled();
+      expect(tx.beneficiaryEntity.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { tradeName: null } }),
+      );
+    });
+
+    it('keeps the trade name and the responsible name when they are not sent', async () => {
+      prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(existingEntity);
+      mockUpdatedResult();
+
+      await service.update(20, { personalPhone: '18988887777' });
+
+      expect(tx.user.update).toHaveBeenCalledWith({
+        where: { id: 20 },
+        data: { personalPhone: '18988887777' },
+      });
+      expect(tx.beneficiaryEntity.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: {} }),
+      );
+    });
+
     it('throws NotFoundException when the authenticated user has no beneficiary entity', async () => {
       prismaMock.beneficiaryEntity.findUnique.mockResolvedValue(null);
 

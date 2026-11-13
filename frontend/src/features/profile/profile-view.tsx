@@ -82,7 +82,7 @@ export function ProfileView({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Field label="Razão social" value={data.companyName} locked />
-            <Field label="Nome fantasia" value={data.tradeName ?? ''} locked />
+            <Field label="Nome fantasia" value={data.tradeName ?? ''} />
             <Field label="CNPJ" value={data.cnpj} locked />
             <Field label="E-mail institucional" value={data.institutionalEmail} />
             <Field label="Celular institucional" value={data.institutionalPhone} />
@@ -97,7 +97,7 @@ export function ProfileView({
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Field label="Nome" value={data.user.name} locked />
+            <Field label="Nome" value={data.user.name} />
             <Field label="E-mail" value={data.user.email} locked />
             <Field label="Celular pessoal" value={data.user.personalPhone} />
           </CardContent>
