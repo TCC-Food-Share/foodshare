@@ -75,10 +75,11 @@ export interface CreateOrderPayload {
 }
 
 export interface ListOrdersParams {
-  status: OrderStatusName;
+  status?: OrderStatusName;
   page: number;
   pageSize: number;
   search?: string;
+  beneficiaryEntityId?: number;
 }
 
 export const createOrder = (payload: CreateOrderPayload) => api.post<Order>('/orders', payload);

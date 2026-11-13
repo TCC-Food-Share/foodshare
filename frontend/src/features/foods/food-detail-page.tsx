@@ -17,6 +17,7 @@ import { useAuth } from '@/features/auth/use-auth';
 import { FOOD_REQUEST_TYPE_LABELS } from '@/features/foods/food-request-type';
 import { FoodStatusBadge } from '@/features/foods/food-status-badge';
 import { establishmentDisplayName, getFood } from '@/features/foods/foods-api';
+import { institutionProfilePath } from '@/features/institutions/institution-kind';
 import { RequestDonationCard } from '@/features/orders/request-donation-card';
 import { ApiError } from '@/lib/api';
 import { formatDate, formatQuantity } from '@/lib/format';
@@ -167,9 +168,18 @@ export function FoodDetailPage() {
                 <StoreIcon className="text-primary-foreground size-5" />
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-foreground text-sm font-semibold">
-                  {establishmentDisplayName(food.establishment)}
-                </span>
+                {role === 'beneficiary' ? (
+                  <Link
+                    to={institutionProfilePath('establishment', food.establishment.id)}
+                    className="text-foreground text-sm font-semibold underline-offset-2 hover:underline"
+                  >
+                    {establishmentDisplayName(food.establishment)}
+                  </Link>
+                ) : (
+                  <span className="text-foreground text-sm font-semibold">
+                    {establishmentDisplayName(food.establishment)}
+                  </span>
+                )}
                 {food.establishment.city && food.establishment.state && (
                   <span className="text-muted-foreground text-xs">
                     {food.establishment.city}, {food.establishment.state}

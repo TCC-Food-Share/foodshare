@@ -38,7 +38,9 @@ export interface FoodFilters {
   categoryId?: number;
   city?: string;
   state?: string;
+  establishmentId?: number;
   page?: number;
+  pageSize?: number;
 }
 
 export interface CreateFoodPayload {

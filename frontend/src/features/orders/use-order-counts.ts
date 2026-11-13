@@ -4,12 +4,18 @@ import { ORDER_STATUSES, type OrderStatusName } from '@/features/orders/order-st
 import { listOrders, ORDERS_REFETCH_INTERVAL } from '@/features/orders/orders-api';
 import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
-export function useOrderCounts(search = ''): Record<OrderStatusName, number | undefined> {
+export function useOrderCounts(
+  search = '',
+  beneficiaryEntityId?: number,
+  enabled = true,
+): Record<OrderStatusName, number | undefined> {
   const results = useQueries({
     queries: ORDER_STATUSES.map((status) => ({
-      queryKey: ['orders', 'count', status, search],
-      queryFn: () => listOrders({ status, page: 1, pageSize: DEFAULT_PAGE_SIZE, search }),
+      queryKey: ['orders', 'count', status, search, beneficiaryEntityId],
+      queryFn: () =>
+        listOrders({ status, page: 1, pageSize: DEFAULT_PAGE_SIZE, search, beneficiaryEntityId }),
       refetchInterval: ORDERS_REFETCH_INTERVAL,
+      enabled,
     })),
   });
 

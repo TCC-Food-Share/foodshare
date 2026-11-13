@@ -23,6 +23,9 @@ import { SignUpPage } from '@/features/auth/sign-up/sign-up-page';
 import { FeedPage } from '@/features/foods/feed-page';
 import { FoodDetailPage } from '@/features/foods/food-detail-page';
 import { MyFoodsPage } from '@/features/foods/my-foods-page';
+import { EntityProfilePage } from '@/features/institutions/entity-profile-page';
+import { EstablishmentProfilePage } from '@/features/institutions/establishment-profile-page';
+import { InstitutionsPage } from '@/features/institutions/institutions-page';
 import { OrderDetailPage } from '@/features/orders/order-detail-page';
 import { OrdersPage } from '@/features/orders/orders-page';
 import { ProfilePage } from '@/features/profile/profile-page';
@@ -72,7 +75,26 @@ export const router = createBrowserRouter([
               { path: '/perfil', element: <ProfilePage /> },
               {
                 element: <RoleRoute roles={['establishment']} />,
-                children: [{ path: '/meus-alimentos', element: <MyFoodsPage /> }],
+                children: [
+                  { path: '/meus-alimentos', element: <MyFoodsPage /> },
+                  {
+                    path: '/entidades',
+                    element: (
+                      <InstitutionsPage key="beneficiary-entity" kind="beneficiary-entity" />
+                    ),
+                  },
+                  { path: '/entidades/:id', element: <EntityProfilePage /> },
+                ],
+              },
+              {
+                element: <RoleRoute roles={['beneficiary']} />,
+                children: [
+                  {
+                    path: '/estabelecimentos',
+                    element: <InstitutionsPage key="establishment" kind="establishment" />,
+                  },
+                  { path: '/estabelecimentos/:id', element: <EstablishmentProfilePage /> },
+                ],
               },
             ],
           },

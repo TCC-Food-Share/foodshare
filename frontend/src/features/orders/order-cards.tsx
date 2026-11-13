@@ -15,10 +15,12 @@ import { formatLocalDate, formatQuantity } from '@/lib/format';
 interface OrderCardsProps {
   orders: Order[];
   role: Role | null;
-  status: OrderStatusName;
+  /** `null` lists every status together. */
+  status: OrderStatusName | null;
+  showCounterpart?: boolean;
 }
 
-export function OrderCards({ orders, role, status }: OrderCardsProps) {
+export function OrderCards({ orders, role, status, showCounterpart = true }: OrderCardsProps) {
   const cancelledTab = status === ORDER_STATUS.CANCELLED;
   return (
     <ul className="flex flex-col gap-3 md:hidden">
@@ -42,9 +44,11 @@ export function OrderCards({ orders, role, status }: OrderCardsProps) {
                 <span className="text-foreground tabular-nums">
                   {formatQuantity(order.quantity)} {order.food.quantityUnit}
                 </span>
-                <span className="text-muted-foreground truncate text-xs">
-                  {counterpartLabel(role)}: {counterpartName(order, role)}
-                </span>
+                {showCounterpart && (
+                  <span className="text-muted-foreground truncate text-xs">
+                    {counterpartLabel(role)}: {counterpartName(order, role)}
+                  </span>
+                )}
                 {cancelledTab && (
                   <>
                     <span className="text-muted-foreground text-xs">
