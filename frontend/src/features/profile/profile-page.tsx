@@ -10,6 +10,7 @@ import { Form } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/use-auth';
 import { imageErrorMessage } from '@/features/files/image-errors';
+import { DangerZone } from '@/features/profile/danger-zone';
 import {
   getMyProfile,
   updateMyProfile,
@@ -224,6 +225,8 @@ export function ProfilePage() {
           </form>
         </Form>
       )}
+
+      <DangerZone role={role} />
     </div>
   );
 }

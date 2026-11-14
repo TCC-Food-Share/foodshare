@@ -198,7 +198,7 @@ describe('OrdersService', () => {
       Promise.resolve(foodStatusByName[args.where.name]),
     );
     prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
-    prismaMock.$queryRaw.mockResolvedValue([]);
+    prismaMock.$queryRaw.mockResolvedValue([{ id: 7 }]);
     prismaMock.cancellationReason.findUnique.mockResolvedValue({ id: 4, isSystem: false });
     foodsServiceMock.findAvailableById.mockResolvedValue(foodRow);
 
@@ -253,6 +253,24 @@ describe('OrdersService', () => {
 
       await expect(service.create(99, dto)).rejects.toBeInstanceOf(NotFoundException);
       expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses the order when the entity was deleted while waiting for its lock', async () => {
+      prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+      await expect(service.create(20, dto)).rejects.toBeInstanceOf(NotFoundException);
+      expect(foodsServiceMock.findAvailableById).not.toHaveBeenCalled();
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('locks the live entity (FOR SHARE) before the food', async () => {
+      await service.create(20, dto);
+
+      const [entityLock, foodLock] = prismaMock.$queryRaw.mock.calls;
+      expect((entityLock[0] as string[]).join('?')).toContain('FROM beneficiary_entity');
+      expect((entityLock[0] as string[]).join('?')).toContain('deleted = false FOR SHARE');
+      expect(entityLock[1]).toBe(7);
+      expect((foodLock[0] as string[]).join('?')).toContain('FROM food');
     });
 
     it('throws NotFoundException when the food is not available', async () => {

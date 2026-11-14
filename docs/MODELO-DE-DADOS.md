@@ -159,7 +159,8 @@ Aplicado na 3.2 (`cancelar_pedido`): o enum `OrderCancelledBy` e `cancelledBy`.
 A migration preenche `ESTABLISHMENT` nos pedidos `Cancelado` que já existem,
 porque até ali só a exclusão de alimento (RF16) cancelava. Os quatro valores
 entram de uma vez: a 3.2 grava `ESTABLISHMENT` e `BENEFICIARY_ENTITY`, e as
-changes 4.4, 5.3 e 6.1 gravam o valor de cada fluxo delas.
+changes 4.4, 5.3 e 6.1 gravam o valor de cada fluxo delas. A 4.4 grava a parte
+que excluiu a própria conta, `ESTABLISHMENT` ou `BENEFICIARY_ENTITY` (DT44).
 
 ## Listas padronizadas: regras comuns
 

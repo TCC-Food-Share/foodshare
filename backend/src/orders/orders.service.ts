@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { OrderCancelledBy, Prisma } from '../../generated/prisma/client';
+import { lockLiveBeneficiaryEntityForShare } from '../account-deletion/institution-locks';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { ImageStorageService } from '../files/image-storage.service';
 import {
@@ -86,6 +87,10 @@ export class OrdersService {
     }
 
     const order = await this.prisma.$transaction(async (tx) => {
+      // Entity before food (lock order of account deletion): a deletion in flight finishes first.
+      if (!(await lockLiveBeneficiaryEntityForShare(tx, beneficiaryEntity.id))) {
+        throw new NotFoundException('Beneficiary entity not found.');
+      }
       await lockFood(tx, dto.foodId);
 
       const food = await this.foodsService.findAvailableById(dto.foodId, tx);

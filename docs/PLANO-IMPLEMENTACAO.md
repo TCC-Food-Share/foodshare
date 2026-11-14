@@ -52,7 +52,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | 4.1 | `recuperar-senha`               | RF08, RF75, RNF11, RNF12, RN33, RN47, RN48  | 0.1            | 29/10 | ✅     |
 | 4.2 | `perfil-completo`               | RF03, RF11 (ajustes)                        | 0.3            | 30/10 | ✅     |
 | 4.3 | `instituicoes-e-perfil-publico` | RF10, RF12, RF13, RN35, RN36                | 4.2            | 01/11 | ✅     |
-| 4.4 | `exclusao-propria-conta`        | RF04, RF05, RN28–RN30                       | 3.2            | 03/11 | ⬜     |
+| 4.4 | `exclusao-propria-conta`        | RF04, RF05, RN28–RN30                       | 3.2            | 03/11 | ✅     |
 | 5.1 | `admin-administradores`         | RF29–RF32                                   | 0.2            | 04/11 | ⬜     |
 | 5.2 | `admin-instituicoes`            | RF41, RF44, RF47, RF48, RF57, RF58          | 5.1, 4.4       | 06/11 | ⬜     |
 | 5.3 | `admin-exclusoes-instituicoes`  | RF42, RF43, RF45, RF46                      | 5.2            | 08/11 | ⬜     |
