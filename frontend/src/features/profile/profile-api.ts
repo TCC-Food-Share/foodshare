@@ -63,3 +63,17 @@ export function updateMyProfile(
     image ? toFormData(payload, { image }, { keepEmpty: ['tradeName'] }) : payload,
   );
 }
+
+export interface DeletionImpact {
+  pendingOrders: number;
+  inProgressOrders: number;
+}
+
+export function getDeletionImpact(role: Role): Promise<DeletionImpact> {
+  return api.get<DeletionImpact>(`${profilePath(role)}/deletion-impact`);
+}
+
+// RF04/RF05: the password goes in the body, never in the URL (DT45).
+export function deleteMyAccount(role: Role, password: string): Promise<void> {
+  return api.delete(profilePath(role), { body: { password } });
+}

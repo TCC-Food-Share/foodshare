@@ -15,6 +15,8 @@ export interface AuthContextValue {
   role: Role | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  // Clears the local session only, for when the server already ended it (account deletion).
+  endSession: () => void;
   refreshSession: () => Promise<void>;
   retrySession: () => void;
 }
