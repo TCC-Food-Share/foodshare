@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { OrderCancelledBy, Prisma } from '../../generated/prisma/client';
+import { lockLiveEstablishmentForShare } from '../account-deletion/institution-locks';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination';
 import { IMAGE_FOLDER } from '../files/files.constants';
 import type { ValidatedImage } from '../files/image-file.pipe';
@@ -120,21 +121,27 @@ export class FoodsService {
     const imageKey = await this.storage.store(IMAGE_FOLDER.FOODS, image);
 
     try {
-      const food = await this.prisma.food.create({
-        data: {
-          image: imageKey,
-          quantity: dto.quantity,
-          requestType: dto.requestType,
-          description: dto.description,
-          notes: dto.notes ?? null,
-          expirationDate: new Date(dto.expirationDate),
-          publishedAt: new Date(),
-          catalogItemId: catalogItem.id,
-          measurementUnitId: unit.id,
-          establishmentId: establishment.id,
-          statusId: status.id,
-        },
-        include: FOOD_INCLUDE,
+      const food = await this.prisma.$transaction(async (tx) => {
+        // A deletion of the establishment in flight finishes first; after it, nothing is created.
+        if (!(await lockLiveEstablishmentForShare(tx, establishment.id))) {
+          throw new NotFoundException('Establishment not found.');
+        }
+        return tx.food.create({
+          data: {
+            image: imageKey,
+            quantity: dto.quantity,
+            requestType: dto.requestType,
+            description: dto.description,
+            notes: dto.notes ?? null,
+            expirationDate: new Date(dto.expirationDate),
+            publishedAt: new Date(),
+            catalogItemId: catalogItem.id,
+            measurementUnitId: unit.id,
+            establishmentId: establishment.id,
+            statusId: status.id,
+          },
+          include: FOOD_INCLUDE,
+        });
       });
       return this.toResponse(food);
     } catch (error) {

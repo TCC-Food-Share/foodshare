@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -13,6 +16,8 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -22,6 +27,9 @@ import {
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 
+import { AccountDeletionService } from '../account-deletion/account-deletion.service';
+import { DeleteAccountDto } from '../account-deletion/dto/delete-account.dto';
+import { DeletionImpactResponseDto } from '../account-deletion/dto/deletion-impact-response.dto';
 import { RequireRoles } from '../auth/require-roles.decorator';
 import { INSTITUTION_ROLES, ROLE } from '../auth/roles.constants';
 import {
@@ -40,7 +48,10 @@ import { UpdateBeneficiaryEntityDto } from './dto/update-beneficiary-entity.dto'
 @ApiTags('Entidades Beneficiárias')
 @Controller('beneficiary-entities')
 export class BeneficiaryEntitiesController {
-  constructor(private readonly beneficiaryEntitiesService: BeneficiaryEntitiesService) {}
+  constructor(
+    private readonly beneficiaryEntitiesService: BeneficiaryEntitiesService,
+    private readonly accountDeletion: AccountDeletionService,
+  ) {}
 
   @Post()
   @AllowAnonymous()
@@ -144,6 +155,42 @@ export class BeneficiaryEntitiesController {
     @UploadedFile(new ImageFilePipe({ required: false })) image: ValidatedImage | undefined,
   ): Promise<BeneficiaryEntityResponseDto> {
     return this.beneficiaryEntitiesService.update(Number(session.user.id), dto, image);
+  }
+
+  @Get('me/deletion-impact')
+  @RequireRoles(...INSTITUTION_ROLES)
+  @ApiOperation({
+    summary: 'Impacto da exclusão da própria conta',
+    description:
+      'Conta os pedidos "Pendente" e "Em andamento" do entidade autenticado que a exclusão da conta ' +
+      'altera (RF05, RN29). Não muda nada.',
+  })
+  @ApiOkResponse({ description: 'Contagem dos pedidos afetados.', type: DeletionImpactResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  @ApiForbiddenResponse({ description: 'Papel sem acesso (`code: ROLE_NOT_ALLOWED`).' })
+  @ApiNotFoundResponse({ description: 'Nenhum entidade vinculado ao usuário autenticado.' })
+  deletionImpact(@Session() session: UserSession): Promise<DeletionImpactResponseDto> {
+    return this.accountDeletion.beneficiaryEntityImpact(Number(session.user.id));
+  }
+
+  @Delete('me')
+  @RequireRoles(...INSTITUTION_ROLES)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Exclusão lógica da própria conta',
+    description:
+      'Confere a senha (DT45) e, numa única transação, os pedidos "Pendente" e "Em andamento" viram "Cancelado" com o motivo de sistema "Conta encerrada pela instituição" (RN30, DT44), a quantidade dos "Em andamento" volta ao estoque, e a entidade, o usuário e os pedidos dela ficam excluídos logicamente, exceto os "Doado" e "Cancelado" de estabelecimentos não excluídos. ' +
+      'Todas as sessões da conta são encerradas (RF05, RN29).',
+  })
+  @ApiNoContentResponse({ description: 'Conta excluída.' })
+  @ApiBadRequestResponse({
+    description: 'Senha ausente ou campo a mais, ou senha errada (`code: INVALID_PASSWORD`).',
+  })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  @ApiForbiddenResponse({ description: 'Papel sem acesso (`code: ROLE_NOT_ALLOWED`).' })
+  @ApiNotFoundResponse({ description: 'Nenhum entidade vinculado ao usuário autenticado.' })
+  deleteMe(@Session() session: UserSession, @Body() dto: DeleteAccountDto): Promise<void> {
+    return this.accountDeletion.deleteOwnBeneficiaryEntity(Number(session.user.id), dto.password);
   }
 
   @Get(':id')

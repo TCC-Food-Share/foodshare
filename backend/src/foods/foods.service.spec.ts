@@ -53,7 +53,9 @@ describe('FoodsService', () => {
     },
   };
 
-  const sqlText = (sql: Prisma.Sql): string => sql.strings.join(' ');
+  // Prisma.sql fragments carry `strings`; tagged `$queryRaw` calls pass the template array itself.
+  const sqlText = (sql: Prisma.Sql | TemplateStringsArray): string =>
+    ('strings' in sql ? sql.strings : sql).join(' ');
 
   let idRows: { id: number }[];
   let countValue: bigint;
@@ -76,7 +78,8 @@ describe('FoodsService', () => {
       findMany: jest.fn<(args: unknown) => Promise<unknown>>(),
       findFirst: jest.fn<(args: unknown) => Promise<unknown>>(),
     },
-    $queryRaw: jest.fn<(sql: Prisma.Sql) => Promise<unknown>>(),
+    $queryRaw: jest.fn<(sql: Prisma.Sql | TemplateStringsArray) => Promise<unknown>>(),
+    $transaction: jest.fn<(cb: (tx: unknown) => Promise<unknown>) => Promise<unknown>>(),
   };
 
   const storageMock = {
@@ -86,7 +89,9 @@ describe('FoodsService', () => {
   };
 
   const idQueryCall = (): Prisma.Sql =>
-    prismaMock.$queryRaw.mock.calls.map((c) => c[0]).find((s) => !sqlText(s).includes('count(*)'))!;
+    prismaMock.$queryRaw.mock.calls
+      .map((c) => c[0])
+      .find((s): s is Prisma.Sql => 'strings' in s && !sqlText(s).includes('count(*)'))!;
 
   const badRequestCode = async (input: CreateFoodDto): Promise<unknown> => {
     const error = await service.create(20, input, image).catch((e: unknown) => e);
@@ -107,7 +112,8 @@ describe('FoodsService', () => {
     prismaMock.food.create.mockResolvedValue(foodRow);
     prismaMock.food.findMany.mockResolvedValue([foodRow]);
     prismaMock.food.findFirst.mockResolvedValue(foodRow);
-    prismaMock.$queryRaw.mockImplementation((sql: Prisma.Sql) =>
+    prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
+    prismaMock.$queryRaw.mockImplementation((sql) =>
       sqlText(sql).includes('count(*)')
         ? Promise.resolve([{ count: countValue }])
         : Promise.resolve(idRows),
@@ -208,6 +214,25 @@ describe('FoodsService', () => {
 
       await expect(service.create(20, dto, image)).rejects.toThrow('db down');
       expect(storageMock.removeQuietly).toHaveBeenCalledWith(imageKey);
+    });
+
+    it('refuses the food and removes the image when the establishment was deleted meanwhile', async () => {
+      prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+      await expect(service.create(20, dto, image)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.food.create).not.toHaveBeenCalled();
+      expect(storageMock.removeQuietly).toHaveBeenCalledWith(imageKey);
+    });
+
+    it('creates the food inside a transaction holding the establishment lock (FOR SHARE)', async () => {
+      await service.create(20, dto, image);
+
+      const lock = prismaMock.$queryRaw.mock.calls[0];
+      expect(sqlText(lock[0])).toContain('FROM establishment');
+      expect(sqlText(lock[0])).toContain('FOR SHARE');
+      expect(prismaMock.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        prismaMock.food.create.mock.invocationCallOrder[0],
+      );
     });
   });
 
