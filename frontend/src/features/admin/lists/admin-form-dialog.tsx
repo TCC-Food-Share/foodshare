@@ -20,6 +20,8 @@ interface AdminFormDialogShellProps {
   description: string;
   error: string | null;
   pending: boolean;
+  /** Desabilita o "Salvar" além do envio em andamento (ex.: edição sem mudança). */
+  submitDisabled?: boolean;
   onSubmit: () => void;
   children: ReactNode;
 }
@@ -32,6 +34,7 @@ export function AdminFormDialogShell({
   description,
   error,
   pending,
+  submitDisabled = false,
   onSubmit,
   children,
 }: AdminFormDialogShellProps) {
@@ -75,7 +78,7 @@ export function AdminFormDialogShell({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || submitDisabled}>
               {pending ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
               Salvar
             </Button>

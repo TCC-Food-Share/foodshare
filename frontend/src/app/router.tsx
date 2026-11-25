@@ -6,6 +6,7 @@ import { AdminHomePage } from '@/features/admin/admin-home-page';
 import { AdminLayout } from '@/features/admin/admin-layout';
 import { ADMIN_NAV_ITEMS } from '@/features/admin/admin-nav-items';
 import { AdminPlaceholderPage } from '@/features/admin/admin-placeholder-page';
+import { AdminAdministratorsPage } from '@/features/admin/administrators/admin-administrators-page';
 import { AdminCancellationReasonsPage } from '@/features/admin/lists/admin-cancellation-reasons-page';
 import { AdminCategoriesPage } from '@/features/admin/lists/admin-categories-page';
 import { AdminFoodItemsPage } from '@/features/admin/lists/admin-food-items-page';
@@ -31,6 +32,7 @@ import { OrdersPage } from '@/features/orders/orders-page';
 import { ProfilePage } from '@/features/profile/profile-page';
 
 const ADMIN_LIST_PAGES: Record<string, ReactNode> = {
+  '/admin/administradores': <AdminAdministratorsPage />,
   '/admin/categorias': <AdminCategoriesPage />,
   '/admin/catalogo': <AdminFoodItemsPage />,
   '/admin/unidades': <AdminMeasurementUnitsPage />,
