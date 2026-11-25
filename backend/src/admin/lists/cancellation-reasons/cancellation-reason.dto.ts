@@ -52,3 +52,11 @@ export class PaginatedAdminCancellationReasonsDto {
   @ApiProperty({ example: 20 })
   pageSize!: number;
 }
+
+export class CancellationReasonOptionDto {
+  @ApiProperty({ example: 8 })
+  id!: number;
+
+  @ApiProperty({ example: 'Estabelecimento fechado' })
+  name!: string;
+}
