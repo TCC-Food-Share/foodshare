@@ -25,6 +25,7 @@ import { sessionAdministrator } from '../common/session-administrator';
 import { AdminCancellationReasonsService } from './admin-cancellation-reasons.service';
 import {
   AdminCancellationReasonDto,
+  CancellationReasonOptionDto,
   ListCancellationReasonsQueryDto,
   PaginatedAdminCancellationReasonsDto,
   SaveCancellationReasonDto,
@@ -44,6 +45,19 @@ export class AdminCancellationReasonsController {
   @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
   list(@Query() query: ListCancellationReasonsQueryDto) {
     return this.service.list(query);
+  }
+
+  @Get('options')
+  @ApiOperation({
+    summary: 'Motivos para a exclusão de instituição',
+    description:
+      'DT49: motivos que o administrador pode escolher ao excluir logicamente uma instituição, ' +
+      'sem os de sistema (RN31), em ordem alfabética e sem paginação.',
+  })
+  @ApiOkResponse({ type: [CancellationReasonOptionDto] })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  options() {
+    return this.service.options();
   }
 
   @Post()

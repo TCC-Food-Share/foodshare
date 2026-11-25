@@ -21,11 +21,21 @@ export interface DeletionImpact {
 }
 
 // Who cancels and why. Self-deletion uses the system reason and the party itself (RN30, DT44);
-// the admin panel (5.3) passes the reason it picked and ADMINISTRATOR.
+// the admin panel passes the reason it picked and ADMINISTRATOR (DT49).
 export interface ClosureCancellation {
   cancellationReasonId: number;
   cancelledBy: OrderCancelledBy;
 }
+
+export interface ClosureResult {
+  closed: boolean;
+  rejectedOrders: number;
+  cancelledOrders: number;
+}
+
+const NOT_CLOSED: ClosureResult = { closed: false, rejectedOrders: 0, cancelledOrders: 0 };
+
+export type InstitutionOwner = { establishmentId: number } | { beneficiaryEntityId: number };
 
 @Injectable()
 export class AccountDeletionService {
@@ -50,7 +60,7 @@ export class AccountDeletionService {
 
     await this.prisma.$transaction(async (tx) => {
       const cancellationReasonId = await this.accountClosedReasonId(tx);
-      const closed = await this.closeEstablishment(tx, id, {
+      const { closed } = await this.closeEstablishment(tx, id, {
         cancellationReasonId,
         cancelledBy: OrderCancelledBy.ESTABLISHMENT,
       });
@@ -64,7 +74,7 @@ export class AccountDeletionService {
 
     await this.prisma.$transaction(async (tx) => {
       const cancellationReasonId = await this.accountClosedReasonId(tx);
-      const closed = await this.closeBeneficiaryEntity(tx, id, {
+      const { closed } = await this.closeBeneficiaryEntity(tx, id, {
         cancellationReasonId,
         cancelledBy: OrderCancelledBy.BENEFICIARY_ENTITY,
       });
@@ -73,16 +83,16 @@ export class AccountDeletionService {
   }
 
   /**
-   * RN28. Returns false, changing nothing, when the establishment was already deleted (a second
+   * RN28. Returns `closed: false`, changing nothing, when the establishment was already deleted (a second
    * deletion that waited on the lock). Orders are not marked deleted: entities keep their history.
    */
   async closeEstablishment(
     tx: Prisma.TransactionClient,
     establishmentId: number,
     cancellation: ClosureCancellation,
-  ): Promise<boolean> {
+  ): Promise<ClosureResult> {
     const establishment = await lockEstablishmentForUpdate(tx, establishmentId);
-    if (!establishment || establishment.deleted) return false;
+    if (!establishment || establishment.deleted) return NOT_CLOSED;
 
     // With every food locked, no accept, cancel, receive, food edit or new order runs midway.
     await lockFoodsOfEstablishment(tx, establishmentId);
@@ -94,12 +104,12 @@ export class AccountDeletionService {
       orderStatusId(tx, ORDER_STATUS.CANCELLED),
     ]);
 
-    await tx.order.updateMany({
+    const rejected = await tx.order.updateMany({
       where: { establishmentId, statusId: pendingId, deleted: false },
       data: { statusId: rejectedId },
     });
     // No stock back: the food is deleted right below (DT27).
-    await tx.order.updateMany({
+    const cancelled = await tx.order.updateMany({
       where: { establishmentId, statusId: inProgressId, deleted: false },
       data: { statusId: cancelledId, ...cancellation },
     });
@@ -108,11 +118,11 @@ export class AccountDeletionService {
       data: { deleted: true },
     });
     await tx.establishment.update({ where: { id: establishmentId }, data: { deleted: true } });
-    return true;
+    return { closed: true, rejectedOrders: rejected.count, cancelledOrders: cancelled.count };
   }
 
   /**
-   * RN29. Returns false, changing nothing, when the entity was already deleted. Orders "Doado" and
+   * RN29. Returns `closed: false`, changing nothing, when the entity was already deleted. Orders "Doado" and
    * "Cancelado" with an establishment that is not deleted stay visible, including the ones this
    * closure has just cancelled.
    */
@@ -120,9 +130,9 @@ export class AccountDeletionService {
     tx: Prisma.TransactionClient,
     beneficiaryEntityId: number,
     cancellation: ClosureCancellation,
-  ): Promise<boolean> {
+  ): Promise<ClosureResult> {
     const entity = await lockBeneficiaryEntityForUpdate(tx, beneficiaryEntityId);
-    if (!entity || entity.deleted) return false;
+    if (!entity || entity.deleted) return NOT_CLOSED;
 
     const [pendingId, inProgressId, donatedId, cancelledId] = await Promise.all([
       orderStatusId(tx, ORDER_STATUS.PENDING),
@@ -153,10 +163,11 @@ export class AccountDeletionService {
       orderBy: { id: 'asc' },
     });
 
-    await tx.order.updateMany({
+    const cancelledPending = await tx.order.updateMany({
       where: { beneficiaryEntityId, statusId: pendingId, deleted: false },
       data: { statusId: cancelledId, ...cancellation },
     });
+    let cancelledOrders = cancelledPending.count;
     // One by one, so DT32 recomputes the total pending orders after each give-back.
     for (const order of open.filter((o) => o.statusId === inProgressId)) {
       const moved = await tx.order.updateMany({
@@ -164,6 +175,7 @@ export class AccountDeletionService {
         data: { statusId: cancelledId, ...cancellation },
       });
       if (moved.count > 0) {
+        cancelledOrders++;
         await returnReservedQuantity(tx, order.foodId, order.quantity);
       }
     }
@@ -180,7 +192,7 @@ export class AccountDeletionService {
       where: { id: beneficiaryEntityId },
       data: { deleted: true },
     });
-    return true;
+    return { closed: true, rejectedOrders: 0, cancelledOrders };
   }
 
   // Runs before the transaction: hashing is slow and must not hold row locks.
@@ -199,7 +211,7 @@ export class AccountDeletionService {
     }
   }
 
-  private async closeUser(tx: Prisma.TransactionClient, userId: number): Promise<void> {
+  async closeUser(tx: Prisma.TransactionClient, userId: number): Promise<void> {
     await tx.user.update({ where: { id: userId }, data: { deleted: true } });
     // Sessions live only in the table (no cookie cache): deleting them logs out every device.
     await tx.session.deleteMany({ where: { userId } });
@@ -212,9 +224,7 @@ export class AccountDeletionService {
     return reason.id;
   }
 
-  private async impact(
-    owner: { establishmentId: number } | { beneficiaryEntityId: number },
-  ): Promise<DeletionImpact> {
+  async impact(owner: InstitutionOwner): Promise<DeletionImpact> {
     const [pendingId, inProgressId] = await Promise.all([
       orderStatusId(this.prisma, ORDER_STATUS.PENDING),
       orderStatusId(this.prisma, ORDER_STATUS.IN_PROGRESS),

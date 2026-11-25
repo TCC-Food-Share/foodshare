@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
 
 import { AccountDeletionModule } from '../account-deletion/account-deletion.module';
-import { auth } from '../auth/auth.instance';
-import { BETTER_AUTH } from '../auth/better-auth.token';
+import { InstitutionsCoreModule } from '../institutions/institutions-core.module';
 import { BeneficiaryEntitiesController } from './beneficiary-entities.controller';
 import { BeneficiaryEntitiesService } from './beneficiary-entities.service';
 
 @Module({
-  imports: [AccountDeletionModule],
+  imports: [AccountDeletionModule, InstitutionsCoreModule],
   controllers: [BeneficiaryEntitiesController],
-  providers: [BeneficiaryEntitiesService, { provide: BETTER_AUTH, useValue: auth }],
+  providers: [BeneficiaryEntitiesService],
 })
 export class BeneficiaryEntitiesModule {}

@@ -15,6 +15,7 @@ import { hasDuplicate } from '../common/find-duplicate';
 import { type Paginated, paginateInMemory } from '../common/paginate-in-memory';
 import type {
   AdminCancellationReasonDto,
+  CancellationReasonOptionDto,
   ListCancellationReasonsQueryDto,
   SaveCancellationReasonDto,
 } from './cancellation-reason.dto';
@@ -51,6 +52,15 @@ export class AdminCancellationReasonsService {
         name: (item) => item.name,
         usageCount: (item) => item.usageCount,
       },
+    });
+  }
+
+  /** DT49: what the administrator may pick when soft deleting an institution (RN31). */
+  options(): Promise<CancellationReasonOptionDto[]> {
+    return this.prisma.cancellationReason.findMany({
+      where: { isSystem: false },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
     });
   }
 

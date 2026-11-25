@@ -54,7 +54,7 @@ paralelas. Se uma spec antiga conflitar com `docs/REQUISITOS.md`, vale o
 | 4.3 | `instituicoes-e-perfil-publico` | RF10, RF12, RF13, RN35, RN36                | 4.2            | 01/11 | ✅     |
 | 4.4 | `exclusao-propria-conta`        | RF04, RF05, RN28–RN30                       | 3.2            | 03/11 | ✅     |
 | 5.1 | `admin-administradores`         | RF29–RF32                                   | 0.2            | 04/11 | ✅     |
-| 5.2 | `admin-instituicoes`            | RF41, RF44, RF47, RF48, RF57, RF58          | 5.1, 4.4       | 06/11 | ⬜     |
+| 5.2 | `admin-instituicoes`            | RF41, RF44, RF47, RF48, RF57, RF58          | 5.1, 4.4       | 06/11 | ✅     |
 | 5.3 | `admin-exclusoes-instituicoes`  | RF42, RF43, RF45, RF46                      | 5.2            | 08/11 | ⬜     |
 | 5.4 | `admin-alimentos`               | RF50–RF53                                   | 2.2, 5.1       | 09/11 | ⬜     |
 | 5.5 | `admin-pedidos`                 | RF54–RF56, RN13                             | 3.3, 5.1       | 10/11 | ⬜     |
@@ -275,7 +275,7 @@ auditoria.
 
 ### 5.3 `admin-exclusoes-instituicoes`
 
-- Exclusão lógica pelo admin, com escolha de motivo (RF42, RF43; reaproveita a lógica da 4.4).
+- Ação "Excluir" dedicada na listagem e no perfil (RF42, RF43). A exclusão lógica pelo administrador, com escolha de motivo, já existe desde a 5.2 pelo campo "deletado" da edição (DT49); a ação reaproveita a mesma operação.
 - Exclusão permanente (RF45, RF46), na ordem de `docs/MODELO-DE-DADOS.md`, incluindo a remoção das imagens no MinIO depois do commit.
 - A ordem de exclusão precisa incluir as sugestões feitas pela instituição (`Suggestion.requesterId` não tem cascade, desde a 1.1).
 

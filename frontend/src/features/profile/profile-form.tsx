@@ -6,7 +6,7 @@ import {
   LockIcon,
   MapPinIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import type { Control } from 'react-hook-form';
 import { useFormContext, useWatch } from 'react-hook-form';
 
@@ -66,6 +66,8 @@ export function ProfileForm({
   submitting,
   onCancel,
   onSubmit,
+  submitDisabled = false,
+  children,
 }: {
   control: Control<ProfileFormInput>;
   data: ProfileResponse;
@@ -73,6 +75,8 @@ export function ProfileForm({
   submitting: boolean;
   onCancel: () => void;
   onSubmit: () => void;
+  submitDisabled?: boolean;
+  children?: ReactNode;
 }) {
   const form = useFormContext<ProfileFormInput>();
   const [cepStatus, setCepStatus] = useState<CepStatus>('idle');
@@ -442,11 +446,18 @@ export function ProfileForm({
         </CardContent>
       </Card>
 
+      {children}
+
       <div className="flex gap-3">
         <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="button" className="flex-1" disabled={submitting} onClick={onSubmit}>
+        <Button
+          type="button"
+          className="flex-1"
+          disabled={submitting || submitDisabled}
+          onClick={onSubmit}
+        >
           {submitting && <Loader2Icon className="animate-spin" />}
           {submitting ? 'Salvando…' : 'Salvar alterações'}
         </Button>
