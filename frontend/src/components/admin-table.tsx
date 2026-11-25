@@ -36,6 +36,7 @@ interface AdminTableProps<T extends { id: number }> {
   itemLabel: string;
   rowActions?: (row: T) => ReactNode;
   toolbar?: ReactNode;
+  rowKey?: (row: T) => string | number;
 }
 
 const SEARCH_DELAY_MS = 300;
@@ -105,6 +106,7 @@ export function AdminTable<T extends { id: number }>({
   itemLabel,
   rowActions,
   toolbar,
+  rowKey = (row) => row.id,
 }: AdminTableProps<T>) {
   const [search, setSearch] = useState(params.search ?? '');
 
@@ -206,7 +208,7 @@ export function AdminTable<T extends { id: number }>({
               </TableRow>
             ) : result && result.data.length > 0 ? (
               result.data.map((row) => (
-                <TableRow key={row.id} className="odd:bg-card even:bg-background h-14">
+                <TableRow key={rowKey(row)} className="odd:bg-card even:bg-background h-14">
                   {columns.map((column) => (
                     <TableCell
                       key={column.key}

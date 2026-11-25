@@ -7,6 +7,11 @@ import { AdminLayout } from '@/features/admin/admin-layout';
 import { ADMIN_NAV_ITEMS } from '@/features/admin/admin-nav-items';
 import { AdminPlaceholderPage } from '@/features/admin/admin-placeholder-page';
 import { AdminAdministratorsPage } from '@/features/admin/administrators/admin-administrators-page';
+import { AdminInstitutionCreatePage } from '@/features/admin/institutions/admin-institution-create-page';
+import { AdminInstitutionEditPage } from '@/features/admin/institutions/admin-institution-edit-page';
+import { AdminInstitutionProfilePage } from '@/features/admin/institutions/admin-institution-profile-page';
+import { AdminInstitutionsPage } from '@/features/admin/institutions/admin-institutions-page';
+import { INSTITUTIONS_PATH } from '@/features/admin/institutions/institution-kind';
 import { AdminCancellationReasonsPage } from '@/features/admin/lists/admin-cancellation-reasons-page';
 import { AdminCategoriesPage } from '@/features/admin/lists/admin-categories-page';
 import { AdminFoodItemsPage } from '@/features/admin/lists/admin-food-items-page';
@@ -33,6 +38,7 @@ import { ProfilePage } from '@/features/profile/profile-page';
 
 const ADMIN_LIST_PAGES: Record<string, ReactNode> = {
   '/admin/administradores': <AdminAdministratorsPage />,
+  [INSTITUTIONS_PATH]: <AdminInstitutionsPage />,
   '/admin/categorias': <AdminCategoriesPage />,
   '/admin/catalogo': <AdminFoodItemsPage />,
   '/admin/unidades': <AdminMeasurementUnitsPage />,
@@ -114,6 +120,12 @@ export const router = createBrowserRouter([
                 path: item.to,
                 element: ADMIN_LIST_PAGES[item.to] ?? <AdminPlaceholderPage title={item.label} />,
               })),
+              { path: `${INSTITUTIONS_PATH}/nova`, element: <AdminInstitutionCreatePage /> },
+              { path: `${INSTITUTIONS_PATH}/:slug/:id`, element: <AdminInstitutionProfilePage /> },
+              {
+                path: `${INSTITUTIONS_PATH}/:slug/:id/editar`,
+                element: <AdminInstitutionEditPage />,
+              },
               { path: '*', element: <Navigate to={ADMIN_HOME} replace /> },
             ],
           },
