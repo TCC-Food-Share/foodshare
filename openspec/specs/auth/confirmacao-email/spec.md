@@ -11,13 +11,20 @@ enviado a esse e-mail antes do primeiro login, e liberar os dados únicos de cad
 
 Ao criar uma conta, o sistema SHALL marcá-la como não confirmada e SHALL enviar ao e-mail pessoal um código de 6
 dígitos, válido por 10 minutos (RF75, RN47). O e-mail SHALL sair com remetente no domínio `foodshare.com.br`
-(RNF12). A única conta que nasce confirmada, sem envio de e-mail, é o administrador criado pelo seed (DT39).
+(RNF12). Isso vale também para o administrador cadastrado pelo painel (RF29). A única conta que nasce confirmada, sem
+envio de e-mail, é o administrador criado pelo seed (DT39).
 
 #### Scenario: Cadastro de instituição
 
 - **WHEN** um estabelecimento ou uma entidade beneficiária conclui o cadastro
 - **THEN** a conta é criada como não confirmada e um código de 6 dígitos, válido por 10 minutos, é enviado ao
   e-mail pessoal informado
+
+#### Scenario: Administrador cadastrado pelo painel
+
+- **WHEN** um administrador cadastra outro administrador pelo painel
+- **THEN** a conta nova é criada como não confirmada, um código de 6 dígitos, válido por 10 minutos, é enviado ao
+  e-mail informado, e ela só faz login depois de confirmar pela tela de confirmação
 
 #### Scenario: Administrador do seed
 
