@@ -52,7 +52,7 @@ O sistema SHALL criar o usuário, o endereço, a entidade beneficiária e a imag
 - **THEN** nenhum arquivo do cadastro permanece no armazenamento
 
 ### Requirement: Unicidade de CNPJ, e-mail e celular no cadastro
-O sistema SHALL impedir o cadastro de uma entidade beneficiária quando o CNPJ, o e-mail institucional, o celular institucional, o e-mail pessoal ou o celular pessoal informados já pertencerem a outro cadastro, rejeitando a submissão sem criar nenhum registro (`User`, `Address` ou `BeneficiaryEntity`). Para CNPJ, e-mail institucional e celular institucional, o sistema SHALL identificar explicitamente qual desses campos está duplicado. Para e-mail pessoal e celular pessoal, o sistema SHALL informar apenas que um dado pessoal (e-mail ou celular) já está cadastrado, sem revelar qual dos dois — a mesma indicação genérica é usada tanto se só um deles colidir quanto se os dois colidirem ao mesmo tempo, para impedir que alguém descubra, testando valores um de cada vez num endpoint público sem autenticação, se um e-mail ou celular pessoal específico já está cadastrado na plataforma.
+O sistema SHALL impedir o cadastro de uma entidade beneficiária quando o CNPJ, o e-mail institucional, o celular institucional, o e-mail pessoal ou o celular pessoal informados já pertencerem a outro cadastro, de qualquer tipo (estabelecimento, entidade beneficiária ou administrador) e excluído logicamente ou não (RN26, DT52), rejeitando a submissão sem criar nenhum registro (`User`, `Address` ou `BeneficiaryEntity`). Para CNPJ, e-mail institucional e celular institucional, o sistema SHALL identificar explicitamente qual desses campos está duplicado. Para e-mail pessoal e celular pessoal, o sistema SHALL informar apenas que um dado pessoal (e-mail ou celular) já está cadastrado, sem revelar qual dos dois — a mesma indicação genérica é usada tanto se só um deles colidir quanto se os dois colidirem ao mesmo tempo, para impedir que alguém descubra, testando valores um de cada vez num endpoint público sem autenticação, se um e-mail ou celular pessoal específico já está cadastrado na plataforma.
 
 #### Scenario: Um único campo duplicado
 - **WHEN** uma entidade beneficiária envia um cadastro em que apenas o CNPJ já pertence a outro cadastro (demais campos únicos)
@@ -77,6 +77,18 @@ O sistema SHALL impedir o cadastro de uma entidade beneficiária quando o CNPJ, 
 #### Scenario: Colisão de cadastros concorrentes (condição de corrida)
 - **WHEN** dois cadastros com o mesmo CNPJ, e-mail ou celular são submetidos ao mesmo tempo e ambos passam pela checagem prévia de unicidade antes que qualquer um seja persistido
 - **THEN** o sistema garante que apenas um dos dois cadastros seja criado e rejeita o outro, sem deixar registros duplicados ou parciais persistidos
+
+#### Scenario: Dado institucional de uma instituição do outro tipo
+- **WHEN** uma entidade beneficiária envia um cadastro com o CNPJ, o e-mail institucional ou o celular institucional de um estabelecimento já cadastrado
+- **THEN** o sistema rejeita o cadastro, informa explicitamente o campo duplicado e não cria nenhum registro
+
+#### Scenario: Dado de instituição excluída logicamente
+- **WHEN** uma entidade beneficiária envia um cadastro com o CNPJ de uma instituição excluída logicamente
+- **THEN** o sistema rejeita o cadastro, informa que o CNPJ já está em uso e não cria nenhum registro
+
+#### Scenario: Cadastros concorrentes de tipos diferentes
+- **WHEN** um estabelecimento e uma entidade beneficiária com o mesmo CNPJ são cadastrados ao mesmo tempo e ambos passam pela checagem prévia
+- **THEN** o sistema garante que apenas um dos dois cadastros seja criado e rejeita o outro como duplicado
 
 ### Requirement: Etapa de foto no formulário de cadastro
 O formulário de cadastro do frontend SHALL ter uma etapa "Foto de perfil", obrigatória, depois da etapa de endereço, usando o componente de seleção de imagem da plataforma. O formulário SHALL impedir a conclusão do cadastro enquanto nenhuma imagem válida estiver selecionada. Quando o servidor rejeitar a imagem, o formulário SHALL voltar para a etapa "Foto de perfil" e mostrar a mensagem correspondente à `code`.
