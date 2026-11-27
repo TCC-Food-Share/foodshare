@@ -1,7 +1,10 @@
 import {
   BadRequestException,
   Body,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Injectable,
   Param,
   ParseIntPipe,
@@ -15,6 +18,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -237,5 +241,31 @@ export class AdminInstitutionsController {
     @UploadedFile(new ImageFilePipe({ required: false })) image: ValidatedImage | undefined,
   ): Promise<AdminInstitutionProfileDto> {
     return this.service.update(sessionAdministrator(session), kind, id, dto, image);
+  }
+
+  @Delete(':kind/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiParam(KIND_PARAM)
+  @ApiOperation({
+    summary: 'Exclusão permanente de instituição pelo painel',
+    description:
+      'RF45, RF46: apaga de vez a instituição, o usuário, o endereço, os alimentos (estabelecimento), ' +
+      'os pedidos e as sugestões da conta, numa transação, e as imagens depois do commit. Só vale ' +
+      'para instituição já excluída logicamente (DT54). Auditado com razão social, CNPJ e contagens, ' +
+      'sem dado pessoal (DT56).',
+  })
+  @ApiNoContentResponse({ description: 'Instituição apagada.' })
+  @ApiUnauthorizedResponse({ description: UNAUTHORIZED })
+  @ApiNotFoundResponse({ description: NOT_FOUND })
+  @ApiConflictResponse({
+    description:
+      'A instituição não está excluída logicamente (`code: INSTITUTION_NOT_SOFT_DELETED`).',
+  })
+  remove(
+    @Session() session: UserSession,
+    @Param('kind', ParseKindSegmentPipe) kind: InstitutionKind,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    return this.service.remove(sessionAdministrator(session), kind, id);
   }
 }

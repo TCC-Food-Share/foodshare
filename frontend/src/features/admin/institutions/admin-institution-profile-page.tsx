@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowLeftIcon, CircleAlertIcon, PencilIcon } from 'lucide-react';
+import { ArrowLeftIcon, CircleAlertIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import { PageSizeSelect } from '@/components/page-size-select';
 import { PaginationBar } from '@/components/pagination-bar';
@@ -20,11 +20,13 @@ import {
 } from '@/components/ui/table';
 import { UserAvatar } from '@/components/user-avatar';
 import { InstitutionSituationBadges } from '@/features/admin/institutions/admin-institutions-page';
+import { DeleteInstitutionPermanentlyDialog } from '@/features/admin/institutions/delete-institution-permanently-dialog';
 import {
   type AdminInstitutionKind,
   INSTITUTION_KIND_LABELS,
   institutionPath,
   INSTITUTIONS_PATH,
+  publicName,
   slugToKind,
 } from '@/features/admin/institutions/institution-kind';
 import {
@@ -33,10 +35,15 @@ import {
   institutionsApi,
   type PageParams,
 } from '@/features/admin/institutions/institutions-api';
+import {
+  type InstitutionDeletionTarget,
+  SoftDeleteInstitutionDialog,
+} from '@/features/admin/institutions/soft-delete-institution-dialog';
 import { FOOD_STATUS } from '@/features/foods/food-status';
 import { FoodStatusBadge } from '@/features/foods/food-status-badge';
 import { isOrderStatus, ORDER_STATUS } from '@/features/orders/order-status';
 import { OrderStatusBadge } from '@/features/orders/order-status-badge';
+import { ApiError } from '@/lib/api';
 import { formatDate, formatLocalDate, formatLocalDateTime } from '@/lib/format';
 import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
@@ -277,10 +284,15 @@ export function AdminInstitutionProfilePage() {
   const id = Number(rawId);
   const valid = kind !== null && Number.isInteger(id) && id > 0;
 
+  const navigate = useNavigate();
+  const [softDeleteTarget, setSoftDeleteTarget] = useState<InstitutionDeletionTarget | null>(null);
+  const [permanentTarget, setPermanentTarget] = useState<InstitutionDeletionTarget | null>(null);
+
   const query = useQuery({
     queryKey: [...INSTITUTIONS_QUERY_KEY, 'profile', kind, id],
     queryFn: () => institutionsApi.get(kind!, id),
     enabled: valid,
+    retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 3,
   });
 
   if (!valid) return <Navigate to={INSTITUTIONS_PATH} replace />;
@@ -290,6 +302,25 @@ export function AdminInstitutionProfilePage() {
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (query.error instanceof ApiError && query.error.status === 404) {
+    return (
+      <div className="mx-auto flex max-w-4xl flex-col items-start gap-4">
+        <Alert>
+          <CircleAlertIcon />
+          <AlertDescription>
+            Instituição não encontrada. Ela pode ter sido excluída permanentemente.
+          </AlertDescription>
+        </Alert>
+        <Button asChild variant="outline">
+          <Link to={INSTITUTIONS_PATH}>
+            <ArrowLeftIcon />
+            Voltar para instituições
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -304,7 +335,8 @@ export function AdminInstitutionProfilePage() {
   }
 
   const data = query.data;
-  const name = data.tradeName?.trim() || data.companyName;
+  const name = publicName(data);
+  const deletionTarget = { kind: data.kind, id: data.id, name };
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -325,14 +357,38 @@ export function AdminInstitutionProfilePage() {
             </div>
             <InstitutionSituationBadges deleted={data.deleted} emailVerified={data.emailVerified} />
           </div>
-          <Button asChild className="self-start sm:self-center">
-            <Link to={`${institutionPath(data.kind, data.id)}/editar`}>
-              <PencilIcon />
-              Editar
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2 self-start sm:self-center">
+            <Button asChild>
+              <Link to={`${institutionPath(data.kind, data.id)}/editar`}>
+                <PencilIcon />
+                Editar
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() =>
+                data.deleted
+                  ? setPermanentTarget(deletionTarget)
+                  : setSoftDeleteTarget(deletionTarget)
+              }
+            >
+              <Trash2Icon />
+              {data.deleted ? 'Excluir permanentemente' : 'Excluir'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      <SoftDeleteInstitutionDialog
+        target={softDeleteTarget}
+        onClose={() => setSoftDeleteTarget(null)}
+      />
+      <DeleteInstitutionPermanentlyDialog
+        target={permanentTarget}
+        onClose={() => setPermanentTarget(null)}
+        onDeleted={() => void navigate(INSTITUTIONS_PATH, { replace: true })}
+      />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

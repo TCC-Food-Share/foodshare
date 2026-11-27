@@ -18,7 +18,10 @@ import {
 import { ORDER_STATUS } from '../../orders/orders.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdminInstitutionsService } from './admin-institutions.service';
-import { INSTITUTION_DATA_ALREADY_REGISTERED } from './institution.errors';
+import {
+  INSTITUTION_DATA_ALREADY_REGISTERED,
+  INSTITUTION_NOT_SOFT_DELETED,
+} from './institution.errors';
 
 type AnyFn = (...args: never[]) => unknown;
 const fn = <T extends AnyFn = (...args: unknown[]) => Promise<unknown>>() => jest.fn<T>();
@@ -73,9 +76,11 @@ describe('AdminInstitutionsService', () => {
     order: { groupBy: fn(), findMany: fn(), count: fn() },
     food: { groupBy: fn(), findMany: fn(), count: fn() },
     cancellationReason: { findUnique: fn() },
+    $transaction: fn(),
   };
   const storageMock = {
     toUrl: (key: string | null) => (key ? `https://api.test/files/${key}` : null),
+    removeQuietly: fn(),
   };
   const auditMock = { record: fn() };
   const registrationMock = { register: fn(), update: fn() };
@@ -505,6 +510,191 @@ describe('AdminInstitutionsService', () => {
       await expect(
         service.update(actor, INSTITUTION_KIND.BENEFICIARY_ENTITY, 99, { description: 'x' }),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('answers 404 when a permanent deletion committed before the transaction', async () => {
+      tx.$queryRaw.mockResolvedValue([]);
+
+      await expect(
+        service.update(actor, INSTITUTION_KIND.ESTABLISHMENT, 10, { deleted: false }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(tx.establishment.update).not.toHaveBeenCalled();
+      expect(auditMock.record).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('remove', () => {
+    const removeTx = {
+      $queryRaw: fn(),
+      establishment: { findUnique: fn(), delete: fn() },
+      beneficiaryEntity: { findUnique: fn(), delete: fn() },
+      food: { findMany: fn(), deleteMany: fn() },
+      order: { findMany: fn(), deleteMany: fn() },
+      suggestion: { deleteMany: fn() },
+      verification: { deleteMany: fn() },
+      address: { delete: fn() },
+      user: { delete: fn() },
+    };
+
+    beforeEach(() => {
+      prismaMock.$transaction.mockImplementation(async (...args: unknown[]) =>
+        (args[0] as (client: typeof removeTx) => Promise<unknown>)(removeTx),
+      );
+      removeTx.$queryRaw.mockResolvedValue([{ deleted: true }]);
+      removeTx.establishment.findUnique.mockResolvedValue(row({ deleted: true }));
+      removeTx.beneficiaryEntity.findUnique.mockResolvedValue(row({ id: 11, deleted: true }));
+      removeTx.establishment.delete.mockResolvedValue({ addressId: 30 });
+      removeTx.beneficiaryEntity.delete.mockResolvedValue({ addressId: 31 });
+      removeTx.food.findMany.mockResolvedValue([
+        { id: 100, image: 'foods/a.webp' },
+        { id: 101, image: 'foods/b.webp' },
+      ]);
+      removeTx.food.deleteMany.mockResolvedValue({ count: 2 });
+      removeTx.order.findMany.mockResolvedValue([{ id: 7 }, { id: 8 }]);
+      removeTx.order.deleteMany.mockResolvedValue({ count: 2 });
+      removeTx.suggestion.deleteMany.mockResolvedValue({ count: 1 });
+      removeTx.verification.deleteMany.mockResolvedValue({ count: 0 });
+      storageMock.removeQuietly.mockResolvedValue(undefined);
+    });
+
+    it('deletes an establishment with its foods, orders, suggestions and codes', async () => {
+      await service.remove(actor, INSTITUTION_KIND.ESTABLISHMENT, 10);
+
+      expect(removeTx.order.deleteMany).toHaveBeenCalledWith({
+        where: { OR: [{ establishmentId: 10 }, { foodId: { in: [100, 101] } }] },
+      });
+      expect(removeTx.food.deleteMany).toHaveBeenCalledWith({ where: { establishmentId: 10 } });
+      expect(removeTx.suggestion.deleteMany).toHaveBeenCalledWith({ where: { requesterId: 20 } });
+      expect(removeTx.establishment.delete).toHaveBeenCalledWith({
+        where: { id: 10 },
+        select: { addressId: true },
+      });
+      expect(removeTx.address.delete).toHaveBeenCalledWith({ where: { id: 30 } });
+      expect(removeTx.verification.deleteMany).toHaveBeenCalledWith({
+        where: {
+          identifier: {
+            in: ['email-verification-otp-joao@example.com', 'forget-password-otp-joao@example.com'],
+          },
+        },
+      });
+      expect(removeTx.user.delete).toHaveBeenCalledWith({ where: { id: 20 } });
+    });
+
+    it('deletes the orders before the foods, and the foods before the establishment', async () => {
+      await service.remove(actor, INSTITUTION_KIND.ESTABLISHMENT, 10);
+
+      const [orders] = removeTx.order.deleteMany.mock.invocationCallOrder;
+      const [foods] = removeTx.food.deleteMany.mock.invocationCallOrder;
+      const [establishment] = removeTx.establishment.delete.mock.invocationCallOrder;
+      const [user] = removeTx.user.delete.mock.invocationCallOrder;
+      expect(orders).toBeLessThan(foods);
+      expect(foods).toBeLessThan(establishment);
+      expect(establishment).toBeLessThan(user);
+    });
+
+    it('audits company name, CNPJ and counts, without personal data', async () => {
+      await service.remove(actor, INSTITUTION_KIND.ESTABLISHMENT, 10);
+
+      expect(auditMock.record).toHaveBeenCalledWith(removeTx, {
+        administrator: actor,
+        action: 'establishment.delete',
+        entityType: 'Establishment',
+        entityId: 10,
+        details: {
+          companyName: 'Padaria São José Ltda',
+          cnpj: '12.345.678/0001-90',
+          deletedFoods: 2,
+          deletedOrders: 2,
+          deletedSuggestions: 1,
+        },
+      });
+      const details = JSON.stringify(auditMock.record.mock.calls[0]);
+      expect(details).not.toContain('joao@example.com');
+      expect(details).not.toContain('João Araújo');
+      expect(details).not.toContain('99123-4567');
+    });
+
+    it('removes the user and food images only after the commit', async () => {
+      let committed = false;
+      prismaMock.$transaction.mockImplementation(async (...args: unknown[]) => {
+        const result = await (args[0] as (client: typeof removeTx) => Promise<unknown>)(removeTx);
+        committed = true;
+        return result;
+      });
+      storageMock.removeQuietly.mockImplementation(() => {
+        expect(committed).toBe(true);
+        return Promise.resolve();
+      });
+
+      await service.remove(actor, INSTITUTION_KIND.ESTABLISHMENT, 10);
+
+      expect(storageMock.removeQuietly.mock.calls.map(([key]) => key)).toEqual([
+        'users/a.png',
+        'foods/a.webp',
+        'foods/b.webp',
+      ]);
+    });
+
+    it('deletes an entity with its orders only, leaving foods untouched', async () => {
+      await service.remove(actor, INSTITUTION_KIND.BENEFICIARY_ENTITY, 11);
+
+      expect(removeTx.order.deleteMany).toHaveBeenCalledWith({
+        where: { beneficiaryEntityId: 11 },
+      });
+      expect(removeTx.food.findMany).not.toHaveBeenCalled();
+      expect(removeTx.food.deleteMany).not.toHaveBeenCalled();
+      expect(removeTx.address.delete).toHaveBeenCalledWith({ where: { id: 31 } });
+      expect(auditMock.record).toHaveBeenCalledWith(
+        removeTx,
+        expect.objectContaining({
+          action: 'beneficiary_entity.delete',
+          details: expect.objectContaining({ deletedFoods: 0, deletedOrders: 2 }),
+        }),
+      );
+      expect(storageMock.removeQuietly.mock.calls.map(([key]) => key)).toEqual(['users/a.png']);
+    });
+
+    it('refuses an active institution without deleting anything', async () => {
+      removeTx.$queryRaw.mockResolvedValue([{ deleted: false }]);
+
+      await expect(service.remove(actor, INSTITUTION_KIND.ESTABLISHMENT, 10)).rejects.toMatchObject(
+        { response: { code: INSTITUTION_NOT_SOFT_DELETED } },
+      );
+      expect(removeTx.order.deleteMany).not.toHaveBeenCalled();
+      expect(removeTx.user.delete).not.toHaveBeenCalled();
+      expect(auditMock.record).not.toHaveBeenCalled();
+      expect(storageMock.removeQuietly).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 for a missing institution or one of the other kind', async () => {
+      removeTx.$queryRaw.mockResolvedValue([]);
+
+      await expect(
+        service.remove(actor, INSTITUTION_KIND.BENEFICIARY_ENTITY, 10),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(removeTx.order.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('removes no image when the transaction fails', async () => {
+      auditMock.record.mockRejectedValue(new Error('audit down'));
+
+      await expect(service.remove(actor, INSTITUTION_KIND.ESTABLISHMENT, 10)).rejects.toThrow(
+        'audit down',
+      );
+      expect(storageMock.removeQuietly).not.toHaveBeenCalled();
+    });
+
+    it('locks the orders in id order before deleting them', async () => {
+      await service.remove(actor, INSTITUTION_KIND.BENEFICIARY_ENTITY, 11);
+
+      const lockCall = removeTx.$queryRaw.mock.calls.find(([sql]) =>
+        (sql as TemplateStringsArray).join('?').includes('FROM "order"'),
+      );
+      expect(lockCall).toBeDefined();
+      expect((lockCall?.[0] as TemplateStringsArray).join('?')).toContain('ORDER BY id FOR UPDATE');
+      const [lock] = removeTx.$queryRaw.mock.invocationCallOrder.slice(-1);
+      const [deleteOrders] = removeTx.order.deleteMany.mock.invocationCallOrder;
+      expect(lock).toBeLessThan(deleteOrders);
     });
   });
 });

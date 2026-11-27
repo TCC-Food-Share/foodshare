@@ -4,6 +4,7 @@ import type { InstitutionUniqueField } from '../../institutions/institution-uniq
 
 export const INSTITUTION_DATA_ALREADY_REGISTERED = 'INSTITUTION_DATA_ALREADY_REGISTERED';
 export const CANCELLATION_REASON_WITHOUT_DELETE = 'CANCELLATION_REASON_WITHOUT_DELETE';
+export const INSTITUTION_NOT_SOFT_DELETED = 'INSTITUTION_NOT_SOFT_DELETED';
 
 /** The panel is not anonymous: unlike the public sign-up, it names every field that collided. */
 export const institutionDataAlreadyRegistered = (fields: InstitutionUniqueField[]) =>
@@ -20,3 +21,10 @@ export const cancellationReasonWithoutDelete = () =>
   });
 
 export const institutionNotFound = () => new NotFoundException('Institution not found.');
+
+/** DT54: the permanent deletion only applies to an institution already soft deleted. */
+export const institutionNotSoftDeleted = () =>
+  new ConflictException({
+    code: INSTITUTION_NOT_SOFT_DELETED,
+    message: 'The institution must be soft deleted before the permanent deletion.',
+  });

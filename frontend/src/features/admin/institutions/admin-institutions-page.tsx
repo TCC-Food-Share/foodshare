@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { EyeIcon, PencilIcon, PlusIcon } from 'lucide-react';
+import { EyeIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { AdminTable } from '@/components/admin-table';
@@ -13,17 +14,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { UserAvatar } from '@/components/user-avatar';
+import { DeleteInstitutionPermanentlyDialog } from '@/features/admin/institutions/delete-institution-permanently-dialog';
 import {
   INSTITUTION_KIND_LABELS,
   INSTITUTION_KINDS,
   institutionPath,
   INSTITUTIONS_PATH,
+  publicName,
 } from '@/features/admin/institutions/institution-kind';
 import {
   type AdminInstitutionRow,
   INSTITUTIONS_QUERY_KEY,
   institutionsApi,
 } from '@/features/admin/institutions/institutions-api';
+import {
+  type InstitutionDeletionTarget,
+  SoftDeleteInstitutionDialog,
+} from '@/features/admin/institutions/soft-delete-institution-dialog';
 import { useAdminListParams } from '@/features/admin/lists/use-admin-list-params';
 import { formatLocalDate } from '@/lib/format';
 
@@ -55,11 +62,10 @@ export function InstitutionSituationBadges({
   );
 }
 
-const publicName = (row: { tradeName: string | null; companyName: string }) =>
-  row.tradeName?.trim() || row.companyName;
-
 export function AdminInstitutionsPage() {
   const [params, setParams] = useAdminListParams(FILTER_KEYS);
+  const [softDeleteTarget, setSoftDeleteTarget] = useState<InstitutionDeletionTarget | null>(null);
+  const [permanentTarget, setPermanentTarget] = useState<InstitutionDeletionTarget | null>(null);
 
   const type = String(params.type ?? ALL);
   const status = String(params.status ?? ALL);
@@ -239,8 +245,36 @@ export function AdminInstitutionsPage() {
                 <PencilIcon />
               </Link>
             </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive size-8"
+              aria-label={
+                row.deleted
+                  ? `Excluir permanentemente ${publicName(row)}`
+                  : `Excluir ${publicName(row)}`
+              }
+              title={row.deleted ? 'Excluir permanentemente' : 'Excluir'}
+              onClick={() => {
+                const target = { kind: row.kind, id: row.id, name: publicName(row) };
+                if (row.deleted) setPermanentTarget(target);
+                else setSoftDeleteTarget(target);
+              }}
+            >
+              <Trash2Icon />
+            </Button>
           </>
         )}
+      />
+
+      <SoftDeleteInstitutionDialog
+        target={softDeleteTarget}
+        onClose={() => setSoftDeleteTarget(null)}
+      />
+      <DeleteInstitutionPermanentlyDialog
+        target={permanentTarget}
+        onClose={() => setPermanentTarget(null)}
       />
     </div>
   );

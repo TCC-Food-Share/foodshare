@@ -5,7 +5,7 @@ jest.mock('@thallesp/nestjs-better-auth', () => ({
 }));
 
 import { BadRequestException, RequestMethod, ValidationPipe } from '@nestjs/common';
-import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { HTTP_CODE_METADATA, METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 
 import { ROLE } from '../../auth/roles.constants';
 import { ROLES_KEY } from '../../auth/roles.guard';
@@ -46,6 +46,11 @@ describe('admin institutions routes', () => {
     expect(route(prototype.listOrders)).toEqual([RequestMethod.GET, ':kind/:id/orders']);
     expect(route(prototype.impact)).toEqual([RequestMethod.GET, ':kind/:id/impact']);
     expect(route(prototype.update)).toEqual([RequestMethod.PATCH, ':kind/:id']);
+  });
+
+  it('exposes the permanent deletion as DELETE :kind/:id answering 204 (RF45, RF46)', () => {
+    expect(route(prototype.remove)).toEqual([RequestMethod.DELETE, ':kind/:id']);
+    expect(meta(HTTP_CODE_METADATA, prototype.remove as Handler)).toBe(204);
   });
 
   it('exposes the cancellation reason options for the soft delete', () => {
