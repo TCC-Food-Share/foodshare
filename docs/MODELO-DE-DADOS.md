@@ -368,9 +368,16 @@ As relações não têm cascade (exceto as do better-auth e `OrderReminder`).
 Cada exclusão permanente apaga os dependentes explicitamente, em uma
 transação, nesta ordem:
 
-- **Estabelecimento:** lembretes e pedidos dos alimentos → alimentos →
-  pedidos restantes → estabelecimento → endereço → sessões e contas → usuário.
-- **Entidade:** pedidos → entidade → endereço → sessões e contas → usuário.
+- **Estabelecimento (RF45):** só depois da exclusão lógica (DT54). Trava o
+  estabelecimento (`FOR UPDATE`) → lembretes e pedidos dos alimentos e
+  pedidos restantes (travados em ordem de id) → alimentos → sugestões feitas
+  pela conta (`Suggestion.requesterId`) → estabelecimento → endereço →
+  códigos em `verification` → usuário (sessões e contas em cascata) →
+  imagens do responsável e dos alimentos no MinIO depois do commit.
+- **Entidade (RF46):** só depois da exclusão lógica (DT54). Trava a entidade
+  (`FOR UPDATE`) → pedidos (travados em ordem de id) → sugestões feitas pela
+  conta → entidade → endereço → códigos em `verification` → usuário →
+  imagem do responsável no MinIO depois do commit.
   Nas regras de estoque, um pedido `Em andamento` apagado **não** devolve
   quantidade: o estoque já saiu do alimento.
 - **Alimento:** pedidos → alimento.
