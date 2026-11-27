@@ -135,6 +135,8 @@ export const institutionsApi = {
       path(kind, id),
       toFormData(changes, { image }, { keepEmpty: ['tradeName'] }),
     ),
+  /** RF45, RF46: only for an institution already soft deleted (DT54). */
+  remove: (kind: AdminInstitutionKind, id: number) => api.delete(path(kind, id)),
   impact: (kind: AdminInstitutionKind, id: number) =>
     api.get<{ pendingOrders: number; inProgressOrders: number }>(`${path(kind, id)}/impact`),
   foods: (id: number, params: PageParams) =>
@@ -160,6 +162,11 @@ export const DUPLICATE_FIELD_MESSAGES: Record<string, string> = {
 export const CANCELLATION_REASON_MESSAGES: Record<string, string> = {
   CANCELLATION_REASON_REQUIRED: 'Escolha o motivo da exclusão.',
   INVALID_CANCELLATION_REASON: 'Este motivo não pode ser usado. Escolha outro.',
+};
+
+export const INSTITUTION_ERROR_MESSAGES: Record<string, string> = {
+  INSTITUTION_NOT_SOFT_DELETED:
+    'Esta instituição não está mais excluída logicamente. Atualize a página e confira a situação.',
 };
 
 /** Fields named by `INSTITUTION_DATA_ALREADY_REGISTERED`, or an empty list for any other error. */

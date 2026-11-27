@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { SearchableSelect } from '@/components/searchable-select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +29,7 @@ import {
   INSTITUTIONS_QUERY_KEY,
   institutionsApi,
 } from '@/features/admin/institutions/institutions-api';
+import { SoftDeleteFields } from '@/features/admin/institutions/soft-delete-fields';
 import type { InstitutionRole } from '@/features/auth/auth-context';
 import { imageErrorMessage } from '@/features/files/image-errors';
 import type { ProfileResponse } from '@/features/profile/profile-api';
@@ -118,19 +118,6 @@ function AccountSituationCard({
   const deleting = situation === 'deleted' && !data.deleted;
   const restoring = situation === 'active' && data.deleted;
 
-  const impact = useQuery({
-    queryKey: [...INSTITUTIONS_QUERY_KEY, 'impact', data.kind, data.id],
-    queryFn: () => institutionsApi.impact(data.kind, data.id),
-    enabled: deleting,
-  });
-  const reasons = useQuery({
-    queryKey: ['admin', 'cancellation-reasons', 'options'],
-    queryFn: institutionsApi.cancellationReasonOptions,
-    enabled: deleting,
-  });
-
-  const isEstablishment = data.kind === 'ESTABLISHMENT';
-
   return (
     <Card>
       <CardHeader>
@@ -160,49 +147,14 @@ function AccountSituationCard({
         </RadioGroup>
 
         {deleting && (
-          <>
-            <Alert variant="destructive">
-              <CircleAlertIcon />
-              <AlertDescription>
-                {impact.isLoading ? (
-                  'Calculando os pedidos afetados…'
-                ) : impact.data ? (
-                  isEstablishment ? (
-                    <>
-                      Ao salvar, {impact.data.pendingOrders} pedido(s) pendente(s) serão rejeitados
-                      e {impact.data.inProgressOrders} pedido(s) em andamento serão cancelados.
-                      Todos os alimentos saem do ar, e a conta deixa de entrar.
-                    </>
-                  ) : (
-                    <>
-                      Ao salvar, {impact.data.pendingOrders} pedido(s) pendente(s) e{' '}
-                      {impact.data.inProgressOrders} pedido(s) em andamento serão cancelados, e as
-                      quantidades reservadas voltam aos alimentos. A conta deixa de entrar.
-                    </>
-                  )
-                ) : (
-                  'Não foi possível calcular os pedidos afetados.'
-                )}
-              </AlertDescription>
-            </Alert>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="cancellation-reason">Motivo dos pedidos cancelados</Label>
-              <SearchableSelect
-                id="cancellation-reason"
-                options={(reasons.data ?? []).map((reason) => ({
-                  value: String(reason.id),
-                  label: reason.name,
-                }))}
-                value={reasonId}
-                onChange={onReasonChange}
-                placeholder={reasons.isLoading ? 'Carregando motivos…' : 'Selecione o motivo'}
-                searchPlaceholder="Buscar motivo..."
-                emptyMessage="Nenhum motivo encontrado."
-                invalid={reasonError !== null}
-              />
-              {reasonError && <p className="text-destructive text-sm">{reasonError}</p>}
-            </div>
-          </>
+          <SoftDeleteFields
+            kind={data.kind}
+            id={data.id}
+            trigger="Ao salvar"
+            reasonId={reasonId}
+            onReasonChange={onReasonChange}
+            reasonError={reasonError}
+          />
         )}
 
         {restoring && (

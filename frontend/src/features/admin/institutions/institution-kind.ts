@@ -30,3 +30,7 @@ export const INSTITUTIONS_PATH = '/admin/instituicoes';
 
 export const institutionPath = (kind: AdminInstitutionKind, id: number) =>
   `${INSTITUTIONS_PATH}/${kindToSlug(kind)}/${id}`;
+
+/** Trade name, or the company name without one (RN36). */
+export const publicName = (institution: { tradeName: string | null; companyName: string }) =>
+  institution.tradeName?.trim() || institution.companyName;
