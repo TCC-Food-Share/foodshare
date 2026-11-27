@@ -7,6 +7,10 @@ import { AdminLayout } from '@/features/admin/admin-layout';
 import { ADMIN_NAV_ITEMS } from '@/features/admin/admin-nav-items';
 import { AdminPlaceholderPage } from '@/features/admin/admin-placeholder-page';
 import { AdminAdministratorsPage } from '@/features/admin/administrators/admin-administrators-page';
+import { AdminFoodDetailPage } from '@/features/admin/foods/admin-food-detail-page';
+import { AdminFoodEditPage } from '@/features/admin/foods/admin-food-edit-page';
+import { ADMIN_FOODS_PATH } from '@/features/admin/foods/admin-foods-api';
+import { AdminFoodsPage } from '@/features/admin/foods/admin-foods-page';
 import { AdminInstitutionCreatePage } from '@/features/admin/institutions/admin-institution-create-page';
 import { AdminInstitutionEditPage } from '@/features/admin/institutions/admin-institution-edit-page';
 import { AdminInstitutionProfilePage } from '@/features/admin/institutions/admin-institution-profile-page';
@@ -39,6 +43,7 @@ import { ProfilePage } from '@/features/profile/profile-page';
 const ADMIN_LIST_PAGES: Record<string, ReactNode> = {
   '/admin/administradores': <AdminAdministratorsPage />,
   [INSTITUTIONS_PATH]: <AdminInstitutionsPage />,
+  [ADMIN_FOODS_PATH]: <AdminFoodsPage />,
   '/admin/categorias': <AdminCategoriesPage />,
   '/admin/catalogo': <AdminFoodItemsPage />,
   '/admin/unidades': <AdminMeasurementUnitsPage />,
@@ -126,6 +131,8 @@ export const router = createBrowserRouter([
                 path: `${INSTITUTIONS_PATH}/:slug/:id/editar`,
                 element: <AdminInstitutionEditPage />,
               },
+              { path: `${ADMIN_FOODS_PATH}/:id`, element: <AdminFoodDetailPage /> },
+              { path: `${ADMIN_FOODS_PATH}/:id/editar`, element: <AdminFoodEditPage /> },
               { path: '*', element: <Navigate to={ADMIN_HOME} replace /> },
             ],
           },
