@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import type { BetterAuthInstance } from '../auth/better-auth.token';
 import { BETTER_AUTH } from '../auth/better-auth.token';
+import { deleteVerificationCodes } from '../auth/verification-codes';
 import { IMAGE_FOLDER } from '../files/files.constants';
 import type { ValidatedImage } from '../files/image-file.pipe';
 import { ImageStorageService } from '../files/image-storage.service';
@@ -81,11 +82,6 @@ export interface UpdateOptions {
     updated: InstitutionWithRelations,
   ) => Promise<void>;
 }
-
-const verificationIdentifiers = (email: string) => [
-  `email-verification-otp-${email}`,
-  `forget-password-otp-${email}`,
-];
 
 const isUniqueViolation = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
@@ -332,9 +328,7 @@ export class InstitutionRegistrationService {
   private async discardAccount(userId: number, email: string): Promise<void> {
     try {
       await this.prisma.user.delete({ where: { id: userId } });
-      await this.prisma.verification.deleteMany({
-        where: { identifier: { in: verificationIdentifiers(email.toLowerCase()) } },
-      });
+      await deleteVerificationCodes(this.prisma, email);
     } catch (error) {
       this.logger.error(
         `Could not discard institution account ${userId}`,

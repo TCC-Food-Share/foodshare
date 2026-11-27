@@ -5,6 +5,7 @@ import { type AuditAdministrator, AuditService } from '../../audit/audit.service
 import type { BetterAuthInstance } from '../../auth/better-auth.token';
 import { BETTER_AUTH } from '../../auth/better-auth.token';
 import { ROLE } from '../../auth/roles.constants';
+import { deleteVerificationCodes, verificationIdentifiers } from '../../auth/verification-codes';
 import { IMAGE_FOLDER } from '../../files/files.constants';
 import type { ValidatedImage } from '../../files/image-file.pipe';
 import { ImageStorageService } from '../../files/image-storage.service';
@@ -38,12 +39,6 @@ type AdministratorRow = Prisma.UserGetPayload<{ select: typeof ADMINISTRATOR_SEL
 type Client = PrismaService | Prisma.TransactionClient;
 
 const ADMINISTRATOR_WHERE = { role: { name: ROLE.ADMINISTRATOR } } satisfies Prisma.UserWhereInput;
-
-/** Códigos pendentes do e-mail (confirmação e recuperação), como na tarefa da RN48. */
-const verificationIdentifiers = (email: string) => [
-  `email-verification-otp-${email}`,
-  `forget-password-otp-${email}`,
-];
 
 const isUniqueViolation = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
@@ -179,9 +174,7 @@ export class AdminAdministratorsService {
           select: ADMINISTRATOR_SELECT,
         });
         if (emailChanged) {
-          await tx.verification.deleteMany({
-            where: { identifier: { in: verificationIdentifiers(current.email) } },
-          });
+          await deleteVerificationCodes(tx, current.email);
         }
         await this.audit.record(tx, {
           administrator: actor,
@@ -230,9 +223,7 @@ export class AdminAdministratorsService {
       );
       if (remaining.length === 0) throw lastAdministrator();
 
-      await tx.verification.deleteMany({
-        where: { identifier: { in: verificationIdentifiers(target.email) } },
-      });
+      await deleteVerificationCodes(tx, target.email);
       // Session e Account saem em cascata; auditoria, acessos e listas ficam com SetNull.
       await tx.user.delete({ where: { id } });
       await this.audit.record(tx, {

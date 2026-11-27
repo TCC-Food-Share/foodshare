@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
+import { deleteVerificationCodes } from '../auth/verification-codes';
 import { ImageStorageService } from '../files/image-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UNVERIFIED_ACCOUNT_MAX_AGE_MS, UNVERIFIED_ACCOUNTS_CLEANUP_JOB } from './jobs.constants';
@@ -87,11 +88,7 @@ export class UnverifiedAccountsCleanupService implements OnModuleInit {
         await tx.address.delete({ where: { id: entity.addressId } });
       }
 
-      await tx.verification.deleteMany({
-        where: {
-          identifier: { in: [`email-verification-otp-${email}`, `forget-password-otp-${email}`] },
-        },
-      });
+      await deleteVerificationCodes(tx, email);
 
       // Session e Account saem em cascata.
       await tx.user.delete({ where: { id } });
