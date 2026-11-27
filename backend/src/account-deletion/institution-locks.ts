@@ -24,6 +24,18 @@ export async function lockLiveBeneficiaryEntityForShare(
   return rows.length > 0;
 }
 
+// For flows that act on one food of any establishment, soft deleted or not (admin edit and
+// permanent deletion of a food). It waits for a deletion of the establishment in flight, which
+// takes FOR UPDATE, and keeps the institution -> food -> orders order. False if it no longer exists.
+export async function lockEstablishmentForShare(
+  tx: Prisma.TransactionClient,
+  establishmentId: number,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<{ id: number }[]>`
+    SELECT id FROM establishment WHERE id = ${establishmentId} FOR SHARE`;
+  return rows.length > 0;
+}
+
 export async function lockEstablishmentForUpdate(
   tx: Prisma.TransactionClient,
   establishmentId: number,

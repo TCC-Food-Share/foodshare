@@ -25,6 +25,7 @@ import {
 } from './dto/my-food-response.dto';
 import { PaginatedFoodsResponseDto } from './dto/paginated-foods-response.dto';
 import { ReactivateFoodDto, UpdateFoodDto } from './dto/update-food.dto';
+import { isExpirationDateInPast, startOfTodayUtc } from './food-dates';
 import {
   applyNewQuantityToPendingOrders,
   lockFood,
@@ -63,11 +64,6 @@ const FOOD_INCLUDE = {
 } as const satisfies Prisma.FoodInclude;
 
 type FoodWithRelations = Prisma.FoodGetPayload<{ include: typeof FOOD_INCLUDE }>;
-
-function startOfTodayUtc(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-}
 
 @Injectable()
 export class FoodsService {
@@ -402,7 +398,7 @@ export class FoodsService {
   }
 
   private assertNotPast(expirationDate: string): void {
-    if (new Date(expirationDate) < startOfTodayUtc()) {
+    if (isExpirationDateInPast(expirationDate)) {
       throw new BadRequestException({
         code: EXPIRATION_DATE_IN_PAST,
         message: 'Expiration date cannot be in the past.',
