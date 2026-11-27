@@ -23,6 +23,7 @@ import {
   InstitutionRegistrationService,
 } from '../../institutions/institution-registration.service';
 import { assertSelectableReason } from '../../orders/cancellation-reason';
+import { lockOrders } from '../../orders/order-locks';
 import { PrismaService } from '../../prisma/prisma.service';
 import { type Paginated, paginateInMemory } from '../lists/common/paginate-in-memory';
 import type {
@@ -98,19 +99,6 @@ interface DeletedRecords {
   deletedFoods: number;
   deletedOrders: number;
   imageKeys: string[];
-}
-
-/**
- * Locks the orders in id order before a batch delete: the permanent deletions of foods (5.4) and of
- * orders (5.5) also delete orders in batch, and the same order keeps them from deadlocking.
- */
-async function lockOrders(tx: Prisma.TransactionClient, where: Prisma.OrderWhereInput) {
-  const ids = await tx.order.findMany({ where, select: { id: true } });
-  if (ids.length === 0) return;
-  await tx.$queryRaw`
-    SELECT id FROM "order"
-    WHERE id IN (${Prisma.join(ids.map((order) => order.id))})
-    ORDER BY id FOR UPDATE`;
 }
 
 const lockForUpdate = (tx: Prisma.TransactionClient, kind: InstitutionKind, id: number) =>

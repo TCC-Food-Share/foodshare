@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { JobsModule } from '../jobs/jobs.module';
 import { AdminAdministratorsModule } from './administrators/admin-administrators.module';
+import { AdminFoodsModule } from './foods/admin-foods.module';
 import { AdminInstitutionsModule } from './institutions/admin-institutions.module';
 import { AdminJobsController } from './jobs/admin-jobs.controller';
 import { AdminListsModule } from './lists/admin-lists.module';
@@ -11,6 +12,7 @@ import { AdminSuggestionsModule } from './suggestions/admin-suggestions.module';
   imports: [
     JobsModule,
     AdminAdministratorsModule,
+    AdminFoodsModule,
     AdminInstitutionsModule,
     AdminListsModule,
     AdminSuggestionsModule,

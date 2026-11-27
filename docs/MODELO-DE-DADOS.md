@@ -380,7 +380,10 @@ transação, nesta ordem:
   imagem do responsável no MinIO depois do commit.
   Nas regras de estoque, um pedido `Em andamento` apagado **não** devolve
   quantidade: o estoque já saiu do alimento.
-- **Alimento:** pedidos → alimento.
+- **Alimento (RF51):** vale para qualquer alimento, com pedidos de qualquer status (DT59).
+  Trava o estabelecimento (`FOR SHARE`) → alimento (`FOR UPDATE`) → pedidos (travados em
+  ordem de id) → pedidos → alimento → imagem no MinIO depois do commit. Pedido apagado não
+  devolve quantidade: o estoque sai com o alimento.
 - **Conta não confirmada (RN48, tarefa de hora em hora):** trava a linha do
   usuário com `emailVerified = false` (`FOR UPDATE`) → instituição →
   endereço → códigos em `verification` → usuário (sessões e contas em

@@ -20,6 +20,8 @@ import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { Session } from '@thallesp/nestjs-better-auth';
 
 import { AdminController } from '../../../auth/admin-controller.decorator';
+import { CatalogService } from '../../../catalog/catalog.service';
+import { MeasurementUnitResponseDto } from '../../../catalog/dto/catalog-response.dto';
 import { ApiAdminListWrite } from '../admin-list.docs';
 import { sessionAdministrator } from '../common/session-administrator';
 import { AdminMeasurementUnitsService } from './admin-measurement-units.service';
@@ -32,7 +34,22 @@ import {
 
 @AdminController('measurement-units')
 export class AdminMeasurementUnitsController {
-  constructor(private readonly service: AdminMeasurementUnitsService) {}
+  constructor(
+    private readonly service: AdminMeasurementUnitsService,
+    private readonly catalog: CatalogService,
+  ) {}
+
+  @Get('options')
+  @ApiOperation({
+    summary: 'Unidades de medida para os selects do painel',
+    description:
+      'Todas as unidades, com a indicação de fração, na ordem do cadastro e sem paginação, para o select da edição de alimento (RF50). Mesma resposta de `GET /catalog/measurement-units`, que é só das instituições.',
+  })
+  @ApiOkResponse({ type: MeasurementUnitResponseDto, isArray: true })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  options(): Promise<MeasurementUnitResponseDto[]> {
+    return this.catalog.listMeasurementUnits();
+  }
 
   @Get()
   @ApiOperation({

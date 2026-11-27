@@ -20,6 +20,8 @@ import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { Session } from '@thallesp/nestjs-better-auth';
 
 import { AdminController } from '../../../auth/admin-controller.decorator';
+import { CatalogService } from '../../../catalog/catalog.service';
+import { FoodCatalogItemResponseDto } from '../../../catalog/dto/catalog-response.dto';
 import { ApiAdminListWrite } from '../admin-list.docs';
 import { sessionAdministrator } from '../common/session-administrator';
 import { AdminFoodItemsService } from './admin-food-items.service';
@@ -32,7 +34,22 @@ import {
 
 @AdminController('food-items')
 export class AdminFoodItemsController {
-  constructor(private readonly service: AdminFoodItemsService) {}
+  constructor(
+    private readonly service: AdminFoodItemsService,
+    private readonly catalog: CatalogService,
+  ) {}
+
+  @Get('options')
+  @ApiOperation({
+    summary: 'Itens do catálogo para os selects do painel',
+    description:
+      'Todos os itens, com a categoria, em ordem alfabética e sem paginação, para o select da edição de alimento (RF50). Mesma resposta de `GET /catalog/food-items`, que é só das instituições.',
+  })
+  @ApiOkResponse({ type: FoodCatalogItemResponseDto, isArray: true })
+  @ApiUnauthorizedResponse({ description: 'Requisição sem sessão autenticada válida.' })
+  options(): Promise<FoodCatalogItemResponseDto[]> {
+    return this.catalog.listFoodItems();
+  }
 
   @Get()
   @ApiOperation({

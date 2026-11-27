@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { CatalogModule } from '../../catalog/catalog.module';
 import { AdminCancellationReasonsController } from './cancellation-reasons/admin-cancellation-reasons.controller';
 import { AdminCancellationReasonsService } from './cancellation-reasons/admin-cancellation-reasons.service';
 import { AdminCategoriesController } from './categories/admin-categories.controller';
@@ -12,6 +13,7 @@ import { AdminProhibitedTermsController } from './prohibited-terms/admin-prohibi
 import { AdminProhibitedTermsService } from './prohibited-terms/admin-prohibited-terms.service';
 
 @Module({
+  imports: [CatalogModule],
   controllers: [
     AdminCategoriesController,
     AdminFoodItemsController,
