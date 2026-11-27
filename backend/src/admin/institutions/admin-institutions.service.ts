@@ -8,6 +8,7 @@ import {
   lockEstablishmentForUpdate,
 } from '../../account-deletion/institution-locks';
 import { type AuditAdministrator, AuditService } from '../../audit/audit.service';
+import { deleteVerificationCodes } from '../../auth/verification-codes';
 import { normalizeText } from '../../common/normalize-text';
 import type { ValidatedImage } from '../../files/image-file.pipe';
 import { ImageStorageService } from '../../files/image-storage.service';
@@ -37,6 +38,7 @@ import {
   cancellationReasonWithoutDelete,
   institutionDataAlreadyRegistered,
   institutionNotFound,
+  institutionNotSoftDeleted,
 } from './institution.errors';
 import { institutionActivity, institutionFoods, institutionOrders } from './institution-activity';
 
@@ -90,6 +92,31 @@ const registeredOn = new Intl.DateTimeFormat('pt-BR', {
   month: '2-digit',
   year: 'numeric',
 });
+
+/** What the permanent deletion removed from the institution's own records. */
+interface DeletedRecords {
+  deletedFoods: number;
+  deletedOrders: number;
+  imageKeys: string[];
+}
+
+/**
+ * Locks the orders in id order before a batch delete: the permanent deletions of foods (5.4) and of
+ * orders (5.5) also delete orders in batch, and the same order keeps them from deadlocking.
+ */
+async function lockOrders(tx: Prisma.TransactionClient, where: Prisma.OrderWhereInput) {
+  const ids = await tx.order.findMany({ where, select: { id: true } });
+  if (ids.length === 0) return;
+  await tx.$queryRaw`
+    SELECT id FROM "order"
+    WHERE id IN (${Prisma.join(ids.map((order) => order.id))})
+    ORDER BY id FOR UPDATE`;
+}
+
+const lockForUpdate = (tx: Prisma.TransactionClient, kind: InstitutionKind, id: number) =>
+  kind === INSTITUTION_KIND.ESTABLISHMENT
+    ? lockEstablishmentForUpdate(tx, id)
+    : lockBeneficiaryEntityForUpdate(tx, id);
 
 const digitsOf = (value: string | null | undefined) => (value ?? '').replace(/\D/g, '');
 
@@ -286,6 +313,8 @@ export class AdminInstitutionsService {
     await this.registration.update(kind, current, fields, image, {
       conflict: institutionDataAlreadyRegistered,
       beforeUpdate: async (tx) => {
+        // Locks the row first: a permanent deletion committed after `require` gives 404, not 500.
+        if (!(await lockForUpdate(tx, kind, id))) throw institutionNotFound();
         if (deleted === true && cancellationReasonId !== undefined) {
           await this.softDelete(tx, kind, current, cancellationReasonId, audit);
         }
@@ -297,6 +326,94 @@ export class AdminInstitutionsService {
     });
 
     return this.getProfile(kind, id);
+  }
+
+  /**
+   * RF45, RF46 and DT54: deletes for good an institution already soft deleted, in the order of
+   * docs/MODELO-DE-DADOS.md, and its images after the commit. Audited without personal data (DT56).
+   */
+  async remove(actor: AuditAdministrator, kind: InstitutionKind, id: number): Promise<void> {
+    const { imageKeys } = await this.prisma.$transaction(async (tx) => {
+      const locked = await lockForUpdate(tx, kind, id);
+      if (!locked) throw institutionNotFound();
+      if (!locked.deleted) throw institutionNotSoftDeleted();
+
+      const institution = await findInstitution(tx, kind, { id });
+      if (!institution) throw institutionNotFound();
+
+      const deletion =
+        kind === INSTITUTION_KIND.ESTABLISHMENT
+          ? await this.deleteEstablishmentRecords(tx, id)
+          : await this.deleteBeneficiaryEntityRecords(tx, id);
+
+      const { count: deletedSuggestions } = await tx.suggestion.deleteMany({
+        where: { requesterId: institution.userId },
+      });
+      await deleteVerificationCodes(tx, institution.user.email);
+      // Session and Account go in cascade; AccessLog keeps the row with userId = NULL.
+      await tx.user.delete({ where: { id: institution.userId } });
+
+      await this.audit.record(tx, {
+        administrator: actor,
+        action: `${AUDIT[kind].prefix}.delete`,
+        entityType: AUDIT[kind].entityType,
+        entityId: id,
+        details: {
+          companyName: institution.companyName,
+          cnpj: institution.cnpj,
+          deletedFoods: deletion.deletedFoods,
+          deletedOrders: deletion.deletedOrders,
+          deletedSuggestions,
+        },
+      });
+
+      const userImage = institution.user.image;
+      return { imageKeys: userImage ? [userImage, ...deletion.imageKeys] : deletion.imageKeys };
+    });
+
+    // Only after the commit (docs/MODELO-DE-DADOS.md).
+    for (const key of imageKeys) await this.storage.removeQuietly(key);
+  }
+
+  private async deleteEstablishmentRecords(
+    tx: Prisma.TransactionClient,
+    id: number,
+  ): Promise<DeletedRecords> {
+    const foods = await tx.food.findMany({
+      where: { establishmentId: id },
+      select: { id: true, image: true },
+    });
+    const foodIds = foods.map((food) => food.id);
+    const orderWhere: Prisma.OrderWhereInput = {
+      OR: [{ establishmentId: id }, ...(foodIds.length > 0 ? [{ foodId: { in: foodIds } }] : [])],
+    };
+
+    await lockOrders(tx, orderWhere);
+    const { count: deletedOrders } = await tx.order.deleteMany({ where: orderWhere });
+    const { count: deletedFoods } = await tx.food.deleteMany({ where: { establishmentId: id } });
+    const { addressId } = await tx.establishment.delete({
+      where: { id },
+      select: { addressId: true },
+    });
+    await tx.address.delete({ where: { id: addressId } });
+
+    return { deletedFoods, deletedOrders, imageKeys: foods.map((food) => food.image) };
+  }
+
+  private async deleteBeneficiaryEntityRecords(
+    tx: Prisma.TransactionClient,
+    id: number,
+  ): Promise<DeletedRecords> {
+    const orderWhere: Prisma.OrderWhereInput = { beneficiaryEntityId: id };
+    await lockOrders(tx, orderWhere);
+    const { count: deletedOrders } = await tx.order.deleteMany({ where: orderWhere });
+    const { addressId } = await tx.beneficiaryEntity.delete({
+      where: { id },
+      select: { addressId: true },
+    });
+    await tx.address.delete({ where: { id: addressId } });
+
+    return { deletedFoods: 0, deletedOrders, imageKeys: [] };
   }
 
   private async softDelete(
